@@ -127,7 +127,12 @@ export function TransacoesClient({
 			year: String(year),
 			all: "todos os lançamentos",
 		};
-		if (!confirm(`Deseja excluir ${labels[scope]}? Esta ação não pode ser desfeita.`)) return;
+		if (
+			!confirm(
+				`Deseja excluir ${labels[scope]}? Esta ação não pode ser desfeita.`,
+			)
+		)
+			return;
 		await fetch("/api/transactions", {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json" },

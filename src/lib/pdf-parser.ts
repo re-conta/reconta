@@ -104,7 +104,8 @@ function parseTextToTransactions(
 				type = "income";
 			}
 
-			if (description.length > 3 && description.length < 200) {
+			const isSaldoLine = /\bsaldo\b/i.test(description);
+			if (!isSaldoLine && description.length > 3 && description.length < 200) {
 				transactions.push({ date: isoDate, description, amount, type });
 			}
 		}
