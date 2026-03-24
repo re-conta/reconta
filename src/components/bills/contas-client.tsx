@@ -112,7 +112,7 @@ export function ContasClient({
 					<Button variant="outline" size="icon" onClick={prevMonth}>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
-					<span className="font-medium capitalize min-w-[160px] text-center text-zinc-100">
+					<span className="font-medium capitalize min-w-40 text-center text-zinc-100">
 						{formatMonth(month, year)}
 					</span>
 					<Button

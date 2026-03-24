@@ -103,7 +103,7 @@ export function DashboardClient({ initialMonth, initialYear }: Props) {
 				<Button variant="outline" size="icon" onClick={prevMonth}>
 					<ChevronLeft className="h-4 w-4" />
 				</Button>
-				<span className="text-zinc-100 font-medium capitalize min-w-[160px] text-center">
+				<span className="text-zinc-100 font-medium capitalize min-w-40 text-center">
 					{formatMonth(month, year)}
 				</span>
 				<Button

@@ -7,30 +7,55 @@ export interface ParsedTransaction {
 	type: "income" | "expense";
 }
 
+declare global {
+	interface GlobalThis {
+		pdfjsWorker?: {
+			WorkerMessageHandler: unknown;
+		};
+	}
+}
+
 export async function parseBankStatementPdf(
 	buffer: ArrayBuffer,
 ): Promise<ParsedTransaction[]> {
-	const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+	const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+	// In Node environment, PDF.js uses a fake worker and tries to import pdf.worker.mjs
+	// relatively from the calling module, which breaks in Next.js chunks.
+	// Provide the worker handler directly via globalThis.pdfjsWorker to avoid dynamic import.
+	type PdfjsWorkerType = { WorkerMessageHandler: unknown };
+	const globalThisPdfjs = globalThis as typeof globalThis & { pdfjsWorker?: PdfjsWorkerType };
 
-	const loadingTask = getDocument({ data: buffer });
+	if (!globalThisPdfjs.pdfjsWorker?.WorkerMessageHandler) {
+		const worker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+		globalThisPdfjs.pdfjsWorker = { WorkerMessageHandler: worker.WorkerMessageHandler };
+	}
+
+	type PdfjsDocumentInit = {
+		data: ArrayBuffer;
+		standardFontDataUrl: string;
+	};
+
+	const standardFontDataUrl = `file://${process.cwd()}/node_modules/pdfjs-dist/standard_fonts/`;
+	const loadingTask = pdfjs.getDocument({
+		data: buffer,
+		standardFontDataUrl,
+	} as unknown as PdfjsDocumentInit);
 	const pdf = await loadingTask.promise;
 
-	let fullText = "";
+	const transactions: ParsedTransaction[] = [];
 	for (let i = 1; i <= pdf.numPages; i++) {
 		const page = await pdf.getPage(i);
 		const content = await page.getTextContent();
 		const pageText = content.items
 			.map((item) => ("str" in item ? (item.str ?? "") : ""))
 			.join(" ");
-		fullText += `${pageText}\n`;
+		parseTextToTransactions(pageText, transactions);
 	}
 
-	return parseTextToTransactions(fullText);
+	return transactions;
 }
 
-function parseTextToTransactions(text: string): ParsedTransaction[] {
-	const transactions: ParsedTransaction[] = [];
-
+function parseTextToTransactions(text: string, transactions: ParsedTransaction[] = []): ParsedTransaction[] {
 	// Pattern: DD/MM/YYYY ... description ... value
 	// Tries multiple common Brazilian bank statement formats
 	const patterns = [

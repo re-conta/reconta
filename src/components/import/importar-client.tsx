@@ -65,12 +65,31 @@ export function ImportarClient() {
 		if (accountId) formData.append("accountId", accountId);
 
 		const res = await fetch("/api/import", { method: "POST", body: formData });
-		const data = await res.json();
+		const text = await res.text();
+		let data: ImportResult | { error: string } | null = null;
+
+		if (text) {
+			try {
+				data = JSON.parse(text);
+			} catch {
+				data = { error: "Resposta inválida do servidor." };
+			}
+		} else {
+			data = { error: "Resposta vazia do servidor." };
+		}
 
 		if (!res.ok) {
-			setError(data.error ?? "Erro ao processar o arquivo.");
+			if (data && "error" in data) {
+				setError(data.error);
+			} else {
+				setError("Erro ao processar o arquivo.");
+			}
 		} else {
-			setResult(data);
+			if (data && "imported" in data && "transactions" in data) {
+				setResult(data);
+			} else {
+				setError("Resposta inesperada do servidor.");
+			}
 		}
 		setUploading(false);
 	}

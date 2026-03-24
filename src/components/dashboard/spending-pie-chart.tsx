@@ -77,7 +77,7 @@ export function SpendingPieChart({ data }: { data: DataPoint[] }) {
 								className="h-2.5 w-2.5 rounded-full shrink-0"
 								style={{ backgroundColor: d.color }}
 							/>
-							<span className="text-zinc-400 truncate max-w-[120px]">
+							<span className="text-zinc-400 truncate max-w-30">
 								{d.name}
 							</span>
 						</div>
