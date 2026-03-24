@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
 	Pencil,
@@ -15,6 +16,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate, formatMonth } from "@/lib/utils";
 import { TransactionDialog } from "./transaction-dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Transaction {
 	id: number;
@@ -113,6 +121,21 @@ export function TransacoesClient({
 		fetchTransactions();
 	}
 
+	async function bulkDelete(scope: "month" | "year" | "all") {
+		const labels: Record<typeof scope, string> = {
+			month: formatMonth(month, year),
+			year: String(year),
+			all: "todos os lançamentos",
+		};
+		if (!confirm(`Deseja excluir ${labels[scope]}? Esta ação não pode ser desfeita.`)) return;
+		await fetch("/api/transactions", {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ scope, month, year }),
+		});
+		fetchTransactions();
+	}
+
 	return (
 		<div className="space-y-4">
 			{/* Controls */}
@@ -157,16 +180,48 @@ export function TransacoesClient({
 					))}
 				</div>
 
-				<Button
-					onClick={() => {
-						setEditingTx(null);
-						setDialogOpen(true);
-					}}
-					className="ml-auto"
-				>
-					<Plus className="h-4 w-4" />
-					Novo lançamento
-				</Button>
+				<div className="ml-auto flex gap-2">
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="sm">
+								<Trash2 className="h-4 w-4 text-red-400" />
+								Apagar em massa
+								<ChevronDown className="h-3.5 w-3.5" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								className="text-red-400 focus:text-red-300"
+								onSelect={() => bulkDelete("month")}
+							>
+								Apagar {formatMonth(month, year)}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="text-red-400 focus:text-red-300"
+								onSelect={() => bulkDelete("year")}
+							>
+								Apagar ano {year}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								className="text-red-400 focus:text-red-300"
+								onSelect={() => bulkDelete("all")}
+							>
+								Apagar tudo
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+
+					<Button
+						onClick={() => {
+							setEditingTx(null);
+							setDialogOpen(true);
+						}}
+					>
+						<Plus className="h-4 w-4" />
+						Novo lançamento
+					</Button>
+				</div>
 			</div>
 
 			{/* Totals */}

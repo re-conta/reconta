@@ -87,6 +87,37 @@ export async function GET(request: Request) {
 	});
 }
 
+export async function DELETE(request: Request) {
+	const { userId, unauthorized } = await requireSession();
+	if (unauthorized) return unauthorized;
+
+	const body = await request.json();
+	const { scope, month, year } = body;
+
+	if (!["month", "year", "all"].includes(scope)) {
+		return NextResponse.json({ error: "Escopo inválido" }, { status: 400 });
+	}
+
+	const conditions = [eq(transactions.userId, userId)];
+
+	if (scope === "month") {
+		const { start, end } = getMonthRange(Number(month), Number(year));
+		conditions.push(gte(transactions.date, start), lte(transactions.date, end));
+	} else if (scope === "year") {
+		conditions.push(
+			gte(transactions.date, `${year}-01-01`),
+			lte(transactions.date, `${year}-12-31`),
+		);
+	}
+
+	const deleted = await db
+		.delete(transactions)
+		.where(and(...conditions))
+		.returning({ id: transactions.id });
+
+	return NextResponse.json({ deleted: deleted.length });
+}
+
 export async function POST(request: Request) {
 	const { userId, unauthorized } = await requireSession();
 	if (unauthorized) return unauthorized;

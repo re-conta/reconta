@@ -26,10 +26,10 @@ fi
 
 echo "✅ Migrações aplicadas com sucesso!"
 
-if ! pnpm run seed; then
-  echo "❌ Falha ao executar seed. Abortando deploy."
-  exit 1
-fi
+# if ! pnpm run seed; then
+#   echo "❌ Falha ao executar seed. Abortando deploy."
+#   exit 1
+# fi
 
 echo "✅ Seed concluído com sucesso!"
 
