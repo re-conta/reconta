@@ -13,30 +13,24 @@ echo "📦 Preparando ambiente de deploy..."
 cd $TMPDIR || exit 1
 
 git clean -fxd -e .env -e drizzle/reconta.db
-cp .env .env.production
-
-if [ ! -f drizzle/meta/_journal.json ]; then
-  echo "❌ drizzle/meta/_journal.json não encontrado. Verifique se os arquivos de migração foram commitados."
-  exit 1
-fi
+#cp .env .env.production
 
 echo "📥 Instalando dependências..."
 pnpm install
 
-echo "🗃️ Preparando journal de migrações (transição push → migrate)..."
-pnpm tsx scripts/seed-journal.ts
-
 echo "🗃️ Aplicando migrações do banco de dados..."
-if ! pnpm drizzle-kit migrate; then
+if ! pnpm drizzle-kit push; then
   echo "❌ Falha ao aplicar migrações. Abortando deploy."
   exit 1
 fi
+
 echo "✅ Migrações aplicadas com sucesso!"
 
 if ! pnpm run seed; then
   echo "❌ Falha ao executar seed. Abortando deploy."
   exit 1
 fi
+
 echo "✅ Seed concluído com sucesso!"
 
 if pnpm run build; then
