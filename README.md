@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ReConta — Controle Financeiro Pessoal
 
-## Getting Started
+> **reconta.app** · Gerencie suas finanças, analise extratos bancários e acompanhe sua poupança.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (TypeScript · App Router)
+- **Drizzle ORM + SQLite** (banco de dados local em `reconta.db`)
+- **Tailwind CSS v4** (tema dark)
+- **Recharts** (gráficos)
+- **Radix UI** (componentes acessíveis)
+- **Biome** (linting e formatação)
+- **pnpm**
+
+---
+
+## Instalação
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone e entre no diretório
+cd reconta
+
+# Instale as dependências
+pnpm install
+
+# Crie o banco de dados (SQLite)
+pnpm db:push
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Desenvolvimento
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Acesse [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+O banco é criado automaticamente em `reconta.db` na raiz do projeto. As categorias e conta padrão são inseridas na primeira execução via `src/instrumentation.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+## Produção
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm build
+pnpm start
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Páginas
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Página | Rota | Descrição |
+|--------|------|-----------|
+| **Dashboard** | `/` | Visão geral: KPIs do mês, gráfico dos últimos 6 meses, gastos por categoria, contas pendentes e últimos lançamentos |
+| **Lançamentos** | `/transacoes` | Livro-caixa completo com filtros por tipo/mês, busca por descrição, totalizadores e CRUD |
+| **Contas Fixas** | `/contas` | Alertas de cobranças recorrentes (condomínio, luz, internet etc.) com controle de pagamento por mês |
+| **Relatórios** | `/relatorios` | Comparativo mês atual vs anterior, gráfico de poupança, análise por categoria |
+| **Importar PDF** | `/importar` | Upload de extrato bancário em PDF via drag & drop com parsing automático de transações |
+| **Categorias** | `/categorias` | CRUD de categorias com cores customizáveis (receita, despesa ou ambos) |
+| **Contas Bancárias** | `/contas-bancarias` | Gerenciamento de contas (corrente, poupança, crédito, investimentos) com saldo total |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Funcionalidades
+
+- **Importação de extrato PDF** — tenta detectar automaticamente o formato de extratos brasileiros (Itaú, Bradesco, BB, Nubank etc.). O PDF precisa conter texto selecionável (não apenas imagem).
+- **Alertas de contas fixas** — contas vencidas aparecem em vermelho; contas com vencimento em até 3 dias aparecem em amarelo.
+- **Taxa de poupança** — calculada automaticamente como `(receitas - despesas) / receitas × 100`.
+- **Comparativo mensal** — variação percentual em relação ao mês anterior para receitas, despesas e saldo.
+- **Navegação por mês/ano** — todas as views permitem navegar entre meses.
+- **Seed automático** — categorias padrão e conta inicial são criados automaticamente na primeira execução.
+
+---
+
+## Scripts disponíveis
+
+```bash
+pnpm dev          # Servidor de desenvolvimento
+pnpm build        # Build de produção
+pnpm start        # Servidor de produção
+pnpm db:push      # Aplica o schema ao banco SQLite
+pnpm db:generate  # Gera arquivos de migração (drizzle-kit)
+pnpm db:studio    # Abre o Drizzle Studio (GUI para o banco)
+pnpm lint         # Verifica problemas com Biome
+pnpm format       # Formata o código com Biome
+```
+
+---
+
+## Estrutura do projeto
+
+```
+src/
+├── app/
+│   ├── api/                  # Rotas da API REST
+│   │   ├── accounts/
+│   │   ├── bills/
+│   │   ├── categories/
+│   │   ├── dashboard/
+│   │   ├── import/
+│   │   └── transactions/
+│   ├── categorias/
+│   ├── contas/
+│   ├── contas-bancarias/
+│   ├── importar/
+│   ├── relatorios/
+│   ├── transacoes/
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx              # Dashboard
+├── components/
+│   ├── ui/                   # Componentes base (Button, Card, Dialog…)
+│   ├── layout/               # Sidebar e Header
+│   ├── dashboard/            # Gráficos e cards do dashboard
+│   ├── transactions/         # Lista e formulário de lançamentos
+│   ├── bills/                # Lista e formulário de contas fixas
+│   ├── reports/              # Gráficos de relatórios
+│   ├── import/               # Upload de PDF
+│   ├── categories/           # CRUD de categorias
+│   └── accounts/             # CRUD de contas bancárias
+├── hooks/
+│   └── use-accounts.ts
+├── lib/
+│   ├── db/
+│   │   ├── index.ts          # Conexão Drizzle + SQLite
+│   │   ├── schema.ts         # Tabelas e tipos
+│   │   └── seed.ts           # Dados iniciais
+│   ├── pdf-parser.ts         # Parsing de extratos PDF
+│   └── utils.ts              # Helpers (formatação, datas)
+└── instrumentation.ts        # Seed executado na inicialização
+```

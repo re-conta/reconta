@@ -1,0 +1,159 @@
+export const dynamic = "force-dynamic";
+
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { billPayments, bills, categories, transactions } from "@/lib/db/schema";
+import { requireSession } from "@/lib/auth-session";
+import { getMonthRange, getPreviousMonth } from "@/lib/utils";
+
+async function getTotal(
+	type: "income" | "expense",
+	start: string,
+	end: string,
+	userId: string,
+) {
+	const [row] = await db
+		.select({ total: sql<number>`coalesce(sum(${transactions.amount}), 0)` })
+		.from(transactions)
+		.where(
+			and(
+				eq(transactions.userId, userId),
+				eq(transactions.type, type),
+				gte(transactions.date, start),
+				lte(transactions.date, end),
+			),
+		);
+	return Number(row?.total ?? 0);
+}
+
+export async function GET(request: Request) {
+	const { userId, unauthorized } = await requireSession();
+	if (unauthorized) return unauthorized;
+
+	const { searchParams } = new URL(request.url);
+	const month = Number(searchParams.get("month") ?? new Date().getMonth() + 1);
+	const year = Number(searchParams.get("year") ?? new Date().getFullYear());
+
+	const { start, end } = getMonthRange(month, year);
+	const prev = getPreviousMonth(month, year);
+	const { start: prevStart, end: prevEnd } = getMonthRange(
+		prev.month,
+		prev.year,
+	);
+
+	const [currentIncome, currentExpense, prevIncome, prevExpense] =
+		await Promise.all([
+			getTotal("income", start, end, userId),
+			getTotal("expense", start, end, userId),
+			getTotal("income", prevStart, prevEnd, userId),
+			getTotal("expense", prevStart, prevEnd, userId),
+		]);
+
+	const expensesByCategory = await db
+		.select({
+			categoryId: transactions.categoryId,
+			categoryName: categories.name,
+			categoryColor: categories.color,
+			total: sql<number>`coalesce(sum(${transactions.amount}), 0)`,
+		})
+		.from(transactions)
+		.leftJoin(categories, eq(transactions.categoryId, categories.id))
+		.where(
+			and(
+				eq(transactions.userId, userId),
+				eq(transactions.type, "expense"),
+				gte(transactions.date, start),
+				lte(transactions.date, end),
+			),
+		)
+		.groupBy(transactions.categoryId, categories.name, categories.color)
+		.orderBy(sql`coalesce(sum(${transactions.amount}), 0) desc`);
+
+	const recentTransactions = await db
+		.select({
+			id: transactions.id,
+			date: transactions.date,
+			description: transactions.description,
+			amount: transactions.amount,
+			type: transactions.type,
+			categoryName: categories.name,
+			categoryColor: categories.color,
+		})
+		.from(transactions)
+		.leftJoin(categories, eq(transactions.categoryId, categories.id))
+		.where(
+			and(
+				eq(transactions.userId, userId),
+				gte(transactions.date, start),
+				lte(transactions.date, end),
+			),
+		)
+		.orderBy(desc(transactions.date))
+		.limit(10);
+
+	const pendingBills = await db
+		.select({
+			id: bills.id,
+			name: bills.name,
+			amount: bills.amount,
+			dueDay: bills.dueDay,
+			categoryName: categories.name,
+		})
+		.from(bills)
+		.leftJoin(categories, eq(bills.categoryId, categories.id))
+		.leftJoin(
+			billPayments,
+			and(
+				eq(billPayments.billId, bills.id),
+				eq(billPayments.month, month),
+				eq(billPayments.year, year),
+			),
+		)
+		.where(
+			and(
+				eq(bills.userId, userId),
+				eq(bills.isActive, true),
+				sql`${billPayments.id} IS NULL`,
+			),
+		);
+
+	const monthlyBalance = [];
+	for (let i = 5; i >= 0; i--) {
+		let m = month - i;
+		let y = year;
+		while (m <= 0) {
+			m += 12;
+			y -= 1;
+		}
+		const { start: ms, end: me } = getMonthRange(m, y);
+		const [inc, exp] = await Promise.all([
+			getTotal("income", ms, me, userId),
+			getTotal("expense", ms, me, userId),
+		]);
+		monthlyBalance.push({
+			month: m,
+			year: y,
+			income: inc,
+			expense: exp,
+			balance: inc - exp,
+		});
+	}
+
+	return NextResponse.json({
+		current: {
+			income: currentIncome,
+			expense: currentExpense,
+			balance: currentIncome - currentExpense,
+		},
+		previous: {
+			income: prevIncome,
+			expense: prevExpense,
+			balance: prevIncome - prevExpense,
+		},
+		expensesByCategory,
+		recentTransactions,
+		pendingBills,
+		monthlyBalance,
+	});
+}
