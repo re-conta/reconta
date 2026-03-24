@@ -9,13 +9,14 @@ import {
 	Search,
 	Trash2,
 } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
-//import { Badge } from "@/components/ui/badge";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate, formatMonth } from "@/lib/utils";
 import { TransactionDialog } from "./transaction-dialog";
+import { BulkEditDialog, type BulkEditFields } from "./bulk-edit-dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -67,10 +68,24 @@ export function TransacoesClient({
 	const [loading, setLoading] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+	const [bulkEditOpen, setBulkEditOpen] = useState(false);
+
+	const selectAllRef = useRef<HTMLInputElement>(null);
 
 	const today = new Date();
 	const isCurrentMonth =
 		month === today.getMonth() + 1 && year === today.getFullYear();
+
+	// Indeterminate state for select-all checkbox
+	useEffect(() => {
+		if (selectAllRef.current) {
+			const some = selectedIds.size > 0;
+			const all =
+				transactions.length > 0 && selectedIds.size === transactions.length;
+			selectAllRef.current.indeterminate = some && !all;
+		}
+	}, [selectedIds, transactions]);
 
 	const fetchTransactions = useCallback(() => {
 		setLoading(true);
@@ -102,6 +117,7 @@ export function TransacoesClient({
 	}, [fetchTransactions]);
 
 	function prevMonth() {
+		setSelectedIds(new Set());
 		if (month === 1) {
 			setMonth(12);
 			setYear((y) => y - 1);
@@ -109,10 +125,28 @@ export function TransacoesClient({
 	}
 
 	function nextMonth() {
+		setSelectedIds(new Set());
 		if (month === 12) {
 			setMonth(1);
 			setYear((y) => y + 1);
 		} else setMonth((m) => m + 1);
+	}
+
+	function toggleAll() {
+		if (selectedIds.size === transactions.length) {
+			setSelectedIds(new Set());
+		} else {
+			setSelectedIds(new Set(transactions.map((t) => t.id)));
+		}
+	}
+
+	function toggleId(id: number) {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
 	}
 
 	async function deleteTransaction(id: number) {
@@ -138,6 +172,32 @@ export function TransacoesClient({
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ scope, month, year }),
 		});
+		fetchTransactions();
+	}
+
+	async function bulkDeleteSelected() {
+		if (
+			!confirm(
+				`Deseja excluir ${selectedIds.size} lançamento${selectedIds.size !== 1 ? "s" : ""}? Esta ação não pode ser desfeita.`,
+			)
+		)
+			return;
+		await Promise.all(
+			Array.from(selectedIds).map((id) =>
+				fetch(`/api/transactions/${id}`, { method: "DELETE" }),
+			),
+		);
+		setSelectedIds(new Set());
+		fetchTransactions();
+	}
+
+	async function bulkEditSelected(fields: BulkEditFields) {
+		await fetch("/api/transactions", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ids: Array.from(selectedIds), fields }),
+		});
+		setSelectedIds(new Set());
 		fetchTransactions();
 	}
 
@@ -255,6 +315,41 @@ export function TransacoesClient({
 				</div>
 			</div>
 
+			{/* Bulk action bar */}
+			{selectedIds.size > 0 && (
+				<div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-700/40 text-sm">
+					<span className="text-indigo-300 font-medium">
+						{selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
+					</span>
+					<div className="flex gap-2 ml-auto">
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => setBulkEditOpen(true)}
+						>
+							<Pencil className="h-3.5 w-3.5" />
+							Editar selecionados
+						</Button>
+						<Button
+							size="sm"
+							variant="outline"
+							className="text-red-400 hover:text-red-300 border-red-800/50"
+							onClick={bulkDeleteSelected}
+						>
+							<Trash2 className="h-3.5 w-3.5" />
+							Excluir selecionados
+						</Button>
+						<Button
+							size="sm"
+							variant="ghost"
+							onClick={() => setSelectedIds(new Set())}
+						>
+							Cancelar
+						</Button>
+					</div>
+				</div>
+			)}
+
 			{/* Table */}
 			<Card>
 				<CardContent className="p-0">
@@ -271,6 +366,16 @@ export function TransacoesClient({
 							<table className="w-full text-sm">
 								<thead>
 									<tr className="border-b border-zinc-800">
+										<th className="px-4 py-3 w-10">
+											<Checkbox
+												ref={selectAllRef}
+												checked={
+													transactions.length > 0 &&
+													selectedIds.size === transactions.length
+												}
+												onChange={toggleAll}
+											/>
+										</th>
 										<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
 											Data
 										</th>
@@ -290,8 +395,14 @@ export function TransacoesClient({
 									{transactions.map((tx) => (
 										<tr
 											key={tx.id}
-											className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
+											className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${selectedIds.has(tx.id) ? "bg-indigo-900/10" : ""}`}
 										>
+											<td className="px-4 py-3">
+												<Checkbox
+													checked={selectedIds.has(tx.id)}
+													onChange={() => toggleId(tx.id)}
+												/>
+											</td>
 											<td className="px-4 py-3 text-zinc-400 whitespace-nowrap">
 												{formatDate(tx.date)}
 											</td>
@@ -368,6 +479,13 @@ export function TransacoesClient({
 				onSaved={fetchTransactions}
 				defaultMonth={month}
 				defaultYear={year}
+			/>
+
+			<BulkEditDialog
+				open={bulkEditOpen}
+				onClose={() => setBulkEditOpen(false)}
+				count={selectedIds.size}
+				onSave={bulkEditSelected}
 			/>
 		</div>
 	);

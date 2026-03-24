@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { and, desc, eq, gte, like, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, like, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { categories, transactions } from "@/lib/db/schema";
@@ -116,6 +116,50 @@ export async function DELETE(request: Request) {
 		.returning({ id: transactions.id });
 
 	return NextResponse.json({ deleted: deleted.length });
+}
+
+export async function PATCH(request: Request) {
+	const { userId, unauthorized } = await requireSession();
+	if (unauthorized) return unauthorized;
+
+	const body = await request.json();
+	const { ids, fields } = body;
+
+	if (!Array.isArray(ids) || ids.length === 0) {
+		return NextResponse.json({ error: "IDs obrigatórios" }, { status: 400 });
+	}
+
+	const update: {
+		type?: "income" | "expense";
+		categoryId?: number | null;
+		accountId?: number | null;
+		date?: string;
+	} = {};
+
+	if (fields.type !== undefined) update.type = fields.type;
+	if ("categoryId" in fields)
+		update.categoryId =
+			fields.categoryId && fields.categoryId !== "_none"
+				? Number(fields.categoryId)
+				: null;
+	if ("accountId" in fields)
+		update.accountId =
+			fields.accountId && fields.accountId !== "_none"
+				? Number(fields.accountId)
+				: null;
+	if (fields.date !== undefined) update.date = fields.date;
+
+	if (Object.keys(update).length === 0) {
+		return NextResponse.json({ error: "Nenhum campo" }, { status: 400 });
+	}
+
+	const updated = await db
+		.update(transactions)
+		.set(update)
+		.where(and(eq(transactions.userId, userId), inArray(transactions.id, ids)))
+		.returning({ id: transactions.id });
+
+	return NextResponse.json({ updated: updated.length });
 }
 
 export async function POST(request: Request) {
