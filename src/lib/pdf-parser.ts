@@ -23,11 +23,15 @@ export async function parseBankStatementPdf(
 	// relatively from the calling module, which breaks in Next.js chunks.
 	// Provide the worker handler directly via globalThis.pdfjsWorker to avoid dynamic import.
 	type PdfjsWorkerType = { WorkerMessageHandler: unknown };
-	const globalThisPdfjs = globalThis as typeof globalThis & { pdfjsWorker?: PdfjsWorkerType };
+	const globalThisPdfjs = globalThis as typeof globalThis & {
+		pdfjsWorker?: PdfjsWorkerType;
+	};
 
 	if (!globalThisPdfjs.pdfjsWorker?.WorkerMessageHandler) {
 		const worker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
-		globalThisPdfjs.pdfjsWorker = { WorkerMessageHandler: worker.WorkerMessageHandler };
+		globalThisPdfjs.pdfjsWorker = {
+			WorkerMessageHandler: worker.WorkerMessageHandler,
+		};
 	}
 
 	type PdfjsDocumentInit = {
@@ -43,19 +47,27 @@ export async function parseBankStatementPdf(
 	const pdf = await loadingTask.promise;
 
 	const transactions: ParsedTransaction[] = [];
-	for (let i = 1; i <= pdf.numPages; i++) {
-		const page = await pdf.getPage(i);
-		const content = await page.getTextContent();
-		const pageText = content.items
-			.map((item) => ("str" in item ? (item.str ?? "") : ""))
-			.join(" ");
-		parseTextToTransactions(pageText, transactions);
+	try {
+		for (let i = 1; i <= pdf.numPages; i++) {
+			const page = await pdf.getPage(i);
+			const content = await page.getTextContent();
+			const pageText = content.items
+				.map((item) => ("str" in item ? (item.str ?? "") : ""))
+				.join(" ");
+			page.cleanup();
+			parseTextToTransactions(pageText, transactions);
+		}
+	} finally {
+		pdf.destroy();
 	}
 
 	return transactions;
 }
 
-function parseTextToTransactions(text: string, transactions: ParsedTransaction[] = []): ParsedTransaction[] {
+function parseTextToTransactions(
+	text: string,
+	transactions: ParsedTransaction[] = [],
+): ParsedTransaction[] {
 	// Pattern: DD/MM/YYYY ... description ... value
 	// Tries multiple common Brazilian bank statement formats
 	const patterns = [
@@ -67,12 +79,13 @@ function parseTextToTransactions(text: string, transactions: ParsedTransaction[]
 
 	for (const pattern of patterns) {
 		pattern.lastIndex = 0;
-		const match = pattern.exec(text);
+		let match = pattern.exec(text);
 		while (match !== null) {
 			const dateStr = match[1];
 			const description = match[2].trim().replace(/\s+/g, " ");
 			const rawAmount = match[3].replace(/\./g, "").replace(",", ".");
 			const debitCreditFlag = match[4] || "";
+			match = pattern.exec(text);
 
 			const amount = Math.abs(Number.parseFloat(rawAmount));
 			if (Number.isNaN(amount) || amount === 0) continue;
@@ -81,13 +94,14 @@ function parseTextToTransactions(text: string, transactions: ParsedTransaction[]
 			const isoDate = `${year}-${month}-${day}`;
 
 			let type: "income" | "expense";
-			if (
-				debitCreditFlag.toUpperCase() === "C" ||
-				Number.parseFloat(rawAmount) > 0
-			) {
-				type = "income";
-			} else {
+			if (debitCreditFlag.toUpperCase() === "D") {
 				type = "expense";
+			} else if (debitCreditFlag.toUpperCase() === "C") {
+				type = "income";
+			} else if (Number.parseFloat(rawAmount) < 0) {
+				type = "expense";
+			} else {
+				type = "income";
 			}
 
 			if (description.length > 3 && description.length < 200) {

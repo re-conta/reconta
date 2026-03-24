@@ -17,7 +17,10 @@ export async function POST(request: Request) {
 		const defaultCategoryId = formData.get("categoryId") as string | null;
 
 		if (!file) {
-			return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Arquivo não enviado" },
+				{ status: 400 },
+			);
 		}
 
 		if (!file.name.endsWith(".pdf")) {

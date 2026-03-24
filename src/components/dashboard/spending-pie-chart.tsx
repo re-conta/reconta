@@ -55,7 +55,7 @@ export function SpendingPieChart({ data }: { data: DataPoint[] }) {
 						paddingAngle={2}
 						dataKey="value"
 						shape={renderSector}
-					/> 
+					/>
 					<Tooltip
 						contentStyle={{
 							backgroundColor: "#18181b",
@@ -77,9 +77,7 @@ export function SpendingPieChart({ data }: { data: DataPoint[] }) {
 								className="h-2.5 w-2.5 rounded-full shrink-0"
 								style={{ backgroundColor: d.color }}
 							/>
-							<span className="text-zinc-400 truncate max-w-30">
-								{d.name}
-							</span>
+							<span className="text-zinc-400 truncate max-w-30">{d.name}</span>
 						</div>
 						<div className="flex items-center gap-2 shrink-0">
 							<span className="text-zinc-300">{formatCurrency(d.value)}</span>
