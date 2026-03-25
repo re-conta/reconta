@@ -170,19 +170,16 @@ export const notificationLogs = sqliteTable("notification_logs", {
 	notificationCount: integer("notification_count").notNull().default(1),
 });
 
-export const monthlyOpeningBalances = sqliteTable(
-	"monthly_opening_balances",
-	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		userId: text("user_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		month: integer("month").notNull(),
-		year: integer("year").notNull(),
-		amount: real("amount").notNull().default(0),
-		updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
-	},
-);
+export const monthlyOpeningBalances = sqliteTable("monthly_opening_balances", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	month: integer("month").notNull(),
+	year: integer("year").notNull(),
+	amount: real("amount").notNull().default(0),
+	updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
 
 export const sharedAccess = sqliteTable("shared_access", {
 	id: integer("id").primaryKey({ autoIncrement: true }),

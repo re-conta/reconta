@@ -110,8 +110,7 @@ export function CompartilhamentosClient() {
 					email: email.trim(),
 					scope,
 					scopeMonth: scope === "monthly" ? Number(scopeMonth) : undefined,
-					scopeYear:
-						scope !== "all" ? Number(scopeYear) : undefined,
+					scopeYear: scope !== "all" ? Number(scopeYear) : undefined,
 				}),
 			});
 

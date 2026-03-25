@@ -22,9 +22,7 @@ export async function DELETE(
 
 	const result = await db
 		.delete(sharedAccess)
-		.where(
-			and(eq(sharedAccess.id, shareId), eq(sharedAccess.ownerId, userId)),
-		)
+		.where(and(eq(sharedAccess.id, shareId), eq(sharedAccess.ownerId, userId)))
 		.returning({ id: sharedAccess.id });
 
 	if (result.length === 0) {

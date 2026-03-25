@@ -49,7 +49,10 @@ export async function GET(
 		if (month && year) {
 			const { start, end } = getMonthRange(Number(month), Number(year));
 			if (start >= access.start && end <= access.end) {
-				conditions.push(gte(transactions.date, start), lte(transactions.date, end));
+				conditions.push(
+					gte(transactions.date, start),
+					lte(transactions.date, end),
+				);
 			}
 		}
 	} else {

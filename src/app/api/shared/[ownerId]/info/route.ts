@@ -27,10 +27,7 @@ export async function GET(
 		.from(sharedAccess)
 		.innerJoin(user, eq(sharedAccess.ownerId, user.id))
 		.where(
-			and(
-				eq(sharedAccess.ownerId, ownerId),
-				eq(sharedAccess.targetId, userId),
-			),
+			and(eq(sharedAccess.ownerId, ownerId), eq(sharedAccess.targetId, userId)),
 		);
 
 	if (rows.length === 0) {

@@ -15,7 +15,10 @@ export async function GET(request: Request) {
 	const year = Number(searchParams.get("year"));
 
 	if (!month || !year) {
-		return NextResponse.json({ error: "month and year are required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "month and year are required" },
+			{ status: 400 },
+		);
 	}
 
 	const [row] = await db
@@ -43,7 +46,10 @@ export async function POST(request: Request) {
 	const amount = Number(body.amount);
 
 	if (!month || !year || Number.isNaN(amount)) {
-		return NextResponse.json({ error: "month, year and amount are required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "month, year and amount are required" },
+			{ status: 400 },
+		);
 	}
 
 	const [existing] = await db
@@ -61,7 +67,10 @@ export async function POST(request: Request) {
 	if (existing) {
 		await db
 			.update(monthlyOpeningBalances)
-			.set({ amount, updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19) })
+			.set({
+				amount,
+				updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19),
+			})
 			.where(eq(monthlyOpeningBalances.id, existing.id));
 	} else {
 		await db.insert(monthlyOpeningBalances).values({
