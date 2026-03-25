@@ -21,16 +21,14 @@ export interface BillEmailData {
 	subject?: string;
 }
 
-
 const transport = nodemailer.createTransport({
-	service: "icloud",	
-  secure: false,
-		auth: {
-			user: process.env.MAIL_USER,
-			pass: process.env.MAIL_PASS,
-		},
-	});
-
+	service: "icloud",
+	secure: false,
+	auth: {
+		user: process.env.MAIL_USER,
+		pass: process.env.MAIL_PASS,
+	},
+});
 
 export async function sendBillNotificationEmail(
 	to: string,

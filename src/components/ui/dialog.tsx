@@ -34,6 +34,7 @@ export function DialogContent({
 		<DialogPortal>
 			<DialogOverlay />
 			<DialogPrimitive.Content
+				aria-describedby={undefined}
 				className={cn(
 					"fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-xl border border-zinc-700 bg-zinc-900 p-6 shadow-xl",
 					className,

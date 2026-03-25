@@ -4,8 +4,10 @@ import {
 	AlertCircle,
 	ArrowDownRight,
 	ArrowUpRight,
+	CheckCircle2,
 	ChevronLeft,
 	ChevronRight,
+	Circle,
 	TrendingDown,
 	TrendingUp,
 	Wallet,
@@ -85,6 +87,18 @@ export function DashboardClient() {
 	function nextMonth() {
 		if (month === 12) setPeriod(1, year + 1);
 		else setPeriod(month + 1, year);
+	}
+
+	async function markBillPaid(billId: number, amount: number) {
+		await fetch("/api/bills/payments", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ billId, month, year, isPaid: true, amount }),
+		});
+		fetch(`/api/dashboard?month=${month}&year=${year}`)
+			.then((r) => r.json())
+			.then((d) => setData(d))
+			.catch(() => {});
 	}
 
 	const today = new Date();
@@ -204,9 +218,21 @@ export function DashboardClient() {
 											return (
 												<li
 													key={bill.id}
-													className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0"
+													className="flex items-center gap-3 py-2 border-b border-zinc-800 last:border-0"
 												>
-													<div>
+													<button
+														type="button"
+														onClick={() => markBillPaid(bill.id, bill.amount)}
+														className="shrink-0 text-zinc-400 hover:text-emerald-400 transition-colors"
+														title="Marcar como paga"
+													>
+														{isOverdue ? (
+															<CheckCircle2 className="h-5 w-5 text-red-400 hover:text-emerald-400" />
+														) : (
+															<Circle className="h-5 w-5" />
+														)}
+													</button>
+													<div className="flex-1 min-w-0">
 														<p className="text-sm font-medium text-zinc-200">
 															{bill.name}
 														</p>
@@ -217,7 +243,7 @@ export function DashboardClient() {
 															{isOverdue ? " · Atrasada!" : ""}
 														</p>
 													</div>
-													<span className="text-sm font-medium text-amber-400">
+													<span className="text-sm font-medium text-amber-400 shrink-0">
 														{formatCurrency(bill.amount)}
 													</span>
 												</li>

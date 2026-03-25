@@ -10,6 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useSession } from "@/lib/auth-client";
 import { formatCurrency } from "@/lib/utils";
 
 interface OverdueBill {
@@ -22,20 +23,22 @@ interface OverdueBill {
 	daysOverdue: number;
 }
 
-const STORAGE_KEY = "overdue-modal-dismissed";
-
-function getTodayKey() {
-	return new Date().toISOString().slice(0, 10);
+function getSessionKey(token: string) {
+	return `overdue-modal-shown-${token}`;
 }
 
 export function OverdueBillsModal() {
+	const { data: session } = useSession();
 	const [open, setOpen] = useState(false);
 	const [bills, setBills] = useState<OverdueBill[]>([]);
 
 	useEffect(() => {
-		// Only show once per day
-		const dismissed = localStorage.getItem(STORAGE_KEY);
-		if (dismissed === getTodayKey()) return;
+		const token = session?.session?.token;
+		if (!token) return;
+
+		// Show once per auth session (cleared on logout/new login)
+		const key = getSessionKey(token);
+		if (sessionStorage.getItem(key)) return;
 
 		fetch("/api/bills/overdue")
 			.then((r) => r.json())
@@ -46,10 +49,13 @@ export function OverdueBillsModal() {
 				}
 			})
 			.catch(() => {});
-	}, []);
+	}, [session?.session?.token]);
 
 	function handleDismiss() {
-		localStorage.setItem(STORAGE_KEY, getTodayKey());
+		const token = session?.session?.token;
+		if (token) {
+			sessionStorage.setItem(getSessionKey(token), "1");
+		}
 		setOpen(false);
 	}
 
@@ -57,7 +63,12 @@ export function OverdueBillsModal() {
 	const upcoming = bills.filter((b) => !b.isOverdue);
 
 	return (
-		<Dialog open={open} onOpenChange={(v) => { if (!v) handleDismiss(); }}>
+		<Dialog
+			open={open}
+			onOpenChange={(v) => {
+				if (!v) handleDismiss();
+			}}
+		>
 			<DialogContent className="max-w-md">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-base">
@@ -137,7 +148,7 @@ export function OverdueBillsModal() {
 							className="flex-1"
 							onClick={handleDismiss}
 						>
-							Ignorar por hoje
+							Ignorar
 						</Button>
 					</div>
 				</div>

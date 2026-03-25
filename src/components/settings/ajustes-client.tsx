@@ -98,7 +98,8 @@ export function AjustesClient() {
 									Ativar notificações
 								</p>
 								<p className="text-xs text-zinc-400">
-									Receba e-mails sobre contas próximas do vencimento ou vencidas.
+									Receba e-mails sobre contas próximas do vencimento ou
+									vencidas.
 								</p>
 							</div>
 							<button
@@ -120,10 +121,17 @@ export function AjustesClient() {
 							</button>
 						</label>
 
-						<div className={settings.enabled ? "" : "opacity-40 pointer-events-none"}>
+						<div
+							className={
+								settings.enabled ? "" : "opacity-40 pointer-events-none"
+							}
+						>
 							{/* Custom email */}
 							<div className="space-y-1.5">
-								<Label htmlFor="emailAddress" className="flex items-center gap-1.5">
+								<Label
+									htmlFor="emailAddress"
+									className="flex items-center gap-1.5"
+								>
 									<Mail className="h-3.5 w-3.5 text-zinc-400" />
 									E-mail para notificações
 								</Label>
@@ -144,7 +152,9 @@ export function AjustesClient() {
 							<div className="grid grid-cols-2 gap-4 mt-4">
 								{/* Days before */}
 								<div className="space-y-1.5">
-									<Label htmlFor="daysBeforeDue">Dias antes do vencimento</Label>
+									<Label htmlFor="daysBeforeDue">
+										Dias antes do vencimento
+									</Label>
 									<Input
 										id="daysBeforeDue"
 										type="number"
@@ -186,7 +196,9 @@ export function AjustesClient() {
 
 								{/* Max notifications */}
 								<div className="space-y-1.5">
-									<Label htmlFor="maxNotifications">Máximo de notificações</Label>
+									<Label htmlFor="maxNotifications">
+										Máximo de notificações
+									</Label>
 									<Input
 										id="maxNotifications"
 										type="number"
@@ -203,9 +215,7 @@ export function AjustesClient() {
 											}))
 										}
 									/>
-									<p className="text-xs text-zinc-400">
-										Por conta por mês
-									</p>
+									<p className="text-xs text-zinc-400">Por conta por mês</p>
 								</div>
 
 								{/* Interval */}
@@ -232,7 +242,11 @@ export function AjustesClient() {
 				</Card>
 
 				<div className="flex items-center gap-3">
-					<Button type="submit" disabled={saving} className="flex items-center gap-2">
+					<Button
+						type="submit"
+						disabled={saving}
+						className="flex items-center gap-2"
+					>
 						<Save className="h-4 w-4" />
 						{saving ? "Salvando..." : "Salvar ajustes"}
 					</Button>

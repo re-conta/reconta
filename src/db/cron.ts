@@ -12,13 +12,8 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "../lib/db/schema";
 import { sendBillNotificationEmail } from "../lib/email";
 
-const {
-	user,
-	bills,
-	billPayments,
-	notificationSettings,
-	notificationLogs,
-} = schema;
+const { user, bills, billPayments, notificationSettings, notificationLogs } =
+	schema;
 
 function createDb() {
 	const dbPath = path.join(process.cwd(), "reconta.db");
@@ -66,7 +61,9 @@ async function main() {
 		.innerJoin(user, eq(notificationSettings.userId, user.id))
 		.where(eq(notificationSettings.enabled, true));
 
-	console.log(`[cron] Found ${settings.length} user(s) with notifications enabled`);
+	console.log(
+		`[cron] Found ${settings.length} user(s) with notifications enabled`,
+	);
 
 	for (const setting of settings) {
 		const emailTo = setting.emailAddress ?? setting.userEmail;
@@ -186,9 +183,7 @@ async function main() {
 			continue;
 		}
 
-		const filteredOverdue = overdueBills.filter((b) =>
-			billsToNotify.has(b.id),
-		);
+		const filteredOverdue = overdueBills.filter((b) => billsToNotify.has(b.id));
 		const filteredUpcoming = upcomingBills.filter((b) =>
 			billsToNotify.has(b.id),
 		);
@@ -226,7 +221,9 @@ async function main() {
 								existingLogs[existingLogs.length - 1].notificationCount + 1,
 							sentAt: sql`(datetime('now'))`,
 						})
-						.where(eq(notificationLogs.id, existingLogs[existingLogs.length - 1].id));
+						.where(
+							eq(notificationLogs.id, existingLogs[existingLogs.length - 1].id),
+						);
 				} else {
 					await db.insert(notificationLogs).values({
 						userId: setting.userId,

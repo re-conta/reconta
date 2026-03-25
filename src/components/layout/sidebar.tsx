@@ -61,7 +61,12 @@ export function Sidebar() {
 					<Menu className="h-5 w-5" />
 				</button>
 				<div className="flex items-center gap-2">
-					<Image src="/images/favicon.svg" alt="ReConta" width={32} height={32} />
+					<Image
+						src="/images/favicon.svg"
+						alt="ReConta"
+						width={32}
+						height={32}
+					/>
 					<span className="text-base font-bold text-white">ReConta</span>
 				</div>
 			</header>
@@ -86,7 +91,12 @@ export function Sidebar() {
 				{/* Logo */}
 				<div className="flex h-16 items-center justify-between gap-2 px-6 border-b border-zinc-800">
 					<div className="flex items-center gap-2">
-						<Image src="/images/favicon.svg" alt="ReConta" width={32} height={32} />
+						<Image
+							src="/images/favicon.svg"
+							alt="ReConta"
+							width={32}
+							height={32}
+						/>
 						<div>
 							<span className="text-lg font-bold text-white">ReConta</span>
 						</div>

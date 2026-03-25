@@ -24,7 +24,10 @@ export function MonthProvider({ children }: { children: React.ReactNode }) {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			if (stored) {
 				const parsed = JSON.parse(stored) as { month: unknown; year: unknown };
-				if (typeof parsed.month === "number" && typeof parsed.year === "number") {
+				if (
+					typeof parsed.month === "number" &&
+					typeof parsed.year === "number"
+				) {
 					setMonthState(parsed.month);
 					setYearState(parsed.year);
 				}
@@ -49,6 +52,7 @@ export function MonthProvider({ children }: { children: React.ReactNode }) {
 
 export function useMonthContext() {
 	const ctx = useContext(MonthContext);
-	if (!ctx) throw new Error("useMonthContext must be used within MonthProvider");
+	if (!ctx)
+		throw new Error("useMonthContext must be used within MonthProvider");
 	return ctx;
 }
