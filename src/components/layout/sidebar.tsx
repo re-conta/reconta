@@ -4,6 +4,7 @@ import {
 	AlertCircle,
 	BarChart3,
 	BookOpen,
+	Download,
 	Home,
 	LogOut,
 	Tags,
@@ -21,6 +22,7 @@ const navigation = [
 	{ name: "Contas Fixas", href: "/contas", icon: AlertCircle },
 	{ name: "Relatórios", href: "/relatorios", icon: BarChart3 },
 	{ name: "Importar PDF", href: "/importar", icon: Upload },
+	{ name: "Exportar", href: "/exportar", icon: Download },
 	{ name: "Categorias", href: "/categorias", icon: Tags },
 	{ name: "Contas Bancárias", href: "/contas-bancarias", icon: Wallet },
 ];
