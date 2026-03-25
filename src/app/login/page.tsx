@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -47,13 +48,8 @@ function LoginForm() {
 			<div className="w-full max-w-sm">
 				{/* Logo */}
 				<div className="flex items-center justify-center gap-2 mb-8">
-					<div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-						<span className="text-lg font-bold text-white">R</span>
-					</div>
-					<div>
-						<span className="text-2xl font-bold text-white">ReConta</span>
-						<span className="text-sm text-zinc-400">.app</span>
-					</div>
+					<Image src="/images/favicon.svg" alt="ReConta" width={48} height={48} unoptimized />
+					<span className="text-3xl font-bold text-white">ReConta</span>					
 				</div>
 
 				<div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">

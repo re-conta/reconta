@@ -13,7 +13,7 @@ echo "📦 Preparando ambiente de deploy..."
 cd $TMPDIR || exit 1
 
 git clean -fxd -e .env -e drizzle/reconta.db
-#cp .env .env.production
+cp .env .env.production
 
 echo "📥 Instalando dependências..."
 pnpm install

@@ -51,7 +51,7 @@ export function SelectContent({
 				position={position}
 				{...props}
 			>
-				<SelectPrimitive.Viewport className="p-1">
+				<SelectPrimitive.Viewport className="overflow-y-auto p-1">
 					{children}
 				</SelectPrimitive.Viewport>
 			</SelectPrimitive.Content>

@@ -317,11 +317,11 @@ export function TransacoesClient({
 
 			{/* Bulk action bar */}
 			{selectedIds.size > 0 && (
-				<div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-700/40 text-sm">
+				<div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-700/40 text-sm">
 					<span className="text-indigo-300 font-medium">
 						{selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
 					</span>
-					<div className="flex gap-2 ml-auto">
+					<div className="flex flex-wrap gap-2 ml-auto">
 						<Button
 							size="sm"
 							variant="outline"
