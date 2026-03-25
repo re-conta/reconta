@@ -10,6 +10,7 @@
 		"migrate": "tsx src/lib/db/migrate.ts",
 		"push": "drizzle-kit push",
 		"studio": "drizzle-kit studio",
+		"cron": "tsx src/db/cron.ts",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "tsc --noEmit"
@@ -32,11 +33,14 @@
 		"clsx": "^2.1.1",
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "^0.45.1",
+		"email-templates": "^13.0.1",
 		"jspdf": "^4.2.1",
 		"jspdf-autotable": "^5.0.7",
 		"lucide-react": "^1.0.1",
 		"next": "16.2.1",
+		"nodemailer": "^8.0.4",
 		"pdfjs-dist": "^5.5.207",
+		"pug": "^3.0.4",
 		"react": "19.2.4",
 		"react-dom": "19.2.4",
 		"recharts": "^3.8.0",
@@ -52,11 +56,14 @@
 		"@biomejs/biome": "^2.4.8",
 		"@tailwindcss/postcss": "^4",
 		"@types/better-sqlite3": "^7.6.13",
+		"@types/email-templates": "^10.0.4",
 		"@types/node": "^20",
+		"@types/nodemailer": "^7.0.11",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"drizzle-kit": "^0.31.10",
 		"tailwindcss": "^4",
+		"tsx": "^4.21.0",
 		"typescript": "^5"
 	}
 }

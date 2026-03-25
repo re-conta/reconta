@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { useMonthContext } from "@/components/layout/month-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -45,15 +46,8 @@ interface Totals {
 	count: number;
 }
 
-export function TransacoesClient({
-	initialMonth,
-	initialYear,
-}: {
-	initialMonth: number;
-	initialYear: number;
-}) {
-	const [month, setMonth] = useState(initialMonth);
-	const [year, setYear] = useState(initialYear);
+export function TransacoesClient() {
+	const { month, year, setPeriod } = useMonthContext();
 	const [search, setSearch] = useState("");
 	const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">(
 		"all",
@@ -118,18 +112,14 @@ export function TransacoesClient({
 
 	function prevMonth() {
 		setSelectedIds(new Set());
-		if (month === 1) {
-			setMonth(12);
-			setYear((y) => y - 1);
-		} else setMonth((m) => m - 1);
+		if (month === 1) setPeriod(12, year - 1);
+		else setPeriod(month - 1, year);
 	}
 
 	function nextMonth() {
 		setSelectedIds(new Set());
-		if (month === 12) {
-			setMonth(1);
-			setYear((y) => y + 1);
-		} else setMonth((m) => m + 1);
+		if (month === 12) setPeriod(1, year + 1);
+		else setPeriod(month + 1, year);
 	}
 
 	function toggleAll() {

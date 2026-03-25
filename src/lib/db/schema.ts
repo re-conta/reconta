@@ -139,6 +139,37 @@ export const pdfImports = sqliteTable("pdf_imports", {
 	importedAt: text("imported_at").notNull().default(sql`(datetime('now'))`),
 });
 
+export const notificationSettings = sqliteTable("notification_settings", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	userId: text("user_id")
+		.notNull()
+		.unique()
+		.references(() => user.id, { onDelete: "cascade" }),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+	emailAddress: text("email_address"),
+	daysBeforeDue: integer("days_before_due").notNull().default(3),
+	daysAfterDue: integer("days_after_due").notNull().default(7),
+	maxNotificationsPerBill: integer("max_notifications_per_bill")
+		.notNull()
+		.default(3),
+	intervalDays: integer("interval_days").notNull().default(1),
+	updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
+
+export const notificationLogs = sqliteTable("notification_logs", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	billId: integer("bill_id")
+		.notNull()
+		.references(() => bills.id, { onDelete: "cascade" }),
+	month: integer("month").notNull(),
+	year: integer("year").notNull(),
+	sentAt: text("sent_at").notNull().default(sql`(datetime('now'))`),
+	notificationCount: integer("notification_count").notNull().default(1),
+});
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof user.$inferSelect;
@@ -152,3 +183,5 @@ export type Bill = typeof bills.$inferSelect;
 export type NewBill = typeof bills.$inferInsert;
 export type BillPayment = typeof billPayments.$inferSelect;
 export type NewBillPayment = typeof billPayments.$inferInsert;
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type NotificationLog = typeof notificationLogs.$inferSelect;

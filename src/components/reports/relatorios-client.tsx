@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useMonthContext } from "@/components/layout/month-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMonth } from "@/lib/utils";
 import { MonthlyBalanceChart } from "@/components/dashboard/monthly-balance-chart";
@@ -32,15 +33,8 @@ interface DashboardData {
 	}>;
 }
 
-export function RelatoriosClient({
-	initialMonth,
-	initialYear,
-}: {
-	initialMonth: number;
-	initialYear: number;
-}) {
-	const [month, setMonth] = useState(initialMonth);
-	const [year, setYear] = useState(initialYear);
+export function RelatoriosClient() {
+	const { month, year, setPeriod } = useMonthContext();
 	const [data, setData] = useState<DashboardData | null>(null);
 	const [loading, setLoading] = useState(true);
 
@@ -63,16 +57,12 @@ export function RelatoriosClient({
 	}, [month, year]);
 
 	function prevMonth() {
-		if (month === 1) {
-			setMonth(12);
-			setYear((y) => y - 1);
-		} else setMonth((m) => m - 1);
+		if (month === 1) setPeriod(12, year - 1);
+		else setPeriod(month - 1, year);
 	}
 	function nextMonth() {
-		if (month === 12) {
-			setMonth(1);
-			setYear((y) => y + 1);
-		} else setMonth((m) => m + 1);
+		if (month === 12) setPeriod(1, year + 1);
+		else setPeriod(month + 1, year);
 	}
 
 	return (

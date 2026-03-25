@@ -1,0 +1,13 @@
+[Unit]
+Description=ReConta — Verificação de contas a vencer (execução única)
+After=network.target reconta.service
+
+[Service]
+Type=oneshot
+User=nginx
+WorkingDirectory=/var/www/reconta
+EnvironmentFile=/var/www/reconta/.env.local
+ExecStart=/home/nginx/.local/share/pnpm/pnpm tsx src/db/cron.ts
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=reconta-cron

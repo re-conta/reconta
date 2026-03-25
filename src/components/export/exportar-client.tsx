@@ -3,6 +3,7 @@
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useMonthContext } from "@/components/layout/month-context";
 import {
 	Select,
 	SelectContent,
@@ -192,7 +193,7 @@ async function exportPdf(
 }
 
 export function ExportarClient() {
-	const { month: curMonth, year: curYear } = getCurrentMonth();
+	const { month: curMonth, year: curYear } = useMonthContext();
 
 	const [scope, setScope] = useState<Scope>("month");
 	const [month, setMonth] = useState(String(curMonth));

@@ -8,11 +8,13 @@ import {
 	Home,
 	LogOut,
 	Menu,
+	Settings,
 	Tags,
 	Upload,
 	Wallet,
 	X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -28,6 +30,7 @@ const navigation = [
 	{ name: "Exportar", href: "/exportar", icon: Download },
 	{ name: "Categorias", href: "/categorias", icon: Tags },
 	{ name: "Contas Bancárias", href: "/contas-bancarias", icon: Wallet },
+	{ name: "Ajustes", href: "/ajustes", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -58,11 +61,8 @@ export function Sidebar() {
 					<Menu className="h-5 w-5" />
 				</button>
 				<div className="flex items-center gap-2">
-					<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
-						<span className="text-xs font-bold text-white">R</span>
-					</div>
+					<Image src="/images/favicon.svg" alt="ReConta" width={32} height={32} />
 					<span className="text-base font-bold text-white">ReConta</span>
-					<span className="text-xs text-zinc-400">.app</span>
 				</div>
 			</header>
 
@@ -86,12 +86,9 @@ export function Sidebar() {
 				{/* Logo */}
 				<div className="flex h-16 items-center justify-between gap-2 px-6 border-b border-zinc-800">
 					<div className="flex items-center gap-2">
-						<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
-							<span className="text-sm font-bold text-white">R</span>
-						</div>
+						<Image src="/images/favicon.svg" alt="ReConta" width={32} height={32} />
 						<div>
 							<span className="text-lg font-bold text-white">ReConta</span>
-							<span className="ml-0.5 text-xs text-zinc-400">.app</span>
 						</div>
 					</div>
 					<button

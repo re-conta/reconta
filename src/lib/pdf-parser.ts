@@ -72,9 +72,7 @@ const INCOME_KEYWORDS =
 const EXPENSE_KEYWORDS =
 	/\b(debito|débito|pagamento|pag\b|pix\s+enviad[oa]|transferencia\s+enviad[oa]|ted\s+enviad[oa]|doc\s+enviad[oa]|compra|saque|tarifa|taxa|anuidade|iof|juros|multa|encargo|seguro|mensalidade|assinatura|boleto|fatura|parcela)\b/i;
 
-function inferTypeFromDescription(
-	description: string,
-): "income" | "expense" {
+function inferTypeFromDescription(description: string): "income" | "expense" {
 	if (INCOME_KEYWORDS.test(description)) return "income";
 	if (EXPENSE_KEYWORDS.test(description)) return "expense";
 	// Default to expense — most bank statement lines are debits

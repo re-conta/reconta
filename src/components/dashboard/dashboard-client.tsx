@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 //import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useMonthContext } from "@/components/layout/month-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate, formatMonth } from "@/lib/utils";
 import { MonthlyBalanceChart } from "./monthly-balance-chart";
@@ -52,19 +53,13 @@ interface DashboardData {
 	}>;
 }
 
-interface Props {
-	initialMonth: number;
-	initialYear: number;
-}
-
 function pct(curr: number, prev: number) {
 	if (prev === 0) return null;
 	return ((curr - prev) / prev) * 100;
 }
 
-export function DashboardClient({ initialMonth, initialYear }: Props) {
-	const [month, setMonth] = useState(initialMonth);
-	const [year, setYear] = useState(initialYear);
+export function DashboardClient() {
+	const { month, year, setPeriod } = useMonthContext();
 	const [data, setData] = useState<DashboardData | null>(null);
 	const [loading, setLoading] = useState(true);
 
@@ -83,17 +78,13 @@ export function DashboardClient({ initialMonth, initialYear }: Props) {
 	}, [month, year]);
 
 	function prevMonth() {
-		if (month === 1) {
-			setMonth(12);
-			setYear((y) => y - 1);
-		} else setMonth((m) => m - 1);
+		if (month === 1) setPeriod(12, year - 1);
+		else setPeriod(month - 1, year);
 	}
 
 	function nextMonth() {
-		if (month === 12) {
-			setMonth(1);
-			setYear((y) => y + 1);
-		} else setMonth((m) => m + 1);
+		if (month === 12) setPeriod(1, year + 1);
+		else setPeriod(month + 1, year);
 	}
 
 	const today = new Date();
