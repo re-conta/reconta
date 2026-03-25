@@ -9,7 +9,7 @@ import {
 	Search,
 	Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { useMonthContext } from "@/components/layout/month-context";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,6 +65,11 @@ export function TransacoesClient() {
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 	const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
+	const [openingBalance, setOpeningBalance] = useState(0);
+	const [openingBalanceInput, setOpeningBalanceInput] = useState("");
+	const [editingOpeningBalance, setEditingOpeningBalance] = useState(false);
+	const openingBalanceInputId = useId();
+
 	const selectAllRef = useRef<HTMLInputElement>(null);
 
 	const today = new Date();
@@ -100,9 +105,19 @@ export function TransacoesClient() {
 			});
 	}, [month, year, typeFilter, search]);
 
+	const fetchOpeningBalance = useCallback(() => {
+		fetch(`/api/transactions/opening-balance?month=${month}&year=${year}`)
+			.then((r) => r.json())
+			.then((d) => setOpeningBalance(d.amount ?? 0));
+	}, [month, year]);
+
 	useEffect(() => {
 		fetchTransactions();
 	}, [fetchTransactions]);
+
+	useEffect(() => {
+		fetchOpeningBalance();
+	}, [fetchOpeningBalance]);
 
 	// Debounce search
 	useEffect(() => {
@@ -137,6 +152,21 @@ export function TransacoesClient() {
 			else next.add(id);
 			return next;
 		});
+	}
+
+	async function saveOpeningBalance() {
+		const value = Number.parseFloat(openingBalanceInput.replace(",", "."));
+		if (Number.isNaN(value)) {
+			setEditingOpeningBalance(false);
+			return;
+		}
+		await fetch("/api/transactions/opening-balance", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ month, year, amount: value }),
+		});
+		setOpeningBalance(value);
+		setEditingOpeningBalance(false);
 	}
 
 	async function deleteTransaction(id: number) {
@@ -280,7 +310,39 @@ export function TransacoesClient() {
 			</div>
 
 			{/* Totals */}
-			<div className="grid grid-cols-3 gap-3">
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+				<div className="rounded-lg bg-zinc-800/40 border border-zinc-700/40 p-4">
+					<p className="text-xs text-zinc-400 mb-1">Saldo inicial</p>
+					{editingOpeningBalance ? (
+						<div className="flex items-center gap-2 mt-1">
+							<Input
+								id={openingBalanceInputId}
+								autoFocus
+								value={openingBalanceInput}
+								onChange={(e) => setOpeningBalanceInput(e.target.value)}
+								onBlur={saveOpeningBalance}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") saveOpeningBalance();
+									if (e.key === "Escape") setEditingOpeningBalance(false);
+								}}
+								className="h-7 text-sm w-full"
+								placeholder="0,00"
+							/>
+						</div>
+					) : (
+						<button
+							type="button"
+							className="text-lg font-bold text-zinc-200 hover:text-white cursor-pointer text-left w-full"
+							onClick={() => {
+								setOpeningBalanceInput(String(openingBalance));
+								setEditingOpeningBalance(true);
+							}}
+							title="Clique para editar o saldo inicial"
+						>
+							{formatCurrency(openingBalance)}
+						</button>
+					)}
+				</div>
 				<div className="rounded-lg bg-emerald-900/20 border border-emerald-800/30 p-4">
 					<p className="text-xs text-zinc-400 mb-1">Receitas</p>
 					<p className="text-lg font-bold text-emerald-400">
@@ -293,16 +355,21 @@ export function TransacoesClient() {
 						{formatCurrency(totals.expense)}
 					</p>
 				</div>
-				<div
-					className={`rounded-lg border p-4 ${totals.balance >= 0 ? "bg-indigo-900/20 border-indigo-800/30" : "bg-red-900/20 border-red-800/30"}`}
-				>
-					<p className="text-xs text-zinc-400 mb-1">Saldo</p>
-					<p
-						className={`text-lg font-bold ${totals.balance >= 0 ? "text-indigo-400" : "text-red-400"}`}
-					>
-						{formatCurrency(totals.balance)}
-					</p>
-				</div>
+				{(() => {
+					const finalBalance = openingBalance + totals.balance;
+					return (
+						<div
+							className={`rounded-lg border p-4 ${finalBalance >= 0 ? "bg-indigo-900/20 border-indigo-800/30" : "bg-red-900/20 border-red-800/30"}`}
+						>
+							<p className="text-xs text-zinc-400 mb-1">Saldo final</p>
+							<p
+								className={`text-lg font-bold ${finalBalance >= 0 ? "text-indigo-400" : "text-red-400"}`}
+							>
+								{formatCurrency(finalBalance)}
+							</p>
+						</div>
+					);
+				})()}
 			</div>
 
 			{/* Bulk action bar */}

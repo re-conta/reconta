@@ -3,8 +3,9 @@ export const dynamic = "force-dynamic";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { billPayments, bills, categories, transactions } from "@/lib/db/schema";
+import { categories, transactions } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth-session";
+import { checkSharedAccess } from "@/lib/shared-access";
 import { getMonthRange, getPreviousMonth } from "@/lib/utils";
 
 async function getTotal(
@@ -27,9 +28,19 @@ async function getTotal(
 	return Number(row?.total ?? 0);
 }
 
-export async function GET(request: Request) {
+export async function GET(
+	request: Request,
+	{ params }: { params: Promise<{ ownerId: string }> },
+) {
 	const { userId, unauthorized } = await requireSession();
 	if (unauthorized) return unauthorized;
+
+	const { ownerId } = await params;
+
+	const access = await checkSharedAccess(ownerId, userId);
+	if (!access) {
+		return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+	}
 
 	const { searchParams } = new URL(request.url);
 	const month = Number(searchParams.get("month") ?? new Date().getMonth() + 1);
@@ -44,10 +55,10 @@ export async function GET(request: Request) {
 
 	const [currentIncome, currentExpense, prevIncome, prevExpense] =
 		await Promise.all([
-			getTotal("income", start, end, userId),
-			getTotal("expense", start, end, userId),
-			getTotal("income", prevStart, prevEnd, userId),
-			getTotal("expense", prevStart, prevEnd, userId),
+			getTotal("income", start, end, ownerId),
+			getTotal("expense", start, end, ownerId),
+			getTotal("income", prevStart, prevEnd, ownerId),
+			getTotal("expense", prevStart, prevEnd, ownerId),
 		]);
 
 	const expensesByCategory = await db
@@ -61,7 +72,7 @@ export async function GET(request: Request) {
 		.leftJoin(categories, eq(transactions.categoryId, categories.id))
 		.where(
 			and(
-				eq(transactions.userId, userId),
+				eq(transactions.userId, ownerId),
 				eq(transactions.type, "expense"),
 				gte(transactions.date, start),
 				lte(transactions.date, end),
@@ -84,39 +95,13 @@ export async function GET(request: Request) {
 		.leftJoin(categories, eq(transactions.categoryId, categories.id))
 		.where(
 			and(
-				eq(transactions.userId, userId),
+				eq(transactions.userId, ownerId),
 				gte(transactions.date, start),
 				lte(transactions.date, end),
 			),
 		)
 		.orderBy(desc(transactions.date))
 		.limit(10);
-
-	const pendingBills = await db
-		.select({
-			id: bills.id,
-			name: bills.name,
-			amount: bills.amount,
-			dueDay: bills.dueDay,
-			categoryName: categories.name,
-		})
-		.from(bills)
-		.leftJoin(categories, eq(bills.categoryId, categories.id))
-		.leftJoin(
-			billPayments,
-			and(
-				eq(billPayments.billId, bills.id),
-				eq(billPayments.month, month),
-				eq(billPayments.year, year),
-			),
-		)
-		.where(
-			and(
-				eq(bills.userId, userId),
-				eq(bills.isActive, true),
-				sql`(${billPayments.id} IS NULL OR ${billPayments.isPaid} = false)`,
-			),
-		);
 
 	const monthlyBalance = [];
 	for (let i = 5; i >= 0; i--) {
@@ -128,8 +113,8 @@ export async function GET(request: Request) {
 		}
 		const { start: ms, end: me } = getMonthRange(m, y);
 		const [inc, exp] = await Promise.all([
-			getTotal("income", ms, me, userId),
-			getTotal("expense", ms, me, userId),
+			getTotal("income", ms, me, ownerId),
+			getTotal("expense", ms, me, ownerId),
 		]);
 		monthlyBalance.push({
 			month: m,
@@ -153,7 +138,6 @@ export async function GET(request: Request) {
 		},
 		expensesByCategory,
 		recentTransactions,
-		pendingBills,
 		monthlyBalance,
 	});
 }

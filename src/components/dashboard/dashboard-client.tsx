@@ -7,7 +7,6 @@ import {
 	CheckCircle2,
 	ChevronLeft,
 	ChevronRight,
-	Circle,
 	TrendingDown,
 	TrendingUp,
 	Wallet,
@@ -220,18 +219,6 @@ export function DashboardClient() {
 													key={bill.id}
 													className="flex items-center gap-3 py-2 border-b border-zinc-800 last:border-0"
 												>
-													<button
-														type="button"
-														onClick={() => markBillPaid(bill.id, bill.amount)}
-														className="shrink-0 text-zinc-400 hover:text-emerald-400 transition-colors"
-														title="Marcar como paga"
-													>
-														{isOverdue ? (
-															<CheckCircle2 className="h-5 w-5 text-red-400 hover:text-emerald-400" />
-														) : (
-															<Circle className="h-5 w-5" />
-														)}
-													</button>
 													<div className="flex-1 min-w-0">
 														<p className="text-sm font-medium text-zinc-200">
 															{bill.name}
@@ -246,6 +233,15 @@ export function DashboardClient() {
 													<span className="text-sm font-medium text-amber-400 shrink-0">
 														{formatCurrency(bill.amount)}
 													</span>
+													<Button
+														size="sm"
+														variant="outline"
+														className="shrink-0 h-7 px-2 text-xs gap-1.5 border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/30 hover:text-emerald-300"
+														onClick={() => markBillPaid(bill.id, bill.amount)}
+													>
+														<CheckCircle2 className="h-3.5 w-3.5" />
+														Pagar
+													</Button>
 												</li>
 											);
 										})}

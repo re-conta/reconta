@@ -19,7 +19,7 @@ echo "📥 Instalando dependências..."
 pnpm install
 
 echo "🗃️ Aplicando migrações do banco de dados..."
-if ! pnpm drizzle-kit push; then
+if ! pnpm drizzle-kit migrate; then
   echo "❌ Falha ao aplicar migrações. Abortando deploy."
   exit 1
 fi

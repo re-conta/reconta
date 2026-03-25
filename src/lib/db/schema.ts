@@ -170,6 +170,36 @@ export const notificationLogs = sqliteTable("notification_logs", {
 	notificationCount: integer("notification_count").notNull().default(1),
 });
 
+export const monthlyOpeningBalances = sqliteTable(
+	"monthly_opening_balances",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		month: integer("month").notNull(),
+		year: integer("year").notNull(),
+		amount: real("amount").notNull().default(0),
+		updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+	},
+);
+
+export const sharedAccess = sqliteTable("shared_access", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	ownerId: text("owner_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	targetId: text("target_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	scope: text("scope", { enum: ["all", "yearly", "monthly"] })
+		.notNull()
+		.default("all"),
+	scopeMonth: integer("scope_month"),
+	scopeYear: integer("scope_year"),
+	createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof user.$inferSelect;
@@ -185,3 +215,5 @@ export type BillPayment = typeof billPayments.$inferSelect;
 export type NewBillPayment = typeof billPayments.$inferInsert;
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
 export type NotificationLog = typeof notificationLogs.$inferSelect;
+export type SharedAccess = typeof sharedAccess.$inferSelect;
+export type NewSharedAccess = typeof sharedAccess.$inferInsert;

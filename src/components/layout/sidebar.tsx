@@ -9,6 +9,7 @@ import {
 	LogOut,
 	Menu,
 	Settings,
+	Share2,
 	Tags,
 	Upload,
 	Wallet,
@@ -26,10 +27,11 @@ const navigation = [
 	{ name: "Lançamentos", href: "/transacoes", icon: BookOpen },
 	{ name: "Contas Fixas", href: "/contas", icon: AlertCircle },
 	{ name: "Relatórios", href: "/relatorios", icon: BarChart3 },
-	{ name: "Importar PDF", href: "/importar", icon: Upload },
+	{ name: "Importar Extrato", href: "/importar", icon: Upload },
 	{ name: "Exportar", href: "/exportar", icon: Download },
 	{ name: "Categorias", href: "/categorias", icon: Tags },
 	{ name: "Contas Bancárias", href: "/contas-bancarias", icon: Wallet },
+	{ name: "Compartilhamentos", href: "/compartilhamentos", icon: Share2 },
 	{ name: "Ajustes", href: "/ajustes", icon: Settings },
 ];
 
@@ -66,6 +68,7 @@ export function Sidebar() {
 						alt="ReConta"
 						width={32}
 						height={32}
+						loading="eager"
 					/>
 					<span className="text-base font-bold text-white">ReConta</span>
 				</div>
@@ -96,6 +99,7 @@ export function Sidebar() {
 							alt="ReConta"
 							width={32}
 							height={32}
+							loading="eager"
 						/>
 						<div>
 							<span className="text-lg font-bold text-white">ReConta</span>

@@ -63,7 +63,7 @@ pnpm start
 | **Lançamentos** | `/transacoes` | Livro-caixa completo com filtros por tipo/mês, busca por descrição, totalizadores e CRUD |
 | **Contas Fixas** | `/contas` | Alertas de cobranças recorrentes (condomínio, luz, internet etc.) com controle de pagamento por mês |
 | **Relatórios** | `/relatorios` | Comparativo mês atual vs anterior, gráfico de poupança, análise por categoria |
-| **Importar PDF** | `/importar` | Upload de extrato bancário em PDF via drag & drop com parsing automático de transações |
+| **Importar Extrato** | `/importar` | Upload de extrato bancário em PDF via drag & drop com parsing automático de transações |
 | **Categorias** | `/categorias` | CRUD de categorias com cores customizáveis (receita, despesa ou ambos) |
 | **Contas Bancárias** | `/contas-bancarias` | Gerenciamento de contas (corrente, poupança, crédito, investimentos) com saldo total |
 

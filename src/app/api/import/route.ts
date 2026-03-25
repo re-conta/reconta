@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 			transactions: inserted,
 		});
 	} catch (error) {
-		console.error("Erro ao importar PDF:", error);
+		console.error("Erro ao importar extrato:", error);
 		return NextResponse.json(
 			{ error: "Erro interno ao processar o arquivo. Tente novamente." },
 			{ status: 500 },

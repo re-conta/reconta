@@ -1,9 +1,21 @@
 "use client";
 
-import { Bell, Mail, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bell, Mail, Save, Trash2, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { signOut, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -26,10 +38,33 @@ const defaults: Settings = {
 };
 
 export function AjustesClient() {
+	const router = useRouter();
+	const { data: session, refetch: refetchSession } = useSession();
 	const [settings, setSettings] = useState<Settings>(defaults);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [saved, setSaved] = useState(false);
+
+	// Profile state
+	const [profileName, setProfileName] = useState("");
+	const [profileImage, setProfileImage] = useState("");
+	const [savingProfile, setSavingProfile] = useState(false);
+	const [savedProfile, setSavedProfile] = useState(false);
+
+	// Delete account state
+	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [deleteConfirm, setDeleteConfirm] = useState("");
+	const [deleting, setDeleting] = useState(false);
+
+	const profileInitialized = useRef(false);
+
+	useEffect(() => {
+		if (session?.user && !profileInitialized.current) {
+			profileInitialized.current = true;
+			setProfileName(session.user.name ?? "");
+			setProfileImage(session.user.image ?? "");
+		}
+	}, [session]);
 
 	useEffect(() => {
 		fetch("/api/settings")
@@ -64,6 +99,42 @@ export function AjustesClient() {
 		}
 	}
 
+	async function handleSaveProfile(e: React.FormEvent) {
+		e.preventDefault();
+		setSavingProfile(true);
+		setSavedProfile(false);
+		try {
+			await fetch("/api/settings/account", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					name: profileName,
+					image: profileImage || null,
+				}),
+			});
+			await refetchSession();
+			setSavedProfile(true);
+			setTimeout(() => setSavedProfile(false), 3000);
+		} finally {
+			setSavingProfile(false);
+		}
+	}
+
+	async function handleDeleteAccount() {
+		setDeleting(true);
+		try {
+			await fetch("/api/settings/account", { method: "DELETE" });
+			try {
+				await signOut();
+			} catch {
+				// ignore
+			}
+			router.push("/login");
+		} finally {
+			setDeleting(false);
+		}
+	}
+
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-48 text-zinc-400">
@@ -80,6 +151,73 @@ export function AjustesClient() {
 					Configure as preferências de notificação do sistema.
 				</p>
 			</div>
+
+			{/* Profile */}
+			<form onSubmit={handleSaveProfile} className="space-y-6">
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2 text-base">
+							<User className="h-4 w-4 text-violet-400" />
+							Perfil
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="flex items-center gap-4">
+							{profileImage ? (
+								<Image
+									src={profileImage}
+									alt="Avatar"
+									width={56}
+									height={56}
+									unoptimized
+									className="h-14 w-14 rounded-full object-cover ring-2 ring-zinc-700"
+								/>
+							) : (
+								<div className="h-14 w-14 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400">
+									<User className="h-6 w-6" />
+								</div>
+							)}
+							<div className="flex-1 space-y-1.5">
+								<Label htmlFor="profileImage">URL do avatar</Label>
+								<Input
+									id="profileImage"
+									type="url"
+									placeholder="https://..."
+									value={profileImage}
+									onChange={(e) => setProfileImage(e.target.value)}
+								/>
+							</div>
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="profileName">Nome</Label>
+							<Input
+								id="profileName"
+								type="text"
+								placeholder="Seu nome"
+								value={profileName}
+								onChange={(e) => setProfileName(e.target.value)}
+								required
+							/>
+						</div>
+					</CardContent>
+				</Card>
+
+				<div className="flex items-center gap-3">
+					<Button
+						type="submit"
+						disabled={savingProfile}
+						className="flex items-center gap-2"
+					>
+						<Save className="h-4 w-4" />
+						{savingProfile ? "Salvando..." : "Salvar perfil"}
+					</Button>
+					{savedProfile && (
+						<span className="text-sm text-emerald-400 animate-in fade-in">
+							Perfil atualizado!
+						</span>
+					)}
+				</div>
+			</form>
 
 			<form onSubmit={handleSubmit} className="space-y-6">
 				{/* Email Notifications */}
@@ -257,6 +395,76 @@ export function AjustesClient() {
 					)}
 				</div>
 			</form>
+
+			{/* Danger zone */}
+			<Card className="border-red-900/50">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2 text-base text-red-400">
+						<Trash2 className="h-4 w-4" />
+						Zona de perigo
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="flex items-center justify-between gap-4">
+						<div>
+							<p className="text-sm font-medium text-zinc-100">Excluir conta</p>
+							<p className="text-xs text-zinc-400 mt-0.5">
+								Remove permanentemente sua conta e todos os dados associados.
+								Esta ação não pode ser desfeita.
+							</p>
+						</div>
+						<Button
+							type="button"
+							variant="destructive"
+							onClick={() => {
+								setDeleteConfirm("");
+								setDeleteOpen(true);
+							}}
+						>
+							Excluir conta
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Delete confirmation dialog */}
+			<Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Excluir conta</DialogTitle>
+						<DialogDescription>
+							Esta ação é permanente e irá remover todos os seus dados,
+							incluindo transações, contas e categorias. Digite{" "}
+							<span className="font-semibold text-zinc-200">EXCLUIR</span> para
+							confirmar.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-1.5 py-2">
+						<Label htmlFor="deleteConfirm">Confirmação</Label>
+						<Input
+							id="deleteConfirm"
+							placeholder="EXCLUIR"
+							value={deleteConfirm}
+							onChange={(e) => setDeleteConfirm(e.target.value)}
+						/>
+					</div>
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button type="button" variant="outline">
+								Cancelar
+							</Button>
+						</DialogClose>
+						<Button
+							type="button"
+							variant="destructive"
+							disabled={deleteConfirm !== "EXCLUIR" || deleting}
+							onClick={handleDeleteAccount}
+						>
+							{deleting ? "Excluindo..." : "Excluir permanentemente"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
