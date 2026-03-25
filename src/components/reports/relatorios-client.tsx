@@ -51,11 +51,15 @@ export function RelatoriosClient({
 	useEffect(() => {
 		setLoading(true);
 		fetch(`/api/dashboard?month=${month}&year=${year}`)
-			.then((r) => r.json())
+			.then((r) => {
+				if (!r.ok) throw new Error(r.statusText);
+				return r.json();
+			})
 			.then((d) => {
 				setData(d);
 				setLoading(false);
-			});
+			})
+			.catch(() => setLoading(false));
 	}, [month, year]);
 
 	function prevMonth() {

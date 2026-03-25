@@ -10,12 +10,16 @@ export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
 
 export function SelectTrigger({
+	id,
 	className,
 	children,
 	...props
-}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>) {
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+	id?: string;
+}) {
 	return (
 		<SelectPrimitive.Trigger
+			id={id}
 			className={cn(
 				"flex h-9 w-full items-center justify-between rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50",
 				className,

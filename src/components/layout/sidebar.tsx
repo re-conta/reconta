@@ -33,7 +33,11 @@ export function Sidebar() {
 	const { data: session } = useSession();
 
 	async function handleSignOut() {
-		await signOut();
+		try {
+			await signOut();
+		} catch {
+			// ignore network errors during sign-out
+		}
 		router.push("/login");
 	}
 

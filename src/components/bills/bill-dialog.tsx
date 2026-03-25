@@ -51,8 +51,12 @@ export function BillDialog({ open, onClose, bill, onSaved }: Props) {
 
 	useEffect(() => {
 		fetch("/api/categories")
-			.then((r) => r.json())
-			.then(setCategories);
+			.then((r) => {
+				if (!r.ok) throw new Error(r.statusText);
+				return r.json();
+			})
+			.then(setCategories)
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {

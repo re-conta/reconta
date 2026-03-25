@@ -55,11 +55,7 @@ const YEARS = Array.from({ length: currentYear - 2019 }, (_, i) =>
 	String(currentYear - i),
 );
 
-function buildPeriodLabel(
-	scope: Scope,
-	month: string,
-	year: string,
-): string {
+function buildPeriodLabel(scope: Scope, month: string, year: string): string {
 	if (scope === "month") {
 		const monthLabel = MONTHS.find((m) => m.value === month)?.label ?? month;
 		return `${monthLabel} de ${year}`;
@@ -151,8 +147,7 @@ async function exportPdf(
 		bodyStyles: { fontSize: 9 },
 		columnStyles: {
 			2: {
-				textColor:
-					totals.balance >= 0 ? [22, 163, 74] : [220, 38, 38],
+				textColor: totals.balance >= 0 ? [22, 163, 74] : [220, 38, 38],
 			},
 		},
 	});
@@ -230,7 +225,10 @@ export function ExportarClient() {
 			}
 
 			const periodLabel = buildPeriodLabel(scope, month, year);
-			const safePeriod = periodLabel.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+			const safePeriod = periodLabel
+				.toLowerCase()
+				.replace(/\s+/g, "-")
+				.replace(/[^a-z0-9-]/g, "");
 			const filename = `lancamentos-${safePeriod}`;
 
 			if (format === "pdf") {
@@ -254,9 +252,11 @@ export function ExportarClient() {
 				</h2>
 
 				<div className="space-y-1">
-					<label className="text-xs text-zinc-400">Filtrar por</label>
+					<label htmlFor="scope" className="text-xs text-zinc-400">
+						Filtrar por
+					</label>
 					<Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
-						<SelectTrigger>
+						<SelectTrigger id="scope">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -270,9 +270,11 @@ export function ExportarClient() {
 				{scope === "month" && (
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1">
-							<label className="text-xs text-zinc-400">Mês</label>
+							<label htmlFor="month" className="text-xs text-zinc-400">
+								Mês
+							</label>
 							<Select value={month} onValueChange={setMonth}>
-								<SelectTrigger>
+								<SelectTrigger id="month">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -285,9 +287,11 @@ export function ExportarClient() {
 							</Select>
 						</div>
 						<div className="space-y-1">
-							<label className="text-xs text-zinc-400">Ano</label>
+							<label htmlFor="year" className="text-xs text-zinc-400">
+								Ano
+							</label>
 							<Select value={year} onValueChange={setYear}>
-								<SelectTrigger>
+								<SelectTrigger id="year">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -304,9 +308,11 @@ export function ExportarClient() {
 
 				{scope === "year" && (
 					<div className="space-y-1">
-						<label className="text-xs text-zinc-400">Ano</label>
+						<label htmlFor="year" className="text-xs text-zinc-400">
+							Ano
+						</label>
 						<Select value={year} onValueChange={setYear}>
-							<SelectTrigger>
+							<SelectTrigger id="year">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>

@@ -65,10 +65,12 @@ export function BulkEditDialog({ open, onClose, count, onSave }: Props) {
 		Promise.all([
 			fetch("/api/categories").then((r) => r.json()),
 			fetch("/api/accounts").then((r) => r.json()),
-		]).then(([cats, accs]) => {
-			setCategories(cats);
-			setAccounts(accs);
-		});
+		])
+			.then(([cats, accs]) => {
+				setCategories(cats);
+				setAccounts(accs);
+			})
+			.catch(() => {});
 		setEnableType(false);
 		setEnableCategory(false);
 		setEnableAccount(false);

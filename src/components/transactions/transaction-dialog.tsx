@@ -81,10 +81,12 @@ export function TransactionDialog({
 		Promise.all([
 			fetch("/api/categories").then((r) => r.json()),
 			fetch("/api/accounts").then((r) => r.json()),
-		]).then(([cats, accs]) => {
-			setCategories(Array.isArray(cats) ? cats : []);
-			setAccounts(Array.isArray(accs) ? accs : []);
-		});
+		])
+			.then(([cats, accs]) => {
+				setCategories(Array.isArray(cats) ? cats : []);
+				setAccounts(Array.isArray(accs) ? accs : []);
+			})
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
