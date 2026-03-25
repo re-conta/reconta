@@ -1,6 +1,15 @@
 # ReConta — Controle Financeiro Pessoal
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./public/images/banner.svg" />
+    <img src="./public/images/banner.svg" alt="ReConta" />
+  </picture>
+</p>
+
 > **reconta.app** · Gerencie suas finanças, analise extratos bancários e acompanhe sua poupança.
+
+[![Deploy](https://github.com/sistematico/reconta/actions/workflows/deploy.yml/badge.svg)](https://github.com/sistematico/reconta/actions/workflows/deploy.yml)
 
 ## Stack
 

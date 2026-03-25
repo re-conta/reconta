@@ -23,15 +23,13 @@ if ! pnpm drizzle-kit push; then
   echo "❌ Falha ao aplicar migrações. Abortando deploy."
   exit 1
 fi
-
 echo "✅ Migrações aplicadas com sucesso!"
 
 # if ! pnpm run seed; then
 #   echo "❌ Falha ao executar seed. Abortando deploy."
 #   exit 1
 # fi
-
-echo "✅ Seed concluído com sucesso!"
+#echo "✅ Seed concluído com sucesso!"
 
 if pnpm run build; then
   echo "✅ Build concluído com sucesso!"
