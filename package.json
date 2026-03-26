@@ -50,7 +50,12 @@
 	"pnpm": {
 		"overrides": {
 			"esbuild": ">=0.25.0"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"better-sqlite3",
+			"core-js",
+			"esbuild"
+		]
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.8",

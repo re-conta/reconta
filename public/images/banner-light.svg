@@ -7,7 +7,7 @@
    width="600"
    height="200"
    viewBox="0 0 600.00003 200"
-   sodipodi:docname="banner.svg"
+   sodipodi:docname="banner-light.svg"
    inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -506,7 +506,7 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-weight:bold;font-size:106.667px;font-family:Nunito;-inkscape-font-specification:'Nunito, Bold';writing-mode:lr-tb;direction:ltr;fill:#f9f9f9"
+       style="font-weight:bold;font-size:106.667px;font-family:Nunito;-inkscape-font-specification:'Nunito, Bold';writing-mode:lr-tb;direction:ltr;fill:#4d4d4d"
        x="1577.3921"
        y="700.36633"
        id="text1"><tspan
@@ -514,6 +514,6 @@
          id="tspan1"
          x="1577.3921"
          y="700.36633"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;font-family:Nunito;-inkscape-font-specification:'Nunito, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#f9f9f9">ReConta</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;font-family:Nunito;-inkscape-font-specification:'Nunito, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal">ReConta</tspan></text>
   </g>
 </svg>

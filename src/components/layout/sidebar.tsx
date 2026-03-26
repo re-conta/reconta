@@ -148,9 +148,20 @@ export function Sidebar() {
 				<div className="p-4 border-t border-zinc-800 space-y-3">
 					{session?.user && (
 						<div className="flex items-center gap-2.5 px-2">
-							<div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
-								{session.user.name?.[0]?.toUpperCase() ?? "U"}
-							</div>
+							{session.user.image ? (
+								<Image
+									src={session.user.image}
+									alt={session.user.name ?? "Avatar"}
+									width={32}
+									height={32}
+									unoptimized
+									className="h-8 w-8 rounded-full object-cover shrink-0"
+								/>
+							) : (
+								<div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
+									{session.user.name?.[0]?.toUpperCase() ?? "U"}
+								</div>
+							)}
 							<div className="flex-1 min-w-0">
 								<p className="text-xs font-medium text-zinc-200 truncate">
 									{session.user.name}

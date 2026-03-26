@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, FileText, Upload, XCircle } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,12 @@ export function ImportarClient() {
 	const [error, setError] = useState<string | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const { accounts } = useAccounts();
+
+	useEffect(() => {
+		if (accounts.length === 1 && !accountId) {
+			setAccountId(String(accounts[0].id));
+		}
+	}, [accounts, accountId]);
 
 	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const f = e.target.files?.[0];

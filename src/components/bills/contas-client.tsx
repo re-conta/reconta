@@ -107,12 +107,12 @@ export function ContasClient({
 	return (
 		<div className="space-y-4">
 			{/* Month selector + button */}
-			<div className="flex items-center justify-between">
+			<div className="flex flex-wrap items-center gap-3">
 				<div className="flex items-center gap-2">
 					<Button variant="outline" size="icon" onClick={prevMonth}>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
-					<span className="font-medium capitalize min-w-40 text-center text-zinc-100">
+					<span className="font-medium capitalize min-w-28 text-center text-zinc-100">
 						{formatMonth(month, year)}
 					</span>
 					<Button
@@ -125,6 +125,8 @@ export function ContasClient({
 					</Button>
 				</div>
 				<Button
+					className="ml-auto"
+					size="sm"
 					onClick={() => {
 						setEditingBill(null);
 						setDialogOpen(true);

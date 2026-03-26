@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate, formatMonth } from "@/lib/utils";
+import { InlineTransactionForm } from "./inline-transaction-form";
 import { TransactionDialog } from "./transaction-dialog";
 import { BulkEditDialog, type BulkEditFields } from "./bulk-edit-dialog";
 import {
@@ -62,6 +63,9 @@ export function TransacoesClient() {
 	const [loading, setLoading] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+	const [inlineEditingTx, setInlineEditingTx] = useState<Transaction | null>(
+		null,
+	);
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 	const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
@@ -224,12 +228,12 @@ export function TransacoesClient() {
 	return (
 		<div className="space-y-4">
 			{/* Controls */}
-			<div className="flex flex-wrap items-center gap-3">
+			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-2">
 					<Button variant="outline" size="icon" onClick={prevMonth}>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
-					<span className="font-medium capitalize min-w-40 text-center text-zinc-100">
+					<span className="font-medium capitalize min-w-28 text-center text-zinc-100">
 						{formatMonth(month, year)}
 					</span>
 					<Button
@@ -241,8 +245,20 @@ export function TransacoesClient() {
 						<ChevronRight className="h-4 w-4" />
 					</Button>
 				</div>
+				<Button
+					size="sm"
+					onClick={() => {
+						setEditingTx(null);
+						setDialogOpen(true);
+					}}
+				>
+					<Plus className="h-4 w-4" />
+					<span className="hidden sm:inline">Novo lançamento</span>
+				</Button>
+			</div>
 
-				<div className="relative flex-1 min-w-50">
+			<div className="flex flex-wrap items-center gap-2">
+				<div className="relative flex-1 min-w-40">
 					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
 					<Input
 						placeholder="Buscar..."
@@ -251,7 +267,6 @@ export function TransacoesClient() {
 						className="pl-9"
 					/>
 				</div>
-
 				<div className="flex gap-1">
 					{(["all", "income", "expense"] as const).map((t) => (
 						<Button
@@ -264,49 +279,36 @@ export function TransacoesClient() {
 						</Button>
 					))}
 				</div>
-
-				<div className="ml-auto flex gap-2">
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" size="sm">
-								<Trash2 className="h-4 w-4 text-red-400" />
-								Apagar em massa
-								<ChevronDown className="h-3.5 w-3.5" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem
-								className="text-red-400 focus:text-red-300"
-								onSelect={() => bulkDelete("month")}
-							>
-								Apagar {formatMonth(month, year)}
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="text-red-400 focus:text-red-300"
-								onSelect={() => bulkDelete("year")}
-							>
-								Apagar ano {year}
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="text-red-400 focus:text-red-300"
-								onSelect={() => bulkDelete("all")}
-							>
-								Apagar tudo
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-
-					<Button
-						onClick={() => {
-							setEditingTx(null);
-							setDialogOpen(true);
-						}}
-					>
-						<Plus className="h-4 w-4" />
-						Novo lançamento
-					</Button>
-				</div>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="outline" size="sm">
+							<Trash2 className="h-4 w-4 text-red-400" />
+							<span className="hidden sm:inline">Apagar em massa</span>
+							<ChevronDown className="h-3.5 w-3.5" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem
+							className="text-red-400 focus:text-red-300"
+							onSelect={() => bulkDelete("month")}
+						>
+							Apagar {formatMonth(month, year)}
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							className="text-red-400 focus:text-red-300"
+							onSelect={() => bulkDelete("year")}
+						>
+							Apagar ano {year}
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							className="text-red-400 focus:text-red-300"
+							onSelect={() => bulkDelete("all")}
+						>
+							Apagar tudo
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
 
 			{/* Totals */}
@@ -332,7 +334,7 @@ export function TransacoesClient() {
 					) : (
 						<button
 							type="button"
-							className="text-lg font-bold text-zinc-200 hover:text-white cursor-pointer text-left w-full"
+							className="group flex items-center gap-1.5 text-lg font-bold text-zinc-200 hover:text-white cursor-pointer text-left w-full"
 							onClick={() => {
 								setOpeningBalanceInput(String(openingBalance));
 								setEditingOpeningBalance(true);
@@ -340,6 +342,7 @@ export function TransacoesClient() {
 							title="Clique para editar o saldo inicial"
 						>
 							{formatCurrency(openingBalance)}
+							<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
 						</button>
 					)}
 				</div>
@@ -406,6 +409,18 @@ export function TransacoesClient() {
 					</div>
 				</div>
 			)}
+
+			{/* Inline form */}
+			<InlineTransactionForm
+				transaction={inlineEditingTx}
+				defaultMonth={month}
+				defaultYear={year}
+				onSaved={() => {
+					setInlineEditingTx(null);
+					fetchTransactions();
+				}}
+				onCancel={() => setInlineEditingTx(null)}
+			/>
 
 			{/* Table */}
 			<Card>
@@ -500,10 +515,7 @@ export function TransacoesClient() {
 														variant="ghost"
 														size="icon"
 														className="h-7 w-7"
-														onClick={() => {
-															setEditingTx(tx);
-															setDialogOpen(true);
-														}}
+														onClick={() => setInlineEditingTx(tx)}
 													>
 														<Pencil className="h-3.5 w-3.5" />
 													</Button>

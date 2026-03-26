@@ -3,7 +3,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./public/images/banner.svg" />
-    <img src="./public/images/banner.svg" alt="ReConta" />
+    <img src="./public/images/banner-light.svg" alt="ReConta" />
   </picture>
 </p>
 
@@ -33,7 +33,7 @@ cd reconta
 pnpm install
 
 # Crie o banco de dados (SQLite)
-pnpm db:push
+pnpm push
 ```
 
 ## Desenvolvimento
@@ -86,11 +86,12 @@ pnpm start
 pnpm dev          # Servidor de desenvolvimento
 pnpm build        # Build de produção
 pnpm start        # Servidor de produção
-pnpm db:push      # Aplica o schema ao banco SQLite
-pnpm db:generate  # Gera arquivos de migração (drizzle-kit)
-pnpm db:studio    # Abre o Drizzle Studio (GUI para o banco)
+pnpm push         # Aplica o schema ao banco SQLite
+pnpm generate     # Gera arquivos de migração (drizzle-kit)
+pnpm studio       # Abre o Drizzle Studio (GUI para o banco)
 pnpm lint         # Verifica problemas com Biome
 pnpm format       # Formata o código com Biome
+pnpm check        # Checa o código por erros de sintaxe
 ```
 
 ---
