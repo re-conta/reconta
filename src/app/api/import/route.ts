@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 		}
 
 		const buffer = await file.arrayBuffer();
-		const parsed = await parseBankStatementPdf(buffer);
+		const { bank, transactions: parsed } = await parseBankStatementPdf(buffer);
 
 		if (parsed.length === 0) {
 			return NextResponse.json(
@@ -55,6 +55,8 @@ export async function POST(request: Request) {
 					categoryId: defaultCategoryId ? Number(defaultCategoryId) : null,
 					accountId: accountId ? Number(accountId) : null,
 					importedFrom: file.name,
+					bank,
+					pixBeneficiary: t.pixBeneficiary,
 				})),
 			)
 			.returning();

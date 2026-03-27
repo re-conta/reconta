@@ -56,6 +56,8 @@ export async function GET(request: Request) {
 				accountId: transactions.accountId,
 				notes: transactions.notes,
 				importedFrom: transactions.importedFrom,
+				bank: transactions.bank,
+				pixBeneficiary: transactions.pixBeneficiary,
 				createdAt: transactions.createdAt,
 			})
 			.from(transactions)

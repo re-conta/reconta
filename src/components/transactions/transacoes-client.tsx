@@ -38,6 +38,8 @@ interface Transaction {
 	categoryColor: string | null;
 	notes: string | null;
 	accountId: number | null;
+	bank: string | null;
+	pixBeneficiary: string | null;
 }
 
 interface Totals {
@@ -481,7 +483,17 @@ export function TransacoesClient() {
 											<td className="px-4 py-3">
 												<div className="text-zinc-200 font-medium truncate max-w-xs">
 													{tx.description}
-												</div>
+												</div>{" "}
+												{tx.pixBeneficiary && (
+													<div className="text-xs text-indigo-400/70 truncate">
+														Beneficiário: {tx.pixBeneficiary}
+													</div>
+												)}
+												{tx.bank && (
+													<div className="text-xs text-zinc-500 truncate">
+														{tx.bank}
+													</div>
+												)}{" "}
 												{tx.notes && (
 													<div className="text-xs text-zinc-500 truncate">
 														{tx.notes}

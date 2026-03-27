@@ -23,6 +23,8 @@ interface ImportResult {
 		description: string;
 		amount: number;
 		type: string;
+		bank: string | null;
+		pixBeneficiary: string | null;
 	}>;
 }
 
@@ -191,9 +193,16 @@ export function ImportarClient() {
 				<div className="space-y-4">
 					<div className="flex items-center gap-3 rounded-xl border border-emerald-800 bg-emerald-900/20 p-4">
 						<CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-						<p className="font-medium text-emerald-400">
-							{result.imported} transação(ões) importada(s) com sucesso!
-						</p>
+						<div>
+							<p className="font-medium text-emerald-400">
+								{result.imported} transação(ões) importada(s) com sucesso!
+							</p>
+							{result.transactions[0]?.bank && (
+								<p className="text-sm text-emerald-300/70 mt-0.5">
+									Banco detectado: {result.transactions[0].bank}
+								</p>
+							)}
+						</div>
 					</div>
 
 					<Card>
@@ -211,6 +220,9 @@ export function ImportarClient() {
 											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400">
 												Descrição
 											</th>
+											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400">
+												Beneficiário PIX
+											</th>
 											<th className="text-right px-4 py-3 text-xs font-medium text-zinc-400">
 												Valor
 											</th>
@@ -224,6 +236,9 @@ export function ImportarClient() {
 												</td>
 												<td className="px-4 py-2.5 text-zinc-200 truncate max-w-xs">
 													{tx.description}
+												</td>
+												<td className="px-4 py-2.5 text-indigo-400/70 truncate max-w-xs">
+													{tx.pixBeneficiary || "—"}
 												</td>
 												<td
 													className={`px-4 py-2.5 text-right font-medium whitespace-nowrap ${tx.type === "income" ? "text-emerald-400" : "text-red-400"}`}

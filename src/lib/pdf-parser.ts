@@ -5,6 +5,12 @@ export interface ParsedTransaction {
 	description: string;
 	amount: number;
 	type: "income" | "expense";
+	pixBeneficiary: string | null;
+}
+
+export interface ParsedStatement {
+	bank: string | null;
+	transactions: ParsedTransaction[];
 }
 
 declare global {
@@ -17,11 +23,8 @@ declare global {
 
 export async function parseBankStatementPdf(
 	buffer: ArrayBuffer,
-): Promise<ParsedTransaction[]> {
+): Promise<ParsedStatement> {
 	const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-	// In Node environment, PDF.js uses a fake worker and tries to import pdf.worker.mjs
-	// relatively from the calling module, which breaks in Next.js chunks.
-	// Provide the worker handler directly via globalThis.pdfjsWorker to avoid dynamic import.
 	type PdfjsWorkerType = { WorkerMessageHandler: unknown };
 	const globalThisPdfjs = globalThis as typeof globalThis & {
 		pdfjsWorker?: PdfjsWorkerType;
@@ -47,6 +50,7 @@ export async function parseBankStatementPdf(
 	const pdf = await loadingTask.promise;
 
 	const transactions: ParsedTransaction[] = [];
+	const allText: string[] = [];
 	try {
 		for (let i = 1; i <= pdf.numPages; i++) {
 			const page = await pdf.getPage(i);
@@ -55,13 +59,85 @@ export async function parseBankStatementPdf(
 				.map((item) => ("str" in item ? (item.str ?? "") : ""))
 				.join(" ");
 			page.cleanup();
+			allText.push(pageText);
 			parseTextToTransactions(pageText, transactions);
 		}
 	} finally {
 		pdf.destroy();
 	}
 
-	return transactions;
+	const fullText = allText.join(" ");
+	const bank = detectBank(fullText);
+
+	return { bank, transactions };
+}
+
+/** Detect which bank issued the statement based on full PDF text */
+const BANK_PATTERNS: Array<{ name: string; pattern: RegExp }> = [
+	{
+		name: "Itaú",
+		pattern: /\b(ita[uú]\s*unibanco|banco\s*ita[uú]|itau\.com\.br)\b/i,
+	},
+	{ name: "Bradesco", pattern: /\b(bradesco|banco\s*bradesco)\b/i },
+	{
+		name: "Banco do Brasil",
+		pattern: /\b(banco\s*do\s*brasil|bb\.com\.br)\b/i,
+	},
+	{
+		name: "Caixa",
+		pattern: /\b(caixa\s*econ[oô]mica|caixa\s*federal|cef\b|caixa\.gov\.br)\b/i,
+	},
+	{ name: "Nubank", pattern: /\b(nubank|nu\s*pagamentos|nubank\.com\.br)\b/i },
+	{ name: "Santander", pattern: /\b(santander|banco\s*santander)\b/i },
+	{ name: "Inter", pattern: /\b(banco\s*inter|inter\.co|bancointer)\b/i },
+	{ name: "C6 Bank", pattern: /\b(c6\s*bank|c6bank|banco\s*c6)\b/i },
+	{ name: "Sicoob", pattern: /\b(sicoob|bancoob)\b/i },
+	{ name: "Sicredi", pattern: /\b(sicredi)\b/i },
+	{ name: "BTG Pactual", pattern: /\b(btg\s*pactual)\b/i },
+	{ name: "Safra", pattern: /\b(banco\s*safra|safra\.com\.br)\b/i },
+	{ name: "Original", pattern: /\b(banco\s*original|original\.com\.br)\b/i },
+	{ name: "PagBank", pattern: /\b(pagbank|pagseguro)\b/i },
+	{ name: "Mercado Pago", pattern: /\b(mercado\s*pago)\b/i },
+	{ name: "Neon", pattern: /\b(banco\s*neon|neon\.com\.br)\b/i },
+	{ name: "Next", pattern: /\b(banco\s*next|next\.me)\b/i },
+	{ name: "Banrisul", pattern: /\b(banrisul)\b/i },
+	{ name: "BRB", pattern: /\b(brb\b|banco\s*de\s*bras[ií]lia)\b/i },
+	{ name: "Daycoval", pattern: /\b(daycoval)\b/i },
+];
+
+function detectBank(text: string): string | null {
+	for (const { name, pattern } of BANK_PATTERNS) {
+		if (pattern.test(text)) return name;
+	}
+	return null;
+}
+
+/**
+ * Extract PIX beneficiary from a transaction description.
+ * Common patterns:
+ * - "Transferencia PIX - 12345 NOME DO DESTINATARIO"
+ * - "PIX enviado - NOME DO DESTINATARIO"
+ * - "PIX recebido - NOME DO REMETENTE"
+ * - "Pix Enviado NOME"
+ */
+const PIX_BENEFICIARY_PATTERNS = [
+	/transfer[eê]ncia\s+pix\s*[-–]\s*\d+\s+(.+)/i,
+	/transfer[eê]ncia\s+pix\s*[-–]\s*(.+)/i,
+	/pix\s+enviad[oa]\s*[-–]\s*(.+)/i,
+	/pix\s+recebid[oa]\s*[-–]\s*(.+)/i,
+	/pix\s+enviad[oa]\s+(.+)/i,
+	/pix\s+recebid[oa]\s+(.+)/i,
+];
+
+function extractPixBeneficiary(description: string): string | null {
+	for (const pattern of PIX_BENEFICIARY_PATTERNS) {
+		const match = pattern.exec(description);
+		if (match?.[1]) {
+			const name = match[1].trim().replace(/\s+/g, " ");
+			if (name.length >= 2 && name.length < 150) return name;
+		}
+	}
+	return null;
 }
 
 /** Keywords that indicate an income transaction */
@@ -134,7 +210,14 @@ function parseTextToTransactions(
 
 			const isSaldoLine = /\bsaldo\b/i.test(description);
 			if (!isSaldoLine && description.length > 3 && description.length < 200) {
-				transactions.push({ date: isoDate, description, amount, type });
+				const pixBeneficiary = extractPixBeneficiary(description);
+				transactions.push({
+					date: isoDate,
+					description,
+					amount,
+					type,
+					pixBeneficiary,
+				});
 			}
 		}
 		if (transactions.length > 0) break;

@@ -100,6 +100,8 @@ export const transactions = sqliteTable("transactions", {
 	accountId: integer("account_id").references(() => accounts.id),
 	notes: text("notes"),
 	importedFrom: text("imported_from"),
+	bank: text("bank"),
+	pixBeneficiary: text("pix_beneficiary"),
 	createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
