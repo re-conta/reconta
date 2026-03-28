@@ -2,6 +2,7 @@
 
 import {
 	Bell,
+	FlaskConical,
 	Mail,
 	MessageCircle,
 	Phone,
@@ -67,6 +68,11 @@ export function AjustesClient() {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState("");
 	const [deleting, setDeleting] = useState(false);
+
+	// Test notification state
+	const [testingEmail, setTestingEmail] = useState(false);
+	const [testingWhatsapp, setTestingWhatsapp] = useState(false);
+	const [testResult, setTestResult] = useState<string | null>(null);
 
 	const profileInitialized = useRef(false);
 
@@ -146,6 +152,31 @@ export function AjustesClient() {
 			router.push("/login");
 		} finally {
 			setDeleting(false);
+		}
+	}
+
+	async function handleTestNotification(channel: "email" | "whatsapp") {
+		const setter = channel === "email" ? setTestingEmail : setTestingWhatsapp;
+		setter(true);
+		setTestResult(null);
+		try {
+			const res = await fetch("/api/settings/test-notification", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ channel }),
+			});
+			const data = await res.json();
+			if (res.ok) {
+				setTestResult(`${channel === "email" ? "E-mail" : "WhatsApp"} enviado para ${data.sentTo}`);
+			} else {
+				setTestResult(`Erro: ${data.error}`);
+			}
+			setTimeout(() => setTestResult(null), 5000);
+		} catch {
+			setTestResult("Erro ao enviar notificação de teste");
+			setTimeout(() => setTestResult(null), 5000);
+		} finally {
+			setter(false);
 		}
 	}
 
@@ -485,6 +516,50 @@ export function AjustesClient() {
 					)}
 				</div>
 			</form>
+
+			{/* Test notifications — admin only */}
+			{session?.user?.email === "sistematico@gmail.com" && (
+				<Card className="border-amber-900/50">
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2 text-base text-amber-400">
+							<FlaskConical className="h-4 w-4" />
+							Testar notificações
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						<p className="text-xs text-zinc-400">
+							Envia uma notificação de teste com dados fictícios.
+						</p>
+						<div className="flex items-center gap-3">
+							<Button
+								type="button"
+								variant="outline"
+								disabled={testingEmail}
+								onClick={() => handleTestNotification("email")}
+								className="flex items-center gap-2"
+							>
+								<Mail className="h-4 w-4" />
+								{testingEmail ? "Enviando..." : "Testar e-mail"}
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								disabled={testingWhatsapp}
+								onClick={() => handleTestNotification("whatsapp")}
+								className="flex items-center gap-2"
+							>
+								<MessageCircle className="h-4 w-4" />
+								{testingWhatsapp ? "Enviando..." : "Testar WhatsApp"}
+							</Button>
+						</div>
+						{testResult && (
+							<p className="text-sm text-amber-400 animate-in fade-in">
+								{testResult}
+							</p>
+						)}
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Danger zone */}
 			<Card className="border-red-900/50">
