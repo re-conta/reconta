@@ -60,8 +60,7 @@ export async function POST(request: Request) {
 	const settingsUrl = `${appUrl}/ajustes`;
 
 	if (channel === "email") {
-		const emailTo =
-			settings?.emailAddress || currentUser.email;
+		const emailTo = settings?.emailAddress || currentUser.email;
 		await sendBillNotificationEmail(emailTo, {
 			name: "Teste",
 			...sampleData,

@@ -167,7 +167,9 @@ export function AjustesClient() {
 			});
 			const data = await res.json();
 			if (res.ok) {
-				setTestResult(`${channel === "email" ? "E-mail" : "WhatsApp"} enviado para ${data.sentTo}`);
+				setTestResult(
+					`${channel === "email" ? "E-mail" : "WhatsApp"} enviado para ${data.sentTo}`,
+				);
 			} else {
 				setTestResult(`Erro: ${data.error}`);
 			}
