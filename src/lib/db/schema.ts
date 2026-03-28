@@ -113,6 +113,9 @@ export const bills = sqliteTable("bills", {
 	name: text("name").notNull(),
 	amount: real("amount").notNull(),
 	dueDay: integer("due_day").notNull(),
+	frequency: text("frequency", { enum: ["monthly", "annual"] })
+		.notNull()
+		.default("monthly"),
 	categoryId: integer("category_id").references(() => categories.id),
 	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 	createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
@@ -149,6 +152,10 @@ export const notificationSettings = sqliteTable("notification_settings", {
 		.references(() => user.id, { onDelete: "cascade" }),
 	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 	emailAddress: text("email_address"),
+	whatsappEnabled: integer("whatsapp_enabled", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	whatsappNumber: text("whatsapp_number"),
 	daysBeforeDue: integer("days_before_due").notNull().default(3),
 	daysAfterDue: integer("days_after_due").notNull().default(7),
 	maxNotificationsPerBill: integer("max_notifications_per_bill")

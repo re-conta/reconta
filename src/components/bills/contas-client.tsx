@@ -15,12 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, formatMonth } from "@/lib/utils";
 import { BillDialog } from "./bill-dialog";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 
 interface Bill {
 	id: number;
 	name: string;
 	amount: number;
 	dueDay: number;
+	frequency: "monthly" | "annual";
 	isActive: boolean;
 	categoryId: number | null;
 	categoryName: string | null;
@@ -44,6 +46,9 @@ export function ContasClient({
 	const [loading, setLoading] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingBill, setEditingBill] = useState<Bill | null>(null);
+	const shared = useSharedOwner();
+	const apiBase = shared ? shared.apiBase : "/api";
+	const readOnly = !!shared;
 
 	const today = new Date();
 	const isCurrentMonth =
@@ -51,13 +56,13 @@ export function ContasClient({
 
 	const fetchBills = useCallback(() => {
 		setLoading(true);
-		fetch(`/api/bills?month=${month}&year=${year}`)
+		fetch(`${apiBase}/bills?month=${month}&year=${year}`)
 			.then((r) => r.json())
 			.then((d) => {
 				setBills(d);
 				setLoading(false);
 			});
-	}, [month, year]);
+	}, [month, year, apiBase]);
 
 	useEffect(() => {
 		fetchBills();
@@ -124,17 +129,19 @@ export function ContasClient({
 						<ChevronRight className="h-4 w-4" />
 					</Button>
 				</div>
-				<Button
-					className="ml-auto"
-					size="sm"
-					onClick={() => {
-						setEditingBill(null);
-						setDialogOpen(true);
-					}}
-				>
-					<Plus className="h-4 w-4" />
-					Nova conta fixa
-				</Button>
+				{!readOnly && (
+					<Button
+						className="ml-auto"
+						size="sm"
+						onClick={() => {
+							setEditingBill(null);
+							setDialogOpen(true);
+						}}
+					>
+						<Plus className="h-4 w-4" />
+						Nova conta fixa
+					</Button>
+				)}
 			</div>
 
 			{/* Summary */}
@@ -203,30 +210,47 @@ export function ContasClient({
 								}`}
 							>
 								{/* Paid toggle */}
-								<button
-									type="button"
-									onClick={() => togglePaid(bill)}
-									className="shrink-0 text-zinc-400 hover:text-emerald-400 transition-colors"
-									title={
-										bill.isPaid ? "Marcar como não pago" : "Marcar como pago"
-									}
-								>
-									{bill.isPaid ? (
-										<CheckCircle2 className="h-6 w-6 text-emerald-400" />
-									) : isOverdue ? (
-										<AlertTriangle className="h-6 w-6 text-red-400" />
-									) : (
-										<Circle className="h-6 w-6" />
-									)}
-								</button>
+								{!readOnly ? (
+									<button
+										type="button"
+										onClick={() => togglePaid(bill)}
+										className="shrink-0 text-zinc-400 hover:text-emerald-400 transition-colors"
+										title={
+											bill.isPaid ? "Marcar como não pago" : "Marcar como pago"
+										}
+									>
+										{bill.isPaid ? (
+											<CheckCircle2 className="h-6 w-6 text-emerald-400" />
+										) : isOverdue ? (
+											<AlertTriangle className="h-6 w-6 text-red-400" />
+										) : (
+											<Circle className="h-6 w-6" />
+										)}
+									</button>
+								) : (
+									<span className="shrink-0">
+										{bill.isPaid ? (
+											<CheckCircle2 className="h-6 w-6 text-emerald-400" />
+										) : isOverdue ? (
+											<AlertTriangle className="h-6 w-6 text-red-400" />
+										) : (
+											<Circle className="h-6 w-6" />
+										)}
+									</span>
+								)}
 
 								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2">
+									<div className="flex items-center gap-2 flex-wrap">
 										<p
 											className={`font-medium ${bill.isPaid ? "line-through text-zinc-500" : "text-zinc-200"}`}
 										>
 											{bill.name}
 										</p>
+										{bill.frequency === "annual" && (
+											<span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400 border border-blue-800/30">
+												Anual
+											</span>
+										)}
 										{bill.categoryName && (
 											<span
 												className="text-xs px-2 py-0.5 rounded-full"
@@ -262,42 +286,54 @@ export function ContasClient({
 									</p>
 								</div>
 
-								<div className="flex items-center gap-1 shrink-0">
-									<Button
-										variant="ghost"
-										size="icon"
-										className="h-8 w-8"
-										onClick={() => {
-											setEditingBill(bill);
-											setDialogOpen(true);
-										}}
-									>
-										<Pencil className="h-3.5 w-3.5" />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="h-8 w-8 text-red-400 hover:text-red-300"
-										onClick={() => deleteBill(bill.id)}
-									>
-										<Trash2 className="h-3.5 w-3.5" />
-									</Button>
-								</div>
+								{!readOnly && (
+									<div className="flex items-center gap-1 shrink-0">
+										<Button
+											variant={bill.isPaid ? "outline" : "default"}
+											size="sm"
+											className={`text-xs h-7 ${bill.isPaid ? "text-zinc-400" : ""}`}
+											onClick={() => togglePaid(bill)}
+										>
+											{bill.isPaid ? "Desfazer" : "Pagar"}
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8"
+											onClick={() => {
+												setEditingBill(bill);
+												setDialogOpen(true);
+											}}
+										>
+											<Pencil className="h-3.5 w-3.5" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 text-red-400 hover:text-red-300"
+											onClick={() => deleteBill(bill.id)}
+										>
+											<Trash2 className="h-3.5 w-3.5" />
+										</Button>
+									</div>
+								)}
 							</div>
 						);
 					})}
 				</div>
 			)}
 
-			<BillDialog
-				open={dialogOpen}
-				onClose={() => {
-					setDialogOpen(false);
-					setEditingBill(null);
-				}}
-				bill={editingBill}
-				onSaved={fetchBills}
-			/>
+			{!readOnly && (
+				<BillDialog
+					open={dialogOpen}
+					onClose={() => {
+						setDialogOpen(false);
+						setEditingBill(null);
+					}}
+					bill={editingBill}
+					onSaved={fetchBills}
+				/>
+			)}
 		</div>
 	);
 }

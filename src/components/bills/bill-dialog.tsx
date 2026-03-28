@@ -29,6 +29,7 @@ interface Bill {
 	name: string;
 	amount: number;
 	dueDay: number;
+	frequency: "monthly" | "annual";
 	categoryId: number | null;
 }
 
@@ -45,6 +46,7 @@ export function BillDialog({ open, onClose, bill, onSaved }: Props) {
 		name: "",
 		amount: "",
 		dueDay: "1",
+		frequency: "monthly" as "monthly" | "annual",
 		categoryId: "",
 	});
 	const [saving, setSaving] = useState(false);
@@ -65,10 +67,17 @@ export function BillDialog({ open, onClose, bill, onSaved }: Props) {
 				name: bill.name,
 				amount: String(bill.amount),
 				dueDay: String(bill.dueDay),
+				frequency: bill.frequency ?? "monthly",
 				categoryId: bill.categoryId ? String(bill.categoryId) : "",
 			});
 		} else {
-			setForm({ name: "", amount: "", dueDay: "1", categoryId: "" });
+			setForm({
+				name: "",
+				amount: "",
+				dueDay: "1",
+				frequency: "monthly",
+				categoryId: "",
+			});
 		}
 	}, [bill]);
 
@@ -79,6 +88,7 @@ export function BillDialog({ open, onClose, bill, onSaved }: Props) {
 			name: form.name,
 			amount: Number(form.amount),
 			dueDay: Number(form.dueDay),
+			frequency: form.frequency,
 			categoryId: form.categoryId || null,
 		};
 		const url = bill ? `/api/bills/${bill.id}` : "/api/bills";
@@ -146,6 +156,23 @@ export function BillDialog({ open, onClose, bill, onSaved }: Props) {
 								className="mt-1"
 							/>
 						</div>
+					</div>
+					<div>
+						<Label>Frequência</Label>
+						<Select
+							value={form.frequency}
+							onValueChange={(v) =>
+								setForm((f) => ({ ...f, frequency: v as "monthly" | "annual" }))
+							}
+						>
+							<SelectTrigger className="mt-1">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="monthly">Mensal</SelectItem>
+								<SelectItem value="annual">Anual</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 					<div>
 						<Label>Categoria</Label>

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useMonthContext } from "@/components/layout/month-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate, formatMonth } from "@/lib/utils";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 import { MonthlyBalanceChart } from "./monthly-balance-chart";
 import { SpendingPieChart } from "./spending-pie-chart";
 
@@ -63,10 +64,13 @@ export function DashboardClient() {
 	const { month, year, setPeriod } = useMonthContext();
 	const [data, setData] = useState<DashboardData | null>(null);
 	const [loading, setLoading] = useState(true);
+	const shared = useSharedOwner();
+	const apiBase = shared ? shared.apiBase : "/api";
+	const routeBase = shared ? shared.routeBase : "";
 
 	useEffect(() => {
 		setLoading(true);
-		fetch(`/api/dashboard?month=${month}&year=${year}`)
+		fetch(`${apiBase}/dashboard?month=${month}&year=${year}`)
 			.then((r) => {
 				if (!r.ok) throw new Error(r.statusText);
 				return r.json();
@@ -76,7 +80,7 @@ export function DashboardClient() {
 				setLoading(false);
 			})
 			.catch(() => setLoading(false));
-	}, [month, year]);
+	}, [month, year, apiBase]);
 
 	function prevMonth() {
 		if (month === 1) setPeriod(12, year - 1);
@@ -89,12 +93,13 @@ export function DashboardClient() {
 	}
 
 	async function markBillPaid(billId: number, amount: number) {
+		if (shared) return;
 		await fetch("/api/bills/payments", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ billId, month, year, isPaid: true, amount }),
 		});
-		fetch(`/api/dashboard?month=${month}&year=${year}`)
+		fetch(`${apiBase}/dashboard?month=${month}&year=${year}`)
 			.then((r) => r.json())
 			.then((d) => setData(d))
 			.catch(() => {});
@@ -192,7 +197,7 @@ export function DashboardClient() {
 										Contas pendentes
 									</CardTitle>
 									<Link
-										href="/contas"
+										href={`${routeBase}/contas`}
 										className="text-xs text-indigo-400 hover:underline"
 									>
 										Ver todas
@@ -233,15 +238,17 @@ export function DashboardClient() {
 													<span className="text-sm font-medium text-amber-400 shrink-0">
 														{formatCurrency(bill.amount)}
 													</span>
-													<Button
-														size="sm"
-														variant="outline"
-														className="shrink-0 h-7 px-2 text-xs gap-1.5 border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/30 hover:text-emerald-300"
-														onClick={() => markBillPaid(bill.id, bill.amount)}
-													>
-														<CheckCircle2 className="h-3.5 w-3.5" />
-														Pagar
-													</Button>
+													{!shared && (
+														<Button
+															size="sm"
+															variant="outline"
+															className="shrink-0 h-7 px-2 text-xs gap-1.5 border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/30 hover:text-emerald-300"
+															onClick={() => markBillPaid(bill.id, bill.amount)}
+														>
+															<CheckCircle2 className="h-3.5 w-3.5" />
+															Pagar
+														</Button>
+													)}
 												</li>
 											);
 										})}
@@ -256,7 +263,7 @@ export function DashboardClient() {
 								<div className="flex items-center justify-between">
 									<CardTitle>Últimos lançamentos</CardTitle>
 									<Link
-										href="/transacoes"
+										href={`${routeBase}/transacoes`}
 										className="text-xs text-indigo-400 hover:underline"
 									>
 										Ver todos

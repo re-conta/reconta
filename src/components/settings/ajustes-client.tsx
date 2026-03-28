@@ -1,6 +1,14 @@
 "use client";
 
-import { Bell, Mail, Save, Trash2, User } from "lucide-react";
+import {
+	Bell,
+	Mail,
+	MessageCircle,
+	Phone,
+	Save,
+	Trash2,
+	User,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -22,6 +30,8 @@ import { Label } from "@/components/ui/label";
 interface Settings {
 	enabled: boolean;
 	emailAddress: string | null;
+	whatsappEnabled: boolean;
+	whatsappNumber: string | null;
 	daysBeforeDue: number;
 	daysAfterDue: number;
 	maxNotificationsPerBill: number;
@@ -31,6 +41,8 @@ interface Settings {
 const defaults: Settings = {
 	enabled: true,
 	emailAddress: null,
+	whatsappEnabled: false,
+	whatsappNumber: null,
 	daysBeforeDue: 3,
 	daysAfterDue: 7,
 	maxNotificationsPerBill: 3,
@@ -73,6 +85,8 @@ export function AjustesClient() {
 				setSettings({
 					enabled: data.enabled ?? true,
 					emailAddress: data.emailAddress ?? "",
+					whatsappEnabled: data.whatsappEnabled ?? false,
+					whatsappNumber: data.whatsappNumber ?? "",
 					daysBeforeDue: data.daysBeforeDue ?? 3,
 					daysAfterDue: data.daysAfterDue ?? 7,
 					maxNotificationsPerBill: data.maxNotificationsPerBill ?? 3,
@@ -374,6 +388,82 @@ export function AjustesClient() {
 									/>
 									<p className="text-xs text-zinc-400">Em dias</p>
 								</div>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* WhatsApp Notifications */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2 text-base">
+							<MessageCircle className="h-4 w-4 text-emerald-400" />
+							Notificações por WhatsApp
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-5">
+						{/* Toggle */}
+						<label className="flex items-center justify-between gap-4 cursor-pointer">
+							<div>
+								<p className="text-sm font-medium text-zinc-100">
+									Ativar WhatsApp
+								</p>
+								<p className="text-xs text-zinc-400">
+									Receba mensagens no WhatsApp sobre contas próximas do
+									vencimento ou vencidas.
+								</p>
+							</div>
+							<button
+								type="button"
+								role="switch"
+								aria-checked={settings.whatsappEnabled}
+								onClick={() =>
+									setSettings((s) => ({
+										...s,
+										whatsappEnabled: !s.whatsappEnabled,
+									}))
+								}
+								className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-900 ${
+									settings.whatsappEnabled ? "bg-emerald-600" : "bg-zinc-700"
+								}`}
+							>
+								<span
+									className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+										settings.whatsappEnabled ? "translate-x-5" : "translate-x-0"
+									}`}
+								/>
+							</button>
+						</label>
+
+						<div
+							className={
+								settings.whatsappEnabled ? "" : "opacity-40 pointer-events-none"
+							}
+						>
+							<div className="space-y-1.5">
+								<Label
+									htmlFor="whatsappNumber"
+									className="flex items-center gap-1.5"
+								>
+									<Phone className="h-3.5 w-3.5 text-zinc-400" />
+									Número do WhatsApp
+								</Label>
+								<Input
+									id="whatsappNumber"
+									type="tel"
+									placeholder="5511999999999"
+									value={settings.whatsappNumber ?? ""}
+									onChange={(e) =>
+										setSettings((s) => ({
+											...s,
+											whatsappNumber: e.target.value || null,
+										}))
+									}
+								/>
+								<p className="text-xs text-zinc-400">
+									Código do país + DDD + número, sem espaços ou símbolos (ex:
+									5511999999999)
+								</p>
 							</div>
 						</div>
 					</CardContent>

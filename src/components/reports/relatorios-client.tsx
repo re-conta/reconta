@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMonth } from "@/lib/utils";
 import { MonthlyBalanceChart } from "@/components/dashboard/monthly-balance-chart";
 import { SpendingPieChart } from "@/components/dashboard/spending-pie-chart";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 import { SavingsChart } from "./savings-chart";
 import { ComparisonChart } from "./comparison-chart";
 
@@ -37,6 +38,8 @@ export function RelatoriosClient() {
 	const { month, year, setPeriod } = useMonthContext();
 	const [data, setData] = useState<DashboardData | null>(null);
 	const [loading, setLoading] = useState(true);
+	const shared = useSharedOwner();
+	const apiBase = shared ? shared.apiBase : "/api";
 
 	const today = new Date();
 	const isCurrentMonth =
@@ -44,7 +47,7 @@ export function RelatoriosClient() {
 
 	useEffect(() => {
 		setLoading(true);
-		fetch(`/api/dashboard?month=${month}&year=${year}`)
+		fetch(`${apiBase}/dashboard?month=${month}&year=${year}`)
 			.then((r) => {
 				if (!r.ok) throw new Error(r.statusText);
 				return r.json();
@@ -54,7 +57,7 @@ export function RelatoriosClient() {
 				setLoading(false);
 			})
 			.catch(() => setLoading(false));
-	}, [month, year]);
+	}, [month, year, apiBase]);
 
 	function prevMonth() {
 		if (month === 1) setPeriod(12, year - 1);

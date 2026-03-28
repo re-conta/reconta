@@ -26,6 +26,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 
 interface Transaction {
 	id: number;
@@ -51,6 +52,9 @@ interface Totals {
 
 export function TransacoesClient() {
 	const { month, year, setPeriod } = useMonthContext();
+	const shared = useSharedOwner();
+	const apiBase = shared ? shared.apiBase : "/api";
+	const readOnly = !!shared;
 	const [search, setSearch] = useState("");
 	const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">(
 		"all",
@@ -102,14 +106,14 @@ export function TransacoesClient() {
 		if (typeFilter !== "all") params.set("type", typeFilter);
 		if (search) params.set("search", search);
 
-		fetch(`/api/transactions?${params}`)
+		fetch(`${apiBase}/transactions?${params}`)
 			.then((r) => r.json())
 			.then((d) => {
 				setTransactions(d.data ?? []);
 				setTotals(d.totals ?? { income: 0, expense: 0, balance: 0, count: 0 });
 				setLoading(false);
 			});
-	}, [month, year, typeFilter, search]);
+	}, [month, year, typeFilter, search, apiBase]);
 
 	const fetchOpeningBalance = useCallback(() => {
 		fetch(`/api/transactions/opening-balance?month=${month}&year=${year}`)
@@ -247,16 +251,18 @@ export function TransacoesClient() {
 						<ChevronRight className="h-4 w-4" />
 					</Button>
 				</div>
-				<Button
-					size="sm"
-					onClick={() => {
-						setEditingTx(null);
-						setDialogOpen(true);
-					}}
-				>
-					<Plus className="h-4 w-4" />
-					<span className="hidden sm:inline">Novo lançamento</span>
-				</Button>
+				{!readOnly && (
+					<Button
+						size="sm"
+						onClick={() => {
+							setEditingTx(null);
+							setDialogOpen(true);
+						}}
+					>
+						<Plus className="h-4 w-4" />
+						<span className="hidden sm:inline">Novo lançamento</span>
+					</Button>
+				)}
 			</div>
 
 			<div className="flex flex-wrap items-center gap-2">
@@ -281,73 +287,77 @@ export function TransacoesClient() {
 						</Button>
 					))}
 				</div>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="outline" size="sm">
-							<Trash2 className="h-4 w-4 text-red-400" />
-							<span className="hidden sm:inline">Apagar em massa</span>
-							<ChevronDown className="h-3.5 w-3.5" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem
-							className="text-red-400 focus:text-red-300"
-							onSelect={() => bulkDelete("month")}
-						>
-							Apagar {formatMonth(month, year)}
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							className="text-red-400 focus:text-red-300"
-							onSelect={() => bulkDelete("year")}
-						>
-							Apagar ano {year}
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							className="text-red-400 focus:text-red-300"
-							onSelect={() => bulkDelete("all")}
-						>
-							Apagar tudo
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				{!readOnly && (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="sm">
+								<Trash2 className="h-4 w-4 text-red-400" />
+								<span className="hidden sm:inline">Apagar em massa</span>
+								<ChevronDown className="h-3.5 w-3.5" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								className="text-red-400 focus:text-red-300"
+								onSelect={() => bulkDelete("month")}
+							>
+								Apagar {formatMonth(month, year)}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="text-red-400 focus:text-red-300"
+								onSelect={() => bulkDelete("year")}
+							>
+								Apagar ano {year}
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								className="text-red-400 focus:text-red-300"
+								onSelect={() => bulkDelete("all")}
+							>
+								Apagar tudo
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
 			</div>
 
 			{/* Totals */}
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<div className="rounded-lg bg-zinc-800/40 border border-zinc-700/40 p-4">
-					<p className="text-xs text-zinc-400 mb-1">Saldo inicial</p>
-					{editingOpeningBalance ? (
-						<div className="flex items-center gap-2 mt-1">
-							<Input
-								id={openingBalanceInputId}
-								autoFocus
-								value={openingBalanceInput}
-								onChange={(e) => setOpeningBalanceInput(e.target.value)}
-								onBlur={saveOpeningBalance}
-								onKeyDown={(e) => {
-									if (e.key === "Enter") saveOpeningBalance();
-									if (e.key === "Escape") setEditingOpeningBalance(false);
+				{!readOnly && (
+					<div className="rounded-lg bg-zinc-800/40 border border-zinc-700/40 p-4">
+						<p className="text-xs text-zinc-400 mb-1">Saldo inicial</p>
+						{editingOpeningBalance ? (
+							<div className="flex items-center gap-2 mt-1">
+								<Input
+									id={openingBalanceInputId}
+									autoFocus
+									value={openingBalanceInput}
+									onChange={(e) => setOpeningBalanceInput(e.target.value)}
+									onBlur={saveOpeningBalance}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") saveOpeningBalance();
+										if (e.key === "Escape") setEditingOpeningBalance(false);
+									}}
+									className="h-7 text-sm w-full"
+									placeholder="0,00"
+								/>
+							</div>
+						) : (
+							<button
+								type="button"
+								className="group flex items-center gap-1.5 text-lg font-bold text-zinc-200 hover:text-white cursor-pointer text-left w-full"
+								onClick={() => {
+									setOpeningBalanceInput(String(openingBalance));
+									setEditingOpeningBalance(true);
 								}}
-								className="h-7 text-sm w-full"
-								placeholder="0,00"
-							/>
-						</div>
-					) : (
-						<button
-							type="button"
-							className="group flex items-center gap-1.5 text-lg font-bold text-zinc-200 hover:text-white cursor-pointer text-left w-full"
-							onClick={() => {
-								setOpeningBalanceInput(String(openingBalance));
-								setEditingOpeningBalance(true);
-							}}
-							title="Clique para editar o saldo inicial"
-						>
-							{formatCurrency(openingBalance)}
-							<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-						</button>
-					)}
-				</div>
+								title="Clique para editar o saldo inicial"
+							>
+								{formatCurrency(openingBalance)}
+								<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+							</button>
+						)}
+					</div>
+				)}
 				<div className="rounded-lg bg-emerald-900/20 border border-emerald-800/30 p-4">
 					<p className="text-xs text-zinc-400 mb-1">Receitas</p>
 					<p className="text-lg font-bold text-emerald-400">
@@ -378,7 +388,7 @@ export function TransacoesClient() {
 			</div>
 
 			{/* Bulk action bar */}
-			{selectedIds.size > 0 && (
+			{!readOnly && selectedIds.size > 0 && (
 				<div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-700/40 text-sm">
 					<span className="text-indigo-300 font-medium">
 						{selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
@@ -413,16 +423,18 @@ export function TransacoesClient() {
 			)}
 
 			{/* Inline form */}
-			<InlineTransactionForm
-				transaction={inlineEditingTx}
-				defaultMonth={month}
-				defaultYear={year}
-				onSaved={() => {
-					setInlineEditingTx(null);
-					fetchTransactions();
-				}}
-				onCancel={() => setInlineEditingTx(null)}
-			/>
+			{!readOnly && (
+				<InlineTransactionForm
+					transaction={inlineEditingTx}
+					defaultMonth={month}
+					defaultYear={year}
+					onSaved={() => {
+						setInlineEditingTx(null);
+						fetchTransactions();
+					}}
+					onCancel={() => setInlineEditingTx(null)}
+				/>
+			)}
 
 			{/* Table */}
 			<Card>
@@ -440,16 +452,18 @@ export function TransacoesClient() {
 							<table className="w-full text-sm">
 								<thead>
 									<tr className="border-b border-zinc-800">
-										<th className="px-4 py-3 w-10">
-											<Checkbox
-												ref={selectAllRef}
-												checked={
-													transactions.length > 0 &&
-													selectedIds.size === transactions.length
-												}
-												onChange={toggleAll}
-											/>
-										</th>
+										{!readOnly && (
+											<th className="px-4 py-3 w-10">
+												<Checkbox
+													ref={selectAllRef}
+													checked={
+														transactions.length > 0 &&
+														selectedIds.size === transactions.length
+													}
+													onChange={toggleAll}
+												/>
+											</th>
+										)}
 										<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
 											Data
 										</th>
@@ -462,7 +476,7 @@ export function TransacoesClient() {
 										<th className="text-right px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
 											Valor
 										</th>
-										<th className="px-4 py-3 w-20" />
+										{!readOnly && <th className="px-4 py-3 w-20" />}
 									</tr>
 								</thead>
 								<tbody>
@@ -471,12 +485,14 @@ export function TransacoesClient() {
 											key={tx.id}
 											className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${selectedIds.has(tx.id) ? "bg-indigo-900/10" : ""}`}
 										>
-											<td className="px-4 py-3">
-												<Checkbox
-													checked={selectedIds.has(tx.id)}
-													onChange={() => toggleId(tx.id)}
-												/>
-											</td>
+											{!readOnly && (
+												<td className="px-4 py-3">
+													<Checkbox
+														checked={selectedIds.has(tx.id)}
+														onChange={() => toggleId(tx.id)}
+													/>
+												</td>
+											)}{" "}
 											<td className="px-4 py-3 text-zinc-400 whitespace-nowrap">
 												{formatDate(tx.date)}
 											</td>
@@ -521,26 +537,28 @@ export function TransacoesClient() {
 												{tx.type === "income" ? "+" : "-"}
 												{formatCurrency(tx.amount)}
 											</td>
-											<td className="px-4 py-3">
-												<div className="flex items-center justify-end gap-1">
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-7 w-7"
-														onClick={() => setInlineEditingTx(tx)}
-													>
-														<Pencil className="h-3.5 w-3.5" />
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="h-7 w-7 text-red-400 hover:text-red-300"
-														onClick={() => deleteTransaction(tx.id)}
-													>
-														<Trash2 className="h-3.5 w-3.5" />
-													</Button>
-												</div>
-											</td>
+											{!readOnly && (
+												<td className="px-4 py-3">
+													<div className="flex items-center justify-end gap-1">
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-7 w-7"
+															onClick={() => setInlineEditingTx(tx)}
+														>
+															<Pencil className="h-3.5 w-3.5" />
+														</Button>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-7 w-7 text-red-400 hover:text-red-300"
+															onClick={() => deleteTransaction(tx.id)}
+														>
+															<Trash2 className="h-3.5 w-3.5" />
+														</Button>
+													</div>
+												</td>
+											)}
 										</tr>
 									))}
 								</tbody>
@@ -550,24 +568,28 @@ export function TransacoesClient() {
 				</CardContent>
 			</Card>
 
-			<TransactionDialog
-				open={dialogOpen}
-				onClose={() => {
-					setDialogOpen(false);
-					setEditingTx(null);
-				}}
-				transaction={editingTx}
-				onSaved={fetchTransactions}
-				defaultMonth={month}
-				defaultYear={year}
-			/>
+			{!readOnly && (
+				<>
+					<TransactionDialog
+						open={dialogOpen}
+						onClose={() => {
+							setDialogOpen(false);
+							setEditingTx(null);
+						}}
+						transaction={editingTx}
+						onSaved={fetchTransactions}
+						defaultMonth={month}
+						defaultYear={year}
+					/>
 
-			<BulkEditDialog
-				open={bulkEditOpen}
-				onClose={() => setBulkEditOpen(false)}
-				count={selectedIds.size}
-				onSave={bulkEditSelected}
-			/>
+					<BulkEditDialog
+						open={bulkEditOpen}
+						onClose={() => setBulkEditOpen(false)}
+						count={selectedIds.size}
+						onSave={bulkEditSelected}
+					/>
+				</>
+			)}
 		</div>
 	);
 }

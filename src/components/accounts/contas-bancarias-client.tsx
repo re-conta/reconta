@@ -3,6 +3,7 @@
 import { Pencil, Plus, Trash2, Wallet } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
@@ -37,6 +38,9 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 };
 
 export function ContasBancariasClient() {
+	const shared = useSharedOwner();
+	const apiBase = shared?.apiBase ?? "/api";
+	const readOnly = !!shared;
 	const [accounts, setAccounts] = useState<Account[]>([]);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<Account | null>(null);
@@ -48,10 +52,10 @@ export function ContasBancariasClient() {
 	const [saving, setSaving] = useState(false);
 
 	const fetchAccounts = useCallback(() => {
-		fetch("/api/accounts")
+		fetch(`${apiBase}/accounts`)
 			.then((r) => r.json())
 			.then(setAccounts);
-	}, []);
+	}, [apiBase]);
 
 	useEffect(() => {
 		fetchAccounts();
@@ -101,10 +105,12 @@ export function ContasBancariasClient() {
 						{formatCurrency(totalBalance)}
 					</p>
 				</div>
-				<Button onClick={openNew}>
-					<Plus className="h-4 w-4" />
-					Nova conta
-				</Button>
+				{!readOnly && (
+					<Button onClick={openNew}>
+						<Plus className="h-4 w-4" />
+						Nova conta
+					</Button>
+				)}
 			</div>
 
 			<Card>
@@ -136,24 +142,26 @@ export function ContasBancariasClient() {
 									>
 										{formatCurrency(acc.balance)}
 									</p>
-									<div className="flex gap-1">
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-7 w-7"
-											onClick={() => openEdit(acc)}
-										>
-											<Pencil className="h-3.5 w-3.5" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-7 w-7 text-red-400 hover:text-red-300"
-											onClick={() => handleDelete(acc.id)}
-										>
-											<Trash2 className="h-3.5 w-3.5" />
-										</Button>
-									</div>
+									{!readOnly && (
+										<div className="flex gap-1">
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-7 w-7"
+												onClick={() => openEdit(acc)}
+											>
+												<Pencil className="h-3.5 w-3.5" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-7 w-7 text-red-400 hover:text-red-300"
+												onClick={() => handleDelete(acc.id)}
+											>
+												<Trash2 className="h-3.5 w-3.5" />
+											</Button>
+										</div>
+									)}
 								</div>
 							))}
 						</div>
@@ -161,73 +169,77 @@ export function ContasBancariasClient() {
 				</CardContent>
 			</Card>
 
-			<Dialog
-				open={dialogOpen}
-				onOpenChange={(v) => !v && setDialogOpen(false)}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{editing ? "Editar conta" : "Nova conta"}</DialogTitle>
-					</DialogHeader>
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<div>
-							<Label>Nome</Label>
-							<Input
-								placeholder="Ex: Conta Nubank, Poupança..."
-								value={form.name}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, name: e.target.value }))
-								}
-								required
-								className="mt-1"
-							/>
-						</div>
-						<div>
-							<Label>Tipo</Label>
-							<Select
-								value={form.type}
-								onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
-							>
-								<SelectTrigger className="mt-1">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{Object.entries(ACCOUNT_TYPE_LABELS).map(([k, v]) => (
-										<SelectItem key={k} value={k}>
-											{v}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div>
-							<Label>Saldo atual (R$)</Label>
-							<Input
-								type="number"
-								step="0.01"
-								placeholder="0,00"
-								value={form.balance}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, balance: e.target.value }))
-								}
-								className="mt-1"
-							/>
-						</div>
-						<DialogFooter>
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setDialogOpen(false)}
-							>
-								Cancelar
-							</Button>
-							<Button type="submit" disabled={saving}>
-								{saving ? "Salvando..." : editing ? "Salvar" : "Criar"}
-							</Button>
-						</DialogFooter>
-					</form>
-				</DialogContent>
-			</Dialog>
+			{!readOnly && (
+				<Dialog
+					open={dialogOpen}
+					onOpenChange={(v) => !v && setDialogOpen(false)}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>
+								{editing ? "Editar conta" : "Nova conta"}
+							</DialogTitle>
+						</DialogHeader>
+						<form onSubmit={handleSubmit} className="space-y-4">
+							<div>
+								<Label>Nome</Label>
+								<Input
+									placeholder="Ex: Conta Nubank, Poupança..."
+									value={form.name}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, name: e.target.value }))
+									}
+									required
+									className="mt-1"
+								/>
+							</div>
+							<div>
+								<Label>Tipo</Label>
+								<Select
+									value={form.type}
+									onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
+								>
+									<SelectTrigger className="mt-1">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{Object.entries(ACCOUNT_TYPE_LABELS).map(([k, v]) => (
+											<SelectItem key={k} value={k}>
+												{v}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<div>
+								<Label>Saldo atual (R$)</Label>
+								<Input
+									type="number"
+									step="0.01"
+									placeholder="0,00"
+									value={form.balance}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, balance: e.target.value }))
+									}
+									className="mt-1"
+								/>
+							</div>
+							<DialogFooter>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setDialogOpen(false)}
+								>
+									Cancelar
+								</Button>
+								<Button type="submit" disabled={saving}>
+									{saving ? "Salvando..." : editing ? "Salvar" : "Criar"}
+								</Button>
+							</DialogFooter>
+						</form>
+					</DialogContent>
+				</Dialog>
+			)}
 		</div>
 	);
 }

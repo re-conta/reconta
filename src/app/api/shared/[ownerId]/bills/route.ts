@@ -5,10 +5,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { billPayments, bills, categories } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth-session";
+import { checkSharedAccess } from "@/lib/shared-access";
 
-export async function GET(request: Request) {
+export async function GET(
+	request: Request,
+	{ params }: { params: Promise<{ ownerId: string }> },
+) {
 	const { userId, unauthorized } = await requireSession();
 	if (unauthorized) return unauthorized;
+
+	const { ownerId } = await params;
+
+	const access = await checkSharedAccess(ownerId, userId);
+	if (!access) {
+		return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+	}
 
 	const { searchParams } = new URL(request.url);
 	const month = Number(searchParams.get("month") ?? new Date().getMonth() + 1);
@@ -40,37 +51,8 @@ export async function GET(request: Request) {
 				eq(billPayments.year, year),
 			),
 		)
-		.where(and(eq(bills.userId, userId), eq(bills.isActive, true)))
+		.where(and(eq(bills.userId, ownerId), eq(bills.isActive, true)))
 		.orderBy(asc(bills.dueDay));
 
 	return NextResponse.json(data);
-}
-
-export async function POST(request: Request) {
-	const { userId, unauthorized } = await requireSession();
-	if (unauthorized) return unauthorized;
-
-	const body = await request.json();
-	const { name, amount, dueDay, categoryId, frequency } = body;
-
-	if (!name || !amount || !dueDay) {
-		return NextResponse.json(
-			{ error: "Campos obrigatórios faltando" },
-			{ status: 400 },
-		);
-	}
-
-	const [bill] = await db
-		.insert(bills)
-		.values({
-			userId,
-			name,
-			amount: Number(amount),
-			dueDay: Number(dueDay),
-			frequency: frequency === "annual" ? "annual" : "monthly",
-			categoryId: categoryId ? Number(categoryId) : null,
-		})
-		.returning();
-
-	return NextResponse.json(bill, { status: 201 });
 }

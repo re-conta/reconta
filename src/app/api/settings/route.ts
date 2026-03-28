@@ -20,6 +20,8 @@ export async function GET() {
 		return NextResponse.json({
 			enabled: true,
 			emailAddress: null,
+			whatsappEnabled: false,
+			whatsappNumber: null,
 			daysBeforeDue: 3,
 			daysAfterDue: 7,
 			maxNotificationsPerBill: 3,
@@ -38,6 +40,8 @@ export async function PUT(request: Request) {
 	const {
 		enabled,
 		emailAddress,
+		whatsappEnabled,
+		whatsappNumber,
 		daysBeforeDue,
 		daysAfterDue,
 		maxNotificationsPerBill,
@@ -57,6 +61,8 @@ export async function PUT(request: Request) {
 			.set({
 				enabled: Boolean(enabled),
 				emailAddress: emailAddress || null,
+				whatsappEnabled: Boolean(whatsappEnabled),
+				whatsappNumber: whatsappNumber || null,
 				daysBeforeDue: Number(daysBeforeDue),
 				daysAfterDue: Number(daysAfterDue),
 				maxNotificationsPerBill: Number(maxNotificationsPerBill),
@@ -74,6 +80,8 @@ export async function PUT(request: Request) {
 			userId,
 			enabled: Boolean(enabled),
 			emailAddress: emailAddress || null,
+			whatsappEnabled: Boolean(whatsappEnabled),
+			whatsappNumber: whatsappNumber || null,
 			daysBeforeDue: Number(daysBeforeDue),
 			daysAfterDue: Number(daysAfterDue),
 			maxNotificationsPerBill: Number(maxNotificationsPerBill),

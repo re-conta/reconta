@@ -4,6 +4,7 @@ import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useMonthContext } from "@/components/layout/month-context";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 import {
 	Select,
 	SelectContent,
@@ -194,6 +195,8 @@ async function exportPdf(
 
 export function ExportarClient() {
 	const { month: curMonth, year: curYear } = useMonthContext();
+	const shared = useSharedOwner();
+	const apiBase = shared?.apiBase ?? "/api";
 
 	const [scope, setScope] = useState<Scope>("month");
 	const [month, setMonth] = useState(String(curMonth));
@@ -215,7 +218,7 @@ export function ExportarClient() {
 				params.set("year", year);
 			}
 
-			const res = await fetch(`/api/export?${params}`);
+			const res = await fetch(`${apiBase}/export?${params}`);
 			if (!res.ok) throw new Error("Erro ao buscar dados para exportação");
 
 			const result: ExportResult = await res.json();

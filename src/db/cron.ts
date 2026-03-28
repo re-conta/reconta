@@ -11,6 +11,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "../lib/db/schema";
 import { sendBillNotificationEmail } from "../lib/email";
+import { sendTextMessage } from "../lib/whatsapp";
 
 const { user, bills, billPayments, notificationSettings, notificationLogs } =
 	schema;
@@ -50,6 +51,9 @@ async function main() {
 		.select({
 			userId: notificationSettings.userId,
 			emailAddress: notificationSettings.emailAddress,
+			enabled: notificationSettings.enabled,
+			whatsappEnabled: notificationSettings.whatsappEnabled,
+			whatsappNumber: notificationSettings.whatsappNumber,
 			daysBeforeDue: notificationSettings.daysBeforeDue,
 			daysAfterDue: notificationSettings.daysAfterDue,
 			maxNotificationsPerBill: notificationSettings.maxNotificationsPerBill,
@@ -198,6 +202,45 @@ async function main() {
 				appUrl,
 				settingsUrl,
 			});
+
+			// Send WhatsApp notification if enabled
+			if (setting.whatsappEnabled && setting.whatsappNumber) {
+				try {
+					const lines: string[] = [];
+					lines.push(`⚠️ *Alerta de contas — ReConta*`);
+					lines.push("");
+
+					if (filteredOverdue.length > 0) {
+						lines.push("🔴 *Contas vencidas:*");
+						for (const b of filteredOverdue) {
+							lines.push(
+								`• ${b.name} — dia ${b.dueDay} (${b.daysOverdue} dia${b.daysOverdue === 1 ? "" : "s"} atrás) — ${b.amountFormatted}`,
+							);
+						}
+						lines.push("");
+					}
+
+					if (filteredUpcoming.length > 0) {
+						lines.push("🟡 *Contas a vencer:*");
+						for (const b of filteredUpcoming) {
+							lines.push(
+								`• ${b.name} — dia ${b.dueDay} (${b.daysUntil === 0 ? "hoje" : `em ${b.daysUntil} dia${b.daysUntil === 1 ? "" : "s"}`}) — ${b.amountFormatted}`,
+							);
+						}
+						lines.push("");
+					}
+
+					lines.push(`Acesse: ${appUrl}/contas`);
+
+					await sendTextMessage(setting.whatsappNumber, lines.join("\n"));
+					console.log(`[cron] Sent WhatsApp to ${setting.whatsappNumber}`);
+				} catch (whatsappErr) {
+					console.error(
+						`[cron] Failed to send WhatsApp to ${setting.whatsappNumber}:`,
+						whatsappErr,
+					);
+				}
+			}
 
 			// Upsert notification log for each bill
 			for (const billId of billsToNotify) {

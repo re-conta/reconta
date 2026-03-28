@@ -15,7 +15,7 @@ export async function PUT(
 
 	const { id } = await params;
 	const body = await request.json();
-	const { name, amount, dueDay, categoryId, isActive } = body;
+	const { name, amount, dueDay, categoryId, isActive, frequency } = body;
 
 	const [updated] = await db
 		.update(bills)
@@ -23,6 +23,7 @@ export async function PUT(
 			name,
 			amount: Number(amount),
 			dueDay: Number(dueDay),
+			frequency: frequency === "annual" ? "annual" : "monthly",
 			categoryId: categoryId ? Number(categoryId) : null,
 			isActive: isActive ?? true,
 		})

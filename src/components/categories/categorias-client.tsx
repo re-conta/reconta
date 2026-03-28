@@ -3,6 +3,7 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { useSharedOwner } from "@/components/layout/shared-owner-context";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
@@ -47,6 +48,9 @@ const COLORS = [
 ];
 
 export function CategoriasClient() {
+	const shared = useSharedOwner();
+	const apiBase = shared?.apiBase ?? "/api";
+	const readOnly = !!shared;
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<Category | null>(null);
@@ -58,10 +62,10 @@ export function CategoriasClient() {
 	const [saving, setSaving] = useState(false);
 
 	const fetchCategories = useCallback(() => {
-		fetch("/api/categories")
+		fetch(`${apiBase}/categories`)
 			.then((r) => r.json())
 			.then(setCategories);
-	}, []);
+	}, [apiBase]);
 
 	useEffect(() => {
 		fetchCategories();
@@ -122,24 +126,26 @@ export function CategoriasClient() {
 								style={{ backgroundColor: cat.color }}
 							/>
 							<span className="flex-1 text-zinc-200 text-sm">{cat.name}</span>
-							<div className="flex gap-1">
-								<Button
-									variant="ghost"
-									size="icon"
-									className="h-7 w-7"
-									onClick={() => openEdit(cat)}
-								>
-									<Pencil className="h-3.5 w-3.5" />
-								</Button>
-								<Button
-									variant="ghost"
-									size="icon"
-									className="h-7 w-7 text-red-400 hover:text-red-300"
-									onClick={() => handleDelete(cat.id)}
-								>
-									<Trash2 className="h-3.5 w-3.5" />
-								</Button>
-							</div>
+							{!readOnly && (
+								<div className="flex gap-1">
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-7 w-7"
+										onClick={() => openEdit(cat)}
+									>
+										<Pencil className="h-3.5 w-3.5" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-7 w-7 text-red-400 hover:text-red-300"
+										onClick={() => handleDelete(cat.id)}
+									>
+										<Trash2 className="h-3.5 w-3.5" />
+									</Button>
+								</div>
+							)}
 						</div>
 					))}
 				</div>
@@ -149,10 +155,12 @@ export function CategoriasClient() {
 
 	return (
 		<div className="max-w-lg space-y-6">
-			<Button onClick={openNew}>
-				<Plus className="h-4 w-4" />
-				Nova categoria
-			</Button>
+			{!readOnly && (
+				<Button onClick={openNew}>
+					<Plus className="h-4 w-4" />
+					Nova categoria
+				</Button>
+			)}
 
 			<Card>
 				<CardContent className="pt-5 space-y-6">
@@ -167,74 +175,76 @@ export function CategoriasClient() {
 				</CardContent>
 			</Card>
 
-			<Dialog
-				open={dialogOpen}
-				onOpenChange={(v) => !v && setDialogOpen(false)}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>
-							{editing ? "Editar categoria" : "Nova categoria"}
-						</DialogTitle>
-					</DialogHeader>
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<div>
-							<Label>Nome</Label>
-							<Input
-								placeholder="Ex: Alimentação, Salário..."
-								value={form.name}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, name: e.target.value }))
-								}
-								required
-								className="mt-1"
-							/>
-						</div>
-						<div>
-							<Label>Tipo</Label>
-							<Select
-								value={form.type}
-								onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
-							>
-								<SelectTrigger className="mt-1">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="expense">Despesa</SelectItem>
-									<SelectItem value="income">Receita</SelectItem>
-									<SelectItem value="both">Receita e Despesa</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-						<div>
-							<Label>Cor</Label>
-							<div className="flex flex-wrap gap-2 mt-2">
-								{COLORS.map((c) => (
-									<button
-										key={c}
-										type="button"
-										className={`h-7 w-7 rounded-full transition-transform hover:scale-110 ${form.color === c ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900 scale-110" : ""}`}
-										style={{ backgroundColor: c }}
-										onClick={() => setForm((f) => ({ ...f, color: c }))}
-									/>
-								))}
+			{!readOnly && (
+				<Dialog
+					open={dialogOpen}
+					onOpenChange={(v) => !v && setDialogOpen(false)}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>
+								{editing ? "Editar categoria" : "Nova categoria"}
+							</DialogTitle>
+						</DialogHeader>
+						<form onSubmit={handleSubmit} className="space-y-4">
+							<div>
+								<Label>Nome</Label>
+								<Input
+									placeholder="Ex: Alimentação, Salário..."
+									value={form.name}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, name: e.target.value }))
+									}
+									required
+									className="mt-1"
+								/>
 							</div>
-						</div>
-						<DialogFooter>
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setDialogOpen(false)}
-							>
-								Cancelar
-							</Button>
-							<Button type="submit" disabled={saving}>
-								{saving ? "Salvando..." : editing ? "Salvar" : "Criar"}
-							</Button>
-						</DialogFooter>
-					</form>
-				</DialogContent>
-			</Dialog>
+							<div>
+								<Label>Tipo</Label>
+								<Select
+									value={form.type}
+									onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
+								>
+									<SelectTrigger className="mt-1">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="expense">Despesa</SelectItem>
+										<SelectItem value="income">Receita</SelectItem>
+										<SelectItem value="both">Receita e Despesa</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div>
+								<Label>Cor</Label>
+								<div className="flex flex-wrap gap-2 mt-2">
+									{COLORS.map((c) => (
+										<button
+											key={c}
+											type="button"
+											className={`h-7 w-7 rounded-full transition-transform hover:scale-110 ${form.color === c ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900 scale-110" : ""}`}
+											style={{ backgroundColor: c }}
+											onClick={() => setForm((f) => ({ ...f, color: c }))}
+										/>
+									))}
+								</div>
+							</div>
+							<DialogFooter>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setDialogOpen(false)}
+								>
+									Cancelar
+								</Button>
+								<Button type="submit" disabled={saving}>
+									{saving ? "Salvando..." : editing ? "Salvar" : "Criar"}
+								</Button>
+							</DialogFooter>
+						</form>
+					</DialogContent>
+				</Dialog>
+			)}
 		</div>
 	);
 }

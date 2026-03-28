@@ -6,7 +6,7 @@ interface HeaderProps {
 
 export function Header({ title, description, action }: HeaderProps) {
 	return (
-		<div className="flex items-center justify-between mb-6">
+		<div className="flex items-center justify-between mb-6 font-nunito">
 			<div>
 				<h1 className="text-2xl font-bold text-zinc-100">{title}</h1>
 				{description && (

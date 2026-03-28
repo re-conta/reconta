@@ -15,6 +15,13 @@
 			"when": 1774597539566,
 			"tag": "0001_hard_war_machine",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "6",
+			"when": 1774691806939,
+			"tag": "0002_giant_hulk",
+			"breakpoints": true
 		}
 	]
 }
