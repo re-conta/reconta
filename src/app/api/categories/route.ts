@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 	if (unauthorized) return unauthorized;
 
 	const body = await request.json();
-	const { name, color, icon, type } = body;
+	const { name, color, icon, type, patterns } = body;
 
 	if (!name) {
 		return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
 			color: color ?? "#6366f1",
 			icon: icon ?? "circle",
 			type: type ?? "both",
+			patterns: patterns || null,
 		})
 		.returning();
 

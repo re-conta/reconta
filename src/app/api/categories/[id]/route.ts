@@ -15,11 +15,11 @@ export async function PUT(
 
 	const { id } = await params;
 	const body = await request.json();
-	const { name, color, icon, type } = body;
+	const { name, color, icon, type, patterns } = body;
 
 	const [updated] = await db
 		.update(categories)
-		.set({ name, color, icon, type })
+		.set({ name, color, icon, type, patterns: patterns || null })
 		.where(and(eq(categories.id, Number(id)), eq(categories.userId, userId)))
 		.returning();
 

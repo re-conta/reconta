@@ -181,10 +181,12 @@ export function Sidebar() {
 								? item.href === shared.routeBase
 									? pathname === shared.routeBase ||
 										pathname === `${shared.routeBase}/`
-									: pathname.startsWith(item.href)
+									: pathname === item.href ||
+										pathname.startsWith(`${item.href}/`)
 								: item.href === "/"
 									? pathname === "/"
-									: pathname.startsWith(item.href);
+									: pathname === item.href ||
+										pathname.startsWith(`${item.href}/`);
 							return (
 								<li key={item.href}>
 									<Link

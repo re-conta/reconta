@@ -7,6 +7,7 @@ import {
 	Pencil,
 	Plus,
 	Search,
+	Sparkles,
 	Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState, useCallback, useId } from "react";
@@ -74,6 +75,7 @@ export function TransacoesClient() {
 	);
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 	const [bulkEditOpen, setBulkEditOpen] = useState(false);
+	const [autoCategorizing, setAutoCategorizing] = useState(false);
 
 	const [openingBalance, setOpeningBalance] = useState(0);
 	const [openingBalanceInput, setOpeningBalanceInput] = useState("");
@@ -221,6 +223,24 @@ export function TransacoesClient() {
 		fetchTransactions();
 	}
 
+	async function autoCategorize() {
+		setAutoCategorizing(true);
+		try {
+			const res = await fetch("/api/transactions/auto-categorize", {
+				method: "POST",
+			});
+			const data = await res.json();
+			fetchTransactions();
+			alert(
+				data.updated > 0
+					? `${data.updated} lançamento${data.updated !== 1 ? "s" : ""} categorizado${data.updated !== 1 ? "s" : ""} automaticamente.`
+					: "Nenhum lançamento correspondeu aos padrões cadastrados.",
+			);
+		} finally {
+			setAutoCategorizing(false);
+		}
+	}
+
 	async function bulkEditSelected(fields: BulkEditFields) {
 		await fetch("/api/transactions", {
 			method: "PATCH",
@@ -252,16 +272,29 @@ export function TransacoesClient() {
 					</Button>
 				</div>
 				{!readOnly && (
-					<Button
-						size="sm"
-						onClick={() => {
-							setEditingTx(null);
-							setDialogOpen(true);
-						}}
-					>
-						<Plus className="h-4 w-4" />
-						<span className="hidden sm:inline">Novo lançamento</span>
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={autoCategorize}
+							disabled={autoCategorizing}
+						>
+							<Sparkles className="h-4 w-4" />
+							<span className="hidden sm:inline">
+								{autoCategorizing ? "Categorizando..." : "Auto-categorizar"}
+							</span>
+						</Button>
+						<Button
+							size="sm"
+							onClick={() => {
+								setEditingTx(null);
+								setDialogOpen(true);
+							}}
+						>
+							<Plus className="h-4 w-4" />
+							<span className="hidden sm:inline">Novo lançamento</span>
+						</Button>
+					</div>
 				)}
 			</div>
 

@@ -21,6 +21,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Category {
 	id: number;
@@ -28,6 +29,7 @@ interface Category {
 	color: string;
 	icon: string;
 	type: string;
+	patterns: string | null;
 }
 
 const COLORS = [
@@ -58,6 +60,7 @@ export function CategoriasClient() {
 		name: "",
 		color: COLORS[0],
 		type: "expense" as string,
+		patterns: "",
 	});
 	const [saving, setSaving] = useState(false);
 
@@ -73,13 +76,18 @@ export function CategoriasClient() {
 
 	function openNew() {
 		setEditing(null);
-		setForm({ name: "", color: COLORS[0], type: "expense" });
+		setForm({ name: "", color: COLORS[0], type: "expense", patterns: "" });
 		setDialogOpen(true);
 	}
 
 	function openEdit(cat: Category) {
 		setEditing(cat);
-		setForm({ name: cat.name, color: cat.color, type: cat.type });
+		setForm({
+			name: cat.name,
+			color: cat.color,
+			type: cat.type,
+			patterns: cat.patterns ?? "",
+		});
 		setDialogOpen(true);
 	}
 
@@ -228,6 +236,23 @@ export function CategoriasClient() {
 										/>
 									))}
 								</div>
+							</div>
+							<div>
+								<Label>Padrões para auto-categorização</Label>
+								<Textarea
+									placeholder="Ex: uber, 99, ifood, posto shell"
+									value={form.patterns}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, patterns: e.target.value }))
+									}
+									className="mt-1"
+									rows={3}
+								/>
+								<p className="text-xs text-zinc-500 mt-1">
+									Separe os trechos por vírgula. Lançamentos cuja descrição
+									contenha um desses trechos serão categorizados
+									automaticamente.
+								</p>
 							</div>
 							<DialogFooter>
 								<Button
