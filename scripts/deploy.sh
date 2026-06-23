@@ -10,9 +10,14 @@ echo "📦 Preparando ambiente de deploy..."
 
 [ -e $TMPDIR ] && rm -rf $TMPDIR
 [ -e $WORKDIR ] && cp -af $WORKDIR $TMPDIR
+# Garantir que o banco de dados exista no servidor
+if [ ! -f "$WORKDIR/reconta.db" ]; then
+  echo "💾 Criando banco de dados inicial..."
+  touch "$WORKDIR/reconta.db"
+fi
 cd $TMPDIR || exit 1
 
-git clean -fxd -e .env -e drizzle/reconta.db
+git clean -fxd -e .env -e drizzle/reconta.db -e reconta.db
 cp .env .env.production
 
 echo "📥 Instalando dependências..."
@@ -36,6 +41,10 @@ if pnpm run build; then
   sudo /usr/bin/systemctl stop $SERVICE
   [ -e $WORKDIR ] && rm -rf $WORKDIR
   [ -e $TMPDIR ] && cp -af $TMPDIR $WORKDIR
+  # Garantir que o banco de dados persista
+  if [ -f "$TMPDIR/reconta.db" ]; then
+    cp -f "$TMPDIR/reconta.db" "$WORKDIR/reconta.db"
+  fi
   sudo /usr/bin/systemctl start $SERVICE
   echo "🚀 Serviço reiniciado!"
 
