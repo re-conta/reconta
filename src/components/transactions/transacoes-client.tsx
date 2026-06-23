@@ -6,9 +6,13 @@ import {
 	ChevronRight,
 	Pencil,
 	Plus,
+	Scale,
 	Search,
 	Sparkles,
 	Trash2,
+	TrendingDown,
+	TrendingUp,
+	Wallet,
 } from "lucide-react";
 import { useEffect, useRef, useState, useCallback, useId } from "react";
 import { Button } from "@/components/ui/button";
@@ -81,6 +85,7 @@ export function TransacoesClient() {
 	const [openingBalanceInput, setOpeningBalanceInput] = useState("");
 	const [editingOpeningBalance, setEditingOpeningBalance] = useState(false);
 	const openingBalanceInputId = useId();
+	const selectAllMobileId = useId();
 
 	const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -251,20 +256,28 @@ export function TransacoesClient() {
 		fetchTransactions();
 	}
 
+	const finalBalance = openingBalance + totals.balance;
+
 	return (
-		<div className="space-y-4">
+		<div className="space-y-5">
 			{/* Controls */}
-			<div className="flex items-center justify-between gap-2">
-				<div className="flex items-center gap-2">
-					<Button variant="outline" size="icon" onClick={prevMonth}>
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/70 p-1 shadow-sm">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-8 w-8 rounded-full"
+						onClick={prevMonth}
+					>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
-					<span className="font-medium capitalize min-w-28 text-center text-zinc-100">
+					<span className="font-nunito font-semibold capitalize min-w-32 text-center text-sm text-zinc-100">
 						{formatMonth(month, year)}
 					</span>
 					<Button
-						variant="outline"
+						variant="ghost"
 						size="icon"
+						className="h-8 w-8 rounded-full"
 						onClick={nextMonth}
 						disabled={isCurrentMonth}
 					>
@@ -290,6 +303,7 @@ export function TransacoesClient() {
 								setEditingTx(null);
 								setDialogOpen(true);
 							}}
+							className="shadow-md shadow-indigo-950/40"
 						>
 							<Plus className="h-4 w-4" />
 							<span className="hidden sm:inline">Novo lançamento</span>
@@ -298,26 +312,126 @@ export function TransacoesClient() {
 				)}
 			</div>
 
-			<div className="flex flex-wrap items-center gap-2">
+			{/* Totals */}
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+				{!readOnly && (
+					<div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 transition-colors hover:border-zinc-700">
+						<div className="flex items-center justify-between mb-2.5">
+							<p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+								Saldo inicial
+							</p>
+							<span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-800 text-zinc-400">
+								<Wallet className="h-3.5 w-3.5" />
+							</span>
+						</div>
+						{editingOpeningBalance ? (
+							<Input
+								id={openingBalanceInputId}
+								autoFocus
+								value={openingBalanceInput}
+								onChange={(e) => setOpeningBalanceInput(e.target.value)}
+								onBlur={saveOpeningBalance}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") saveOpeningBalance();
+									if (e.key === "Escape") setEditingOpeningBalance(false);
+								}}
+								className="h-7 text-sm w-full"
+								placeholder="0,00"
+							/>
+						) : (
+							<button
+								type="button"
+								className="group flex items-center gap-1.5 text-lg sm:text-xl font-bold font-nunito text-zinc-200 hover:text-white cursor-pointer text-left w-full"
+								onClick={() => {
+									setOpeningBalanceInput(String(openingBalance));
+									setEditingOpeningBalance(true);
+								}}
+								title="Clique para editar o saldo inicial"
+							>
+								{formatCurrency(openingBalance)}
+								<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+							</button>
+						)}
+					</div>
+				)}
+				<div className="relative overflow-hidden rounded-2xl border border-emerald-800/30 bg-gradient-to-br from-emerald-900/25 to-emerald-950/10 p-4 transition-colors hover:border-emerald-700/40">
+					<div className="flex items-center justify-between mb-2.5">
+						<p className="text-xs font-medium text-emerald-300/70 uppercase tracking-wide">
+							Receitas
+						</p>
+						<span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+							<TrendingUp className="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<p className="text-lg sm:text-xl font-bold font-nunito text-emerald-400">
+						{formatCurrency(totals.income)}
+					</p>
+				</div>
+				<div className="relative overflow-hidden rounded-2xl border border-red-800/30 bg-gradient-to-br from-red-900/25 to-red-950/10 p-4 transition-colors hover:border-red-700/40">
+					<div className="flex items-center justify-between mb-2.5">
+						<p className="text-xs font-medium text-red-300/70 uppercase tracking-wide">
+							Despesas
+						</p>
+						<span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/15 text-red-400">
+							<TrendingDown className="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<p className="text-lg sm:text-xl font-bold font-nunito text-red-400">
+						{formatCurrency(totals.expense)}
+					</p>
+				</div>
+				<div
+					className={`relative overflow-hidden rounded-2xl border p-4 transition-colors ${
+						finalBalance >= 0
+							? "border-indigo-800/30 bg-gradient-to-br from-indigo-900/25 to-indigo-950/10 hover:border-indigo-700/40"
+							: "border-red-800/30 bg-gradient-to-br from-red-900/25 to-red-950/10 hover:border-red-700/40"
+					}`}
+				>
+					<div className="flex items-center justify-between mb-2.5">
+						<p
+							className={`text-xs font-medium uppercase tracking-wide ${finalBalance >= 0 ? "text-indigo-300/70" : "text-red-300/70"}`}
+						>
+							Saldo final
+						</p>
+						<span
+							className={`flex h-7 w-7 items-center justify-center rounded-full ${finalBalance >= 0 ? "bg-indigo-500/15 text-indigo-400" : "bg-red-500/15 text-red-400"}`}
+						>
+							<Scale className="h-3.5 w-3.5" />
+						</span>
+					</div>
+					<p
+						className={`text-lg sm:text-xl font-bold font-nunito ${finalBalance >= 0 ? "text-indigo-400" : "text-red-400"}`}
+					>
+						{formatCurrency(finalBalance)}
+					</p>
+				</div>
+			</div>
+
+			{/* Filter bar */}
+			<div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-2">
 				<div className="relative flex-1 min-w-40">
 					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
 					<Input
-						placeholder="Buscar..."
+						placeholder="Buscar lançamentos..."
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						className="pl-9"
+						className="pl-9 bg-zinc-900/80 border-zinc-700/60"
 					/>
 				</div>
-				<div className="flex gap-1">
+				<div className="flex gap-1 rounded-lg bg-zinc-800/60 p-1">
 					{(["all", "income", "expense"] as const).map((t) => (
-						<Button
+						<button
 							key={t}
-							variant={typeFilter === t ? "default" : "outline"}
-							size="sm"
+							type="button"
 							onClick={() => setTypeFilter(t)}
+							className={`rounded-md px-3 h-7 text-xs font-medium transition-colors cursor-pointer ${
+								typeFilter === t
+									? "bg-indigo-600 text-white shadow-sm"
+									: "text-zinc-400 hover:text-zinc-200"
+							}`}
 						>
 							{t === "all" ? "Todos" : t === "income" ? "Receitas" : "Despesas"}
-						</Button>
+						</button>
 					))}
 				</div>
 				{!readOnly && (
@@ -354,75 +468,9 @@ export function TransacoesClient() {
 				)}
 			</div>
 
-			{/* Totals */}
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				{!readOnly && (
-					<div className="rounded-lg bg-zinc-800/40 border border-zinc-700/40 p-4">
-						<p className="text-xs text-zinc-400 mb-1">Saldo inicial</p>
-						{editingOpeningBalance ? (
-							<div className="flex items-center gap-2 mt-1">
-								<Input
-									id={openingBalanceInputId}
-									autoFocus
-									value={openingBalanceInput}
-									onChange={(e) => setOpeningBalanceInput(e.target.value)}
-									onBlur={saveOpeningBalance}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") saveOpeningBalance();
-										if (e.key === "Escape") setEditingOpeningBalance(false);
-									}}
-									className="h-7 text-sm w-full"
-									placeholder="0,00"
-								/>
-							</div>
-						) : (
-							<button
-								type="button"
-								className="group flex items-center gap-1.5 text-lg font-bold text-zinc-200 hover:text-white cursor-pointer text-left w-full"
-								onClick={() => {
-									setOpeningBalanceInput(String(openingBalance));
-									setEditingOpeningBalance(true);
-								}}
-								title="Clique para editar o saldo inicial"
-							>
-								{formatCurrency(openingBalance)}
-								<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-							</button>
-						)}
-					</div>
-				)}
-				<div className="rounded-lg bg-emerald-900/20 border border-emerald-800/30 p-4">
-					<p className="text-xs text-zinc-400 mb-1">Receitas</p>
-					<p className="text-lg font-bold text-emerald-400">
-						{formatCurrency(totals.income)}
-					</p>
-				</div>
-				<div className="rounded-lg bg-red-900/20 border border-red-800/30 p-4">
-					<p className="text-xs text-zinc-400 mb-1">Despesas</p>
-					<p className="text-lg font-bold text-red-400">
-						{formatCurrency(totals.expense)}
-					</p>
-				</div>
-				{(() => {
-					const finalBalance = openingBalance + totals.balance;
-					return (
-						<div
-							className={`rounded-lg border p-4 ${finalBalance >= 0 ? "bg-indigo-900/20 border-indigo-800/30" : "bg-red-900/20 border-red-800/30"}`}
-						>
-							<p className="text-xs text-zinc-400 mb-1">Saldo final</p>
-							<p
-								className={`text-lg font-bold ${finalBalance >= 0 ? "text-indigo-400" : "text-red-400"}`}
-							>
-								{formatCurrency(finalBalance)}
-							</p>
-						</div>
-					);
-				})()}
-			</div>
-
 			{/* Bulk action bar */}
 			{!readOnly && selectedIds.size > 0 && (
-				<div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-700/40 text-sm">
+				<div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-xl bg-indigo-900/30 border border-indigo-700/40 text-sm">
 					<span className="text-indigo-300 font-medium">
 						{selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
 					</span>
@@ -469,150 +517,257 @@ export function TransacoesClient() {
 				/>
 			)}
 
-			{/* Table */}
-			<Card>
-				<CardContent className="p-0">
-					{loading ? (
-						<div className="p-8 text-center text-zinc-500 text-sm">
-							Carregando...
-						</div>
-					) : transactions.length === 0 ? (
-						<div className="p-8 text-center text-zinc-500 text-sm">
-							Nenhum lançamento encontrado.
-						</div>
-					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b border-zinc-800">
+			{/* Loading / empty states */}
+			{loading ? (
+				<Card>
+					<CardContent className="p-10 text-center text-zinc-500 text-sm">
+						Carregando...
+					</CardContent>
+				</Card>
+			) : transactions.length === 0 ? (
+				<Card>
+					<CardContent className="p-10 text-center text-zinc-500 text-sm">
+						Nenhum lançamento encontrado.
+					</CardContent>
+				</Card>
+			) : (
+				<>
+					{/* Mobile: card list */}
+					<div className="space-y-2 md:hidden">
+						{!readOnly && (
+							<label
+								htmlFor={selectAllMobileId}
+								className="flex items-center gap-2 px-1 text-xs text-zinc-400"
+							>
+								<Checkbox
+									id={selectAllMobileId}
+									ref={selectAllRef}
+									checked={
+										transactions.length > 0 &&
+										selectedIds.size === transactions.length
+									}
+									onChange={toggleAll}
+								/>
+								Selecionar todos
+							</label>
+						)}
+						{transactions.map((tx) => (
+							<Card
+								key={tx.id}
+								className={`transition-colors ${selectedIds.has(tx.id) ? "border-indigo-700/50 bg-indigo-900/10" : ""}`}
+							>
+								<CardContent className="p-3.5">
+									<div className="flex items-start gap-3">
 										{!readOnly && (
-											<th className="px-4 py-3 w-10">
-												<Checkbox
-													ref={selectAllRef}
-													checked={
-														transactions.length > 0 &&
-														selectedIds.size === transactions.length
-													}
-													onChange={toggleAll}
-												/>
-											</th>
+											<Checkbox
+												checked={selectedIds.has(tx.id)}
+												onChange={() => toggleId(tx.id)}
+												className="mt-1"
+											/>
 										)}
-										<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
-											Data
-										</th>
-										<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
-											Descrição
-										</th>
-										<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
-											Categoria
-										</th>
-										<th className="text-right px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
-											Valor
-										</th>
-										{!readOnly && <th className="px-4 py-3 w-20" />}
-									</tr>
-								</thead>
-								<tbody>
-									{transactions.map((tx) => (
-										<tr
-											key={tx.id}
-											className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${selectedIds.has(tx.id) ? "bg-indigo-900/10" : ""}`}
-										>
-											{!readOnly && (
-												<td className="px-4 py-3">
-													<Checkbox
-														checked={selectedIds.has(tx.id)}
-														onChange={() => toggleId(tx.id)}
-													/>
-												</td>
-											)}{" "}
-											<td className="px-4 py-3 text-zinc-400 whitespace-nowrap">
-												{formatDate(tx.date)}
-											</td>
-											<td
-												className={`group px-4 py-3 ${!readOnly ? "cursor-pointer" : ""}`}
+										<div className="flex-1 min-w-0">
+											<button
+												type="button"
+												className="block w-full text-left"
 												onClick={
 													readOnly ? undefined : () => setInlineEditingTx(tx)
 												}
-												onKeyDown={
-													readOnly
-														? undefined
-														: (e) => {
-																if (e.key === "Enter" || e.key === " ") {
-																	e.preventDefault();
-																	setInlineEditingTx(tx);
-																}
-															}
-												}
-												role={readOnly ? undefined : "button"}
-												tabIndex={readOnly ? undefined : 0}
-												title={readOnly ? undefined : "Clique para editar"}
+												disabled={readOnly}
 											>
-												<div className="flex items-center gap-1.5 text-zinc-200 font-medium truncate max-w-xs">
-													{tx.description}
-													{!readOnly && (
-														<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
-													)}
-												</div>{" "}
-												{tx.pixBeneficiary && (
-													<div className="text-xs text-indigo-400/70 truncate">
-														Beneficiário: {tx.pixBeneficiary}
-													</div>
-												)}
-												{tx.bank && (
-													<div className="text-xs text-zinc-500 truncate">
-														{tx.bank}
-													</div>
-												)}{" "}
-												{tx.notes && (
-													<div className="text-xs text-zinc-500 truncate">
-														{tx.notes}
-													</div>
-												)}
-											</td>
-											<td className="px-4 py-3">
-												{tx.categoryName ? (
-													<span
-														className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-														style={{
-															backgroundColor: `${tx.categoryColor}22`,
-															color: tx.categoryColor ?? "#6366f1",
-														}}
+												<div className="flex items-center justify-between gap-2">
+													<p className="font-medium text-zinc-200 truncate">
+														{tx.description}
+													</p>
+													<p
+														className={`font-semibold whitespace-nowrap font-nunito ${tx.type === "income" ? "text-emerald-400" : "text-red-400"}`}
 													>
-														{tx.categoryName}
+														{tx.type === "income" ? "+" : "-"}
+														{formatCurrency(tx.amount)}
+													</p>
+												</div>
+											</button>
+											<div className="flex items-center justify-between gap-2 mt-1.5">
+												<div className="flex items-center gap-2 min-w-0">
+													<span className="text-xs text-zinc-500 whitespace-nowrap">
+														{formatDate(tx.date)}
 													</span>
-												) : (
-													<span className="text-zinc-600 text-xs">—</span>
-												)}
-											</td>
-											<td
-												className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${tx.type === "income" ? "text-emerald-400" : "text-red-400"}`}
-											>
-												{tx.type === "income" ? "+" : "-"}
-												{formatCurrency(tx.amount)}
-											</td>
-											{!readOnly && (
-												<td className="px-4 py-3">
-													<div className="flex items-center justify-end gap-1">
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-7 w-7 text-red-400 hover:text-red-300"
-															onClick={() => deleteTransaction(tx.id)}
+													{tx.categoryName ? (
+														<span
+															className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium truncate"
+															style={{
+																backgroundColor: `${tx.categoryColor}22`,
+																color: tx.categoryColor ?? "#6366f1",
+															}}
 														>
-															<Trash2 className="h-3.5 w-3.5" />
-														</Button>
-													</div>
-												</td>
+															{tx.categoryName}
+														</span>
+													) : null}
+												</div>
+												{!readOnly && (
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-7 w-7 text-red-400 hover:text-red-300 shrink-0"
+														onClick={() => deleteTransaction(tx.id)}
+													>
+														<Trash2 className="h-3.5 w-3.5" />
+													</Button>
+												)}
+											</div>
+											{(tx.pixBeneficiary || tx.bank || tx.notes) && (
+												<div className="mt-1 text-xs text-zinc-500 truncate">
+													{tx.pixBeneficiary && (
+														<span className="text-indigo-400/70">
+															Beneficiário: {tx.pixBeneficiary}
+														</span>
+													)}
+													{tx.bank && <span> · {tx.bank}</span>}
+													{tx.notes && <span> · {tx.notes}</span>}
+												</div>
 											)}
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+
+					{/* Desktop: table */}
+					<Card className="hidden md:block">
+						<CardContent className="p-0">
+							<div className="overflow-x-auto">
+								<table className="w-full text-sm">
+									<thead>
+										<tr className="border-b border-zinc-800">
+											{!readOnly && (
+												<th className="px-4 py-3 w-10">
+													<Checkbox
+														ref={selectAllRef}
+														checked={
+															transactions.length > 0 &&
+															selectedIds.size === transactions.length
+														}
+														onChange={toggleAll}
+													/>
+												</th>
+											)}
+											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+												Data
+											</th>
+											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+												Descrição
+											</th>
+											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+												Categoria
+											</th>
+											<th className="text-right px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+												Valor
+											</th>
+											{!readOnly && <th className="px-4 py-3 w-20" />}
 										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					)}
-				</CardContent>
-			</Card>
+									</thead>
+									<tbody>
+										{transactions.map((tx) => (
+											<tr
+												key={tx.id}
+												className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${selectedIds.has(tx.id) ? "bg-indigo-900/10" : ""}`}
+											>
+												{!readOnly && (
+													<td className="px-4 py-3">
+														<Checkbox
+															checked={selectedIds.has(tx.id)}
+															onChange={() => toggleId(tx.id)}
+														/>
+													</td>
+												)}
+												<td className="px-4 py-3 text-zinc-400 whitespace-nowrap">
+													{formatDate(tx.date)}
+												</td>
+												<td
+													className={`group px-4 py-3 ${!readOnly ? "cursor-pointer" : ""}`}
+													onClick={
+														readOnly ? undefined : () => setInlineEditingTx(tx)
+													}
+													onKeyDown={
+														readOnly
+															? undefined
+															: (e) => {
+																	if (e.key === "Enter" || e.key === " ") {
+																		e.preventDefault();
+																		setInlineEditingTx(tx);
+																	}
+																}
+													}
+													role={readOnly ? undefined : "button"}
+													tabIndex={readOnly ? undefined : 0}
+													title={readOnly ? undefined : "Clique para editar"}
+												>
+													<div className="flex items-center gap-1.5 text-zinc-200 font-medium truncate max-w-xs">
+														{tx.description}
+														{!readOnly && (
+															<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
+														)}
+													</div>
+													{tx.pixBeneficiary && (
+														<div className="text-xs text-indigo-400/70 truncate">
+															Beneficiário: {tx.pixBeneficiary}
+														</div>
+													)}
+													{tx.bank && (
+														<div className="text-xs text-zinc-500 truncate">
+															{tx.bank}
+														</div>
+													)}
+													{tx.notes && (
+														<div className="text-xs text-zinc-500 truncate">
+															{tx.notes}
+														</div>
+													)}
+												</td>
+												<td className="px-4 py-3">
+													{tx.categoryName ? (
+														<span
+															className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+															style={{
+																backgroundColor: `${tx.categoryColor}22`,
+																color: tx.categoryColor ?? "#6366f1",
+															}}
+														>
+															{tx.categoryName}
+														</span>
+													) : (
+														<span className="text-zinc-600 text-xs">—</span>
+													)}
+												</td>
+												<td
+													className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${tx.type === "income" ? "text-emerald-400" : "text-red-400"}`}
+												>
+													{tx.type === "income" ? "+" : "-"}
+													{formatCurrency(tx.amount)}
+												</td>
+												{!readOnly && (
+													<td className="px-4 py-3">
+														<div className="flex items-center justify-end gap-1">
+															<Button
+																variant="ghost"
+																size="icon"
+																className="h-7 w-7 text-red-400 hover:text-red-300"
+																onClick={() => deleteTransaction(tx.id)}
+															>
+																<Trash2 className="h-3.5 w-3.5" />
+															</Button>
+														</div>
+													</td>
+												)}
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</CardContent>
+					</Card>
+				</>
+			)}
 
 			{!readOnly && (
 				<>

@@ -163,7 +163,10 @@ function parseTextToTransactions(
 	// Tries multiple common Brazilian bank statement formats
 	const patterns = [
 		// Itaú / Bradesco / BB style: DD/MM/YYYY description value [D/C]
-		/(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([+-]?\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?)\s*([DC]?)/gi,
+		// Decimal cents (",NN") are required so long digit runs embedded in the
+		// description (e.g. a CPF in "PAGAMENTO PIX - 03435410175 NOME") aren't
+		// mistaken for the amount, which truncates the description.
+		/(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([+-]?\s*\d{1,3}(?:\.\d{3})*,\d{2})\s*([DC]?)/gi,
 		// Generic: date description +/-amount
 		/(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([+-]?\s*\d+[.,]\d{2})/gi,
 		// Amount in parentheses (negative): DD/MM/YYYY description (amount)
