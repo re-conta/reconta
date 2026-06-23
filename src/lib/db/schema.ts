@@ -85,6 +85,7 @@ export const categories = sqliteTable("categories", {
 	type: text("type", { enum: ["income", "expense", "both"] })
 		.notNull()
 		.default("both"),
+	patterns: text("patterns"),
 });
 
 export const transactions = sqliteTable("transactions", {
