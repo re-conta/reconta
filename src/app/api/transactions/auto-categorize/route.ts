@@ -19,9 +19,16 @@ export async function POST() {
 		.map((c) => ({
 			id: c.id,
 			patterns: (c.patterns ?? "")
-				.split(",")
-				.map((p) => p.trim().toLowerCase())
-				.filter(Boolean),
+				.split("\n")
+				.map((p) => p.trim())
+				.filter(Boolean)
+				.map((p) => {
+					try {
+						return new RegExp(p, "i");
+					} catch {
+						return new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+					}
+				}),
 		}))
 		.filter((c) => c.patterns.length > 0);
 
@@ -42,10 +49,9 @@ export async function POST() {
 
 	const updates: { id: number; categoryId: number }[] = [];
 	for (const tx of uncategorized) {
-		const haystack =
-			`${tx.description} ${tx.pixBeneficiary ?? ""}`.toLowerCase();
+		const haystack = `${tx.description} ${tx.pixBeneficiary ?? ""}`;
 		const match = rules.find((rule) =>
-			rule.patterns.some((pattern) => haystack.includes(pattern)),
+			rule.patterns.some((pattern) => pattern.test(haystack)),
 		);
 		if (match) updates.push({ id: tx.id, categoryId: match.id });
 	}

@@ -240,7 +240,7 @@ export function CategoriasClient() {
 							<div>
 								<Label>Padrões para auto-categorização</Label>
 								<Textarea
-									placeholder="Ex: uber, 99, ifood, posto shell"
+									placeholder={"uber\n99\nifood\nposto shell"}
 									value={form.patterns}
 									onChange={(e) =>
 										setForm((f) => ({ ...f, patterns: e.target.value }))
@@ -249,9 +249,9 @@ export function CategoriasClient() {
 									rows={3}
 								/>
 								<p className="text-xs text-zinc-500 mt-1">
-									Separe os trechos por vírgula. Lançamentos cuja descrição
-									contenha um desses trechos serão categorizados
-									automaticamente.
+									Um padrão por linha (aceita regex). Lançamentos cuja descrição
+									ou beneficiário PIX corresponderem a um desses padrões serão
+									categorizados automaticamente.
 								</p>
 							</div>
 							<DialogFooter>

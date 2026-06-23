@@ -66,6 +66,7 @@ export function MonthlyBalanceChart({ data }: { data: DataPoint[] }) {
 					}
 				/>
 				<Tooltip
+					cursor={{ fill: "#27272a", opacity: 0.5 }}
 					contentStyle={{
 						backgroundColor: "#18181b",
 						border: "1px solid #3f3f46",
