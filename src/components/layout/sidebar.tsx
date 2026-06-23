@@ -29,12 +29,12 @@ const navigation = [
 	{ name: "Dashboard", href: "/", icon: Home },
 	{ name: "Lançamentos", href: "/transacoes", icon: BookOpen },
 	{ name: "Contas Fixas", href: "/contas", icon: AlertCircle },
+	{ name: "Contas Bancárias", href: "/contas-bancarias", icon: Wallet },
+	{ name: "Categorias", href: "/categorias", icon: Tags },
 	{ name: "Relatórios", href: "/relatorios", icon: BarChart3 },
+	{ name: "Compartilhamentos", href: "/compartilhamentos", icon: Share2 },
 	{ name: "Importar Extrato", href: "/importar", icon: Upload },
 	{ name: "Exportar", href: "/exportar", icon: Download },
-	{ name: "Categorias", href: "/categorias", icon: Tags },
-	{ name: "Contas Bancárias", href: "/contas-bancarias", icon: Wallet },
-	{ name: "Compartilhamentos", href: "/compartilhamentos", icon: Share2 },
 	{ name: "Ajustes", href: "/ajustes", icon: Settings },
 ];
 
@@ -43,10 +43,10 @@ const sharedNavigation = [
 	{ name: "Dashboard", href: "", icon: Home },
 	{ name: "Lançamentos", href: "/transacoes", icon: BookOpen },
 	{ name: "Contas Fixas", href: "/contas", icon: AlertCircle },
-	{ name: "Relatórios", href: "/relatorios", icon: BarChart3 },
-	{ name: "Exportar", href: "/exportar", icon: Download },
 	{ name: "Categorias", href: "/categorias", icon: Tags },
+	{ name: "Relatórios", href: "/relatorios", icon: BarChart3 },
 	{ name: "Contas Bancárias", href: "/contas-bancarias", icon: Wallet },
+	{ name: "Exportar", href: "/exportar", icon: Download },
 ];
 
 export function Sidebar() {

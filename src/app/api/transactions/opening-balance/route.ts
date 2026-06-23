@@ -1,10 +1,18 @@
 export const dynamic = "force-dynamic";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { monthlyOpeningBalances } from "@/lib/db/schema";
+import { accounts, monthlyOpeningBalances } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth-session";
+
+async function getAccountsBalance(userId: string) {
+	const [row] = await db
+		.select({ total: sql<number>`coalesce(sum(${accounts.balance}), 0)` })
+		.from(accounts)
+		.where(eq(accounts.userId, userId));
+	return Number(row?.total ?? 0);
+}
 
 export async function GET(request: Request) {
 	const { userId, unauthorized } = await requireSession();
@@ -33,7 +41,10 @@ export async function GET(request: Request) {
 		)
 		.limit(1);
 
-	return NextResponse.json({ amount: row?.amount ?? 0 });
+	if (row) return NextResponse.json({ amount: row.amount });
+
+	const amount = await getAccountsBalance(userId);
+	return NextResponse.json({ amount });
 }
 
 export async function POST(request: Request) {

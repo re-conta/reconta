@@ -496,9 +496,30 @@ export function TransacoesClient() {
 											<td className="px-4 py-3 text-zinc-400 whitespace-nowrap">
 												{formatDate(tx.date)}
 											</td>
-											<td className="px-4 py-3">
-												<div className="text-zinc-200 font-medium truncate max-w-xs">
+											<td
+												className={`group px-4 py-3 ${!readOnly ? "cursor-pointer" : ""}`}
+												onClick={
+													readOnly ? undefined : () => setInlineEditingTx(tx)
+												}
+												onKeyDown={
+													readOnly
+														? undefined
+														: (e) => {
+																if (e.key === "Enter" || e.key === " ") {
+																	e.preventDefault();
+																	setInlineEditingTx(tx);
+																}
+															}
+												}
+												role={readOnly ? undefined : "button"}
+												tabIndex={readOnly ? undefined : 0}
+												title={readOnly ? undefined : "Clique para editar"}
+											>
+												<div className="flex items-center gap-1.5 text-zinc-200 font-medium truncate max-w-xs">
 													{tx.description}
+													{!readOnly && (
+														<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
+													)}
 												</div>{" "}
 												{tx.pixBeneficiary && (
 													<div className="text-xs text-indigo-400/70 truncate">
@@ -540,14 +561,6 @@ export function TransacoesClient() {
 											{!readOnly && (
 												<td className="px-4 py-3">
 													<div className="flex items-center justify-end gap-1">
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-7 w-7"
-															onClick={() => setInlineEditingTx(tx)}
-														>
-															<Pencil className="h-3.5 w-3.5" />
-														</Button>
 														<Button
 															variant="ghost"
 															size="icon"

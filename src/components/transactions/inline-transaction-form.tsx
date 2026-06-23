@@ -3,6 +3,9 @@
 import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { QuickAddCategoryDialog } from "./quick-add-category-dialog";
+
+const NEW_CATEGORY_VALUE = "__new__";
 
 interface Category {
 	id: number;
@@ -73,6 +76,7 @@ export function InlineTransactionForm({
 	const [amount, setAmount] = useState("");
 	const [categoryId, setCategoryId] = useState("");
 	const [accountId, setAccountId] = useState("");
+	const [showNewCategory, setShowNewCategory] = useState(false);
 
 	const descRef = useRef<HTMLInputElement>(null);
 	const formRef = useRef<HTMLFormElement>(null);
@@ -160,135 +164,161 @@ export function InlineTransactionForm({
 	const isEditing = !!transaction;
 
 	return (
-		<form
-			ref={formRef}
-			onSubmit={handleSubmit}
-			className={`rounded-lg border p-3 transition-colors ${
-				isEditing
-					? "border-indigo-600/50 bg-indigo-950/20"
-					: "border-zinc-700/60 bg-zinc-900/60"
-			}`}
-		>
-			<div className="flex flex-wrap gap-2 items-center">
-				{/* Type toggle */}
-				<button
-					type="button"
-					onClick={() => {
-						setType((t) => (t === "expense" ? "income" : "expense"));
-						setCategoryId("");
-					}}
-					className={`h-9 px-3 shrink-0 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-						type === "expense"
-							? "bg-red-500/15 text-red-400 border border-red-700/40"
-							: "bg-emerald-500/15 text-emerald-400 border border-emerald-700/40"
-					}`}
-				>
-					{type === "expense" ? "Despesa" : "Receita"}
-				</button>
-
-				{/* Date */}
-				<input
-					type="date"
-					value={date}
-					onChange={(e) => setDate(e.target.value)}
-					enterKeyHint="next"
-					className={`${inputCls} w-[8.5rem] shrink-0`}
-					style={{ colorScheme: "dark" }}
-					required
-				/>
-
-				{/* Description */}
-				<input
-					ref={descRef}
-					type="text"
-					placeholder="Descrição..."
-					value={description}
-					onChange={(e) => setDescription(e.target.value)}
-					enterKeyHint="next"
-					className={`${inputCls} min-w-[10rem] flex-1`}
-					required
-				/>
-
-				{/* Amount */}
-				<input
-					type="number"
-					step="0.01"
-					min="0.01"
-					placeholder="Valor"
-					value={amount}
-					onChange={(e) => setAmount(e.target.value)}
-					enterKeyHint="next"
-					inputMode="decimal"
-					className={`${inputCls} w-24 shrink-0`}
-					required
-				/>
-
-				{/* Category */}
-				<select
-					value={categoryId}
-					onChange={(e) => setCategoryId(e.target.value)}
-					className={`${selectCls} w-32 shrink-0`}
-					style={chevronStyle}
-				>
-					<option value="">Categoria</option>
-					{filteredCategories.map((c) => (
-						<option key={c.id} value={String(c.id)}>
-							{c.name}
-						</option>
-					))}
-				</select>
-
-				{/* Account */}
-				<select
-					value={accountId}
-					onChange={(e) => setAccountId(e.target.value)}
-					className={`${selectCls} w-32 shrink-0`}
-					style={chevronStyle}
-				>
-					<option value="">Conta</option>
-					{accounts.map((a) => (
-						<option key={a.id} value={String(a.id)}>
-							{a.name}
-						</option>
-					))}
-				</select>
-
-				{/* Actions */}
-				<div className="flex gap-1 shrink-0">
-					<Button
-						type="submit"
-						size="icon"
-						className="h-9 w-9"
-						disabled={saving}
-					>
-						<Check className="h-4 w-4" />
-					</Button>
-					{isEditing && (
-						<Button
-							type="button"
-							size="icon"
-							variant="ghost"
-							className="h-9 w-9"
-							onClick={onCancel}
-						>
-							<X className="h-4 w-4" />
-						</Button>
-					)}
-				</div>
-			</div>
-
-			{isEditing && (
-				<p className="text-xs text-indigo-400/70 mt-2">
-					Editando lançamento —{" "}
+		<>
+			<form
+				ref={formRef}
+				onSubmit={handleSubmit}
+				onKeyDown={(e) => {
+					if (e.key === "Escape" && isEditing) {
+						e.preventDefault();
+						onCancel?.();
+					}
+				}}
+				className={`rounded-lg border p-3 transition-colors ${
+					isEditing
+						? "border-indigo-600/50 bg-indigo-950/20"
+						: "border-zinc-700/60 bg-zinc-900/60"
+				}`}
+			>
+				<div className="flex flex-wrap gap-2 items-center">
+					{/* Type toggle */}
 					<button
 						type="button"
-						className="underline cursor-pointer hover:text-indigo-300"
-						onClick={onCancel}
+						onClick={() => {
+							setType((t) => (t === "expense" ? "income" : "expense"));
+							setCategoryId("");
+						}}
+						className={`h-9 px-3 shrink-0 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+							type === "expense"
+								? "bg-red-500/15 text-red-400 border border-red-700/40"
+								: "bg-emerald-500/15 text-emerald-400 border border-emerald-700/40"
+						}`}
 					>
-						cancelar
+						{type === "expense" ? "Despesa" : "Receita"}
 					</button>
-				</p>
-			)}
-		</form>
+
+					{/* Date */}
+					<input
+						type="date"
+						value={date}
+						onChange={(e) => setDate(e.target.value)}
+						enterKeyHint="next"
+						className={`${inputCls} w-[8.5rem] shrink-0`}
+						style={{ colorScheme: "dark" }}
+						required
+					/>
+
+					{/* Description */}
+					<input
+						ref={descRef}
+						type="text"
+						placeholder="Descrição..."
+						value={description}
+						onChange={(e) => setDescription(e.target.value)}
+						enterKeyHint="next"
+						className={`${inputCls} min-w-[10rem] flex-1`}
+						required
+					/>
+
+					{/* Amount */}
+					<input
+						type="number"
+						step="0.01"
+						min="0.01"
+						placeholder="Valor"
+						value={amount}
+						onChange={(e) => setAmount(e.target.value)}
+						enterKeyHint="next"
+						inputMode="decimal"
+						className={`${inputCls} w-24 shrink-0`}
+						required
+					/>
+
+					{/* Category */}
+					<select
+						value={categoryId}
+						onChange={(e) => {
+							if (e.target.value === NEW_CATEGORY_VALUE) {
+								setShowNewCategory(true);
+								return;
+							}
+							setCategoryId(e.target.value);
+						}}
+						className={`${selectCls} w-32 shrink-0`}
+						style={chevronStyle}
+					>
+						<option value="">Categoria</option>
+						{filteredCategories.map((c) => (
+							<option key={c.id} value={String(c.id)}>
+								{c.name}
+							</option>
+						))}
+						<option value={NEW_CATEGORY_VALUE}>+ Nova categoria</option>
+					</select>
+
+					{/* Account */}
+					<select
+						value={accountId}
+						onChange={(e) => setAccountId(e.target.value)}
+						className={`${selectCls} w-32 shrink-0`}
+						style={chevronStyle}
+					>
+						<option value="">Conta</option>
+						{accounts.map((a) => (
+							<option key={a.id} value={String(a.id)}>
+								{a.name}
+							</option>
+						))}
+					</select>
+
+					{/* Actions */}
+					<div className="flex gap-1 shrink-0">
+						<Button
+							type="submit"
+							size="icon"
+							className="h-9 w-9"
+							disabled={saving}
+						>
+							<Check className="h-4 w-4" />
+						</Button>
+						{isEditing && (
+							<Button
+								type="button"
+								size="icon"
+								variant="ghost"
+								className="h-9 w-9"
+								onClick={onCancel}
+							>
+								<X className="h-4 w-4" />
+							</Button>
+						)}
+					</div>
+				</div>
+
+				{isEditing && (
+					<p className="text-xs text-indigo-400/70 mt-2">
+						Editando lançamento —{" "}
+						<button
+							type="button"
+							className="underline cursor-pointer hover:text-indigo-300"
+							onClick={onCancel}
+						>
+							cancelar
+						</button>
+					</p>
+				)}
+			</form>
+
+			<QuickAddCategoryDialog
+				open={showNewCategory}
+				defaultType={type}
+				onClose={() => setShowNewCategory(false)}
+				onCreated={(category) => {
+					setCategories((prev) => [...prev, category]);
+					setCategoryId(String(category.id));
+					setShowNewCategory(false);
+				}}
+			/>
+		</>
 	);
 }

@@ -19,6 +19,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { QuickAddCategoryDialog } from "./quick-add-category-dialog";
+
+const NEW_CATEGORY_VALUE = "__new__";
 
 interface Category {
 	id: number;
@@ -76,6 +79,7 @@ export function TransactionDialog({
 		notes: "",
 	});
 	const [saving, setSaving] = useState(false);
+	const [showNewCategory, setShowNewCategory] = useState(false);
 
 	useEffect(() => {
 		Promise.all([
@@ -225,7 +229,14 @@ export function TransactionDialog({
 							<Label>Categoria</Label>
 							<Select
 								value={form.categoryId}
-								onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
+								onValueChange={(v) => {
+									if (v === NEW_CATEGORY_VALUE) {
+										setShowNewCategory(true);
+										return;
+									}
+									if (!v) return;
+									setForm((f) => ({ ...f, categoryId: v }));
+								}}
 							>
 								<SelectTrigger className="mt-1">
 									<SelectValue placeholder="Selecionar..." />
@@ -236,6 +247,9 @@ export function TransactionDialog({
 											{c.name}
 										</SelectItem>
 									))}
+									<SelectItem value={NEW_CATEGORY_VALUE}>
+										+ Nova categoria
+									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -283,6 +297,17 @@ export function TransactionDialog({
 					</DialogFooter>
 				</form>
 			</DialogContent>
+
+			<QuickAddCategoryDialog
+				open={showNewCategory}
+				defaultType={form.type}
+				onClose={() => setShowNewCategory(false)}
+				onCreated={(category) => {
+					setCategories((prev) => [...prev, category]);
+					setForm((f) => ({ ...f, categoryId: String(category.id) }));
+					setShowNewCategory(false);
+				}}
+			/>
 		</Dialog>
 	);
 }
