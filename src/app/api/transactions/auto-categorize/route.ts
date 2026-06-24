@@ -59,8 +59,7 @@ export async function POST() {
 	if (updates.length > 0) {
 		db.transaction((tx) => {
 			for (const u of updates) {
-				tx
-					.update(transactions)
+				tx.update(transactions)
 					.set({ categoryId: u.categoryId })
 					.where(
 						and(eq(transactions.id, u.id), eq(transactions.userId, userId)),
