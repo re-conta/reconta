@@ -52,8 +52,8 @@ sudo /usr/bin/systemctl start "$SERVICE"
 echo "🚀 Serviço reiniciado!"
 
 # Instala/atualiza os units do cron de notificações
-sudo cp "$WORKDIR/files/reconta-cron.service" /etc/systemd/system/
-sudo cp "$WORKDIR/files/reconta-cron.timer" /etc/systemd/system/
-sudo /usr/bin/systemctl daemon-reload
-sudo /usr/bin/systemctl enable --now reconta-cron.timer
-echo "⏰ Timer de notificações atualizado!"
+#sudo cp "$WORKDIR/files/reconta-cron.service" /etc/systemd/system/
+#sudo cp "$WORKDIR/files/reconta-cron.timer" /etc/systemd/system/
+#sudo /usr/bin/systemctl daemon-reload
+#sudo /usr/bin/systemctl enable --now reconta-cron.timer
+#echo "⏰ Timer de notificações atualizado!"
