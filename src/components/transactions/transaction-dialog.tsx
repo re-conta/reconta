@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { QuickAddCategoryDialog } from "./quick-add-category-dialog";
+import { TagPicker, type Tag } from "./tag-picker";
 
 const NEW_CATEGORY_VALUE = "__new__";
 
@@ -44,6 +45,7 @@ interface Transaction {
 	categoryId: number | null;
 	accountId: number | null;
 	notes: string | null;
+	tags?: Tag[];
 }
 
 interface Props {
@@ -69,6 +71,8 @@ export function TransactionDialog({
 }: Props) {
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [accounts, setAccounts] = useState<Account[]>([]);
+	const [tags, setTags] = useState<Tag[]>([]);
+	const [tagIds, setTagIds] = useState<number[]>([]);
 	const [form, setForm] = useState({
 		date: todayIso(),
 		description: "",
@@ -85,10 +89,12 @@ export function TransactionDialog({
 		Promise.all([
 			fetch("/api/categories").then((r) => r.json()),
 			fetch("/api/accounts").then((r) => r.json()),
+			fetch("/api/tags").then((r) => r.json()),
 		])
-			.then(([cats, accs]) => {
+			.then(([cats, accs, tgs]) => {
 				setCategories(Array.isArray(cats) ? cats : []);
 				setAccounts(Array.isArray(accs) ? accs : []);
+				setTags(Array.isArray(tgs) ? tgs : []);
 			})
 			.catch(() => {});
 	}, []);
@@ -106,6 +112,7 @@ export function TransactionDialog({
 				accountId: transaction.accountId ? String(transaction.accountId) : "",
 				notes: transaction.notes ?? "",
 			});
+			setTagIds(transaction.tags?.map((t) => t.id) ?? []);
 		} else {
 			const d = new Date(defaultYear, defaultMonth - 1, new Date().getDate());
 			setForm({
@@ -117,6 +124,7 @@ export function TransactionDialog({
 				accountId: "",
 				notes: "",
 			});
+			setTagIds([]);
 		}
 	}, [transaction, defaultMonth, defaultYear]);
 
@@ -132,6 +140,7 @@ export function TransactionDialog({
 			amount: Number(form.amount),
 			categoryId: form.categoryId || null,
 			accountId: form.accountId || null,
+			tagIds,
 		};
 		const url = transaction
 			? `/api/transactions/${transaction.id}`
@@ -270,6 +279,19 @@ export function TransactionDialog({
 									))}
 								</SelectContent>
 							</Select>
+						</div>
+					</div>
+
+					<div>
+						<Label>Tags</Label>
+						<div className="mt-1">
+							<TagPicker
+								tags={tags}
+								selectedIds={tagIds}
+								onChange={setTagIds}
+								onTagCreated={(tag) => setTags((prev) => [...prev, tag])}
+								className="w-full"
+							/>
 						</div>
 					</div>
 

@@ -254,14 +254,17 @@ export function CategoriasClient() {
 									categorizados automaticamente.
 								</p>
 								<div className="mt-2 rounded-md border border-zinc-800 bg-zinc-900/50 p-2 text-xs text-zinc-500">
-									<p className="font-medium text-zinc-400">Guia rápido de regex</p>
+									<p className="font-medium text-zinc-400">
+										Guia rápido de regex
+									</p>
 									<ul className="mt-1 space-y-0.5">
 										<li>
-											<code className="text-zinc-300">.</code> qualquer caractere
+											<code className="text-zinc-300">.</code> qualquer
+											caractere
 										</li>
 										<li>
-											<code className="text-zinc-300">.*</code> qualquer sequência
-											de caracteres
+											<code className="text-zinc-300">.*</code> qualquer
+											sequência de caracteres
 										</li>
 										<li>
 											<code className="text-zinc-300">^uber</code> começa com

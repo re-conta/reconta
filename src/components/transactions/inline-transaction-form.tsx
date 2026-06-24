@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { QuickAddCategoryDialog } from "./quick-add-category-dialog";
+import { TagPicker, type Tag } from "./tag-picker";
 
 const NEW_CATEGORY_VALUE = "__new__";
 
@@ -28,6 +29,7 @@ interface Transaction {
 	categoryId: number | null;
 	accountId: number | null;
 	notes: string | null;
+	tags?: Tag[];
 }
 
 interface Props {
@@ -67,6 +69,8 @@ export function InlineTransactionForm({
 }: Props) {
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [accounts, setAccounts] = useState<Account[]>([]);
+	const [tags, setTags] = useState<Tag[]>([]);
+	const [tagIds, setTagIds] = useState<number[]>([]);
 	const [saving, setSaving] = useState(false);
 	const [type, setType] = useState<"expense" | "income">("expense");
 	const [date, setDate] = useState(() =>
@@ -85,9 +89,11 @@ export function InlineTransactionForm({
 		Promise.all([
 			fetch("/api/categories").then((r) => r.json()),
 			fetch("/api/accounts").then((r) => r.json()),
-		]).then(([cats, accs]) => {
+			fetch("/api/tags").then((r) => r.json()),
+		]).then(([cats, accs, tgs]) => {
 			setCategories(Array.isArray(cats) ? cats : []);
 			setAccounts(Array.isArray(accs) ? accs : []);
+			setTags(Array.isArray(tgs) ? tgs : []);
 		});
 	}, []);
 
@@ -101,6 +107,7 @@ export function InlineTransactionForm({
 				transaction.categoryId ? String(transaction.categoryId) : "",
 			);
 			setAccountId(transaction.accountId ? String(transaction.accountId) : "");
+			setTagIds(transaction.tags?.map((t) => t.id) ?? []);
 			formRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 			setTimeout(() => descRef.current?.focus(), 100);
 		}
@@ -119,6 +126,7 @@ export function InlineTransactionForm({
 		setAmount("");
 		setCategoryId("");
 		setAccountId("");
+		setTagIds([]);
 		setTimeout(() => descRef.current?.focus(), 50);
 	}
 
@@ -139,6 +147,7 @@ export function InlineTransactionForm({
 			categoryId: categoryId || null,
 			accountId: accountId || null,
 			notes: transaction?.notes ?? null,
+			tagIds,
 		};
 
 		const url = transaction
@@ -270,6 +279,15 @@ export function InlineTransactionForm({
 							</option>
 						))}
 					</select>
+
+					{/* Tags */}
+					<TagPicker
+						tags={tags}
+						selectedIds={tagIds}
+						onChange={setTagIds}
+						onTagCreated={(tag) => setTags((prev) => [...prev, tag])}
+						className="w-36 shrink-0"
+					/>
 
 					{/* Actions */}
 					<div className="flex gap-1 shrink-0">

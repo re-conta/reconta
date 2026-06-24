@@ -33,6 +33,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSharedOwner } from "@/components/layout/shared-owner-context";
 
+interface Tag {
+	id: number;
+	name: string;
+	color: string;
+}
+
 interface Transaction {
 	id: number;
 	date: string;
@@ -46,6 +52,7 @@ interface Transaction {
 	accountId: number | null;
 	bank: string | null;
 	pixBeneficiary: string | null;
+	tags: Tag[];
 }
 
 interface Totals {
@@ -64,6 +71,8 @@ export function TransacoesClient() {
 	const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">(
 		"all",
 	);
+	const [tagFilter, setTagFilter] = useState<number | null>(null);
+	const [allTags, setAllTags] = useState<Tag[]>([]);
 	const [transactions, setTransactions] = useState<Transaction[]>([]);
 	const [totals, setTotals] = useState<Totals>({
 		income: 0,
@@ -111,6 +120,7 @@ export function TransacoesClient() {
 			limit: "200",
 		});
 		if (typeFilter !== "all") params.set("type", typeFilter);
+		if (tagFilter) params.set("tagId", String(tagFilter));
 		if (search) params.set("search", search);
 
 		fetch(`${apiBase}/transactions?${params}`)
@@ -120,7 +130,7 @@ export function TransacoesClient() {
 				setTotals(d.totals ?? { income: 0, expense: 0, balance: 0, count: 0 });
 				setLoading(false);
 			});
-	}, [month, year, typeFilter, search, apiBase]);
+	}, [month, year, typeFilter, tagFilter, search, apiBase]);
 
 	const fetchOpeningBalance = useCallback(() => {
 		fetch(`/api/transactions/opening-balance?month=${month}&year=${year}`)
@@ -131,6 +141,13 @@ export function TransacoesClient() {
 	useEffect(() => {
 		fetchTransactions();
 	}, [fetchTransactions]);
+
+	useEffect(() => {
+		fetch(`${apiBase}/tags`)
+			.then((r) => r.json())
+			.then((d) => setAllTags(Array.isArray(d) ? d : []))
+			.catch(() => {});
+	}, [apiBase]);
 
 	useEffect(() => {
 		fetchOpeningBalance();
@@ -434,6 +451,47 @@ export function TransacoesClient() {
 						</button>
 					))}
 				</div>
+				{allTags.length > 0 && (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="sm">
+								{tagFilter ? (
+									<span
+										className="h-2.5 w-2.5 rounded-full"
+										style={{
+											backgroundColor: allTags.find((t) => t.id === tagFilter)
+												?.color,
+										}}
+									/>
+								) : null}
+								<span>
+									{tagFilter
+										? allTags.find((t) => t.id === tagFilter)?.name
+										: "Tag"}
+								</span>
+								<ChevronDown className="h-3.5 w-3.5" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start">
+							<DropdownMenuItem onSelect={() => setTagFilter(null)}>
+								Todas
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							{allTags.map((t) => (
+								<DropdownMenuItem
+									key={t.id}
+									onSelect={() => setTagFilter(t.id)}
+								>
+									<span
+										className="h-2.5 w-2.5 rounded-full mr-2"
+										style={{ backgroundColor: t.color }}
+									/>
+									{t.name}
+								</DropdownMenuItem>
+							))}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
 				{!readOnly && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
@@ -602,6 +660,18 @@ export function TransacoesClient() {
 															{tx.categoryName}
 														</span>
 													) : null}
+													{tx.tags.map((tag) => (
+														<span
+															key={tag.id}
+															className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium truncate"
+															style={{
+																backgroundColor: `${tag.color}22`,
+																color: tag.color,
+															}}
+														>
+															{tag.name}
+														</span>
+													))}
 												</div>
 												{!readOnly && (
 													<Button
@@ -659,6 +729,9 @@ export function TransacoesClient() {
 											</th>
 											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
 												Categoria
+											</th>
+											<th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+												Tags
 											</th>
 											<th className="text-right px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wide">
 												Valor
@@ -738,6 +811,22 @@ export function TransacoesClient() {
 													) : (
 														<span className="text-zinc-600 text-xs">—</span>
 													)}
+												</td>
+												<td className="px-4 py-3">
+													<div className="flex flex-wrap gap-1 max-w-44">
+														{tx.tags.map((tag) => (
+															<span
+																key={tag.id}
+																className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium truncate"
+																style={{
+																	backgroundColor: `${tag.color}22`,
+																	color: tag.color,
+																}}
+															>
+																{tag.name}
+															</span>
+														))}
+													</div>
 												</td>
 												<td
 													className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${tx.type === "income" ? "text-emerald-400" : "text-red-400"}`}

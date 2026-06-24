@@ -1,41 +1,48 @@
 {
-	"version": "7",
-	"dialect": "sqlite",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "6",
-			"when": 1774442217428,
-			"tag": "0000_pretty_zzzax",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1774597539566,
-			"tag": "0001_hard_war_machine",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "6",
-			"when": 1774691806939,
-			"tag": "0002_giant_hulk",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "6",
-			"when": 1774700000000,
-			"tag": "0003_whatsapp_notifications",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "6",
-			"when": 1782223162425,
-			"tag": "0004_add_category_patterns",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1774442217428,
+      "tag": "0000_pretty_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1774597539566,
+      "tag": "0001_hard_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774691806939,
+      "tag": "0002_giant_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1774700000000,
+      "tag": "0003_whatsapp_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782223162425,
+      "tag": "0004_add_category_patterns",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782302483743,
+      "tag": "0005_add_tags",
+      "breakpoints": true
+    }
+  ]
 }

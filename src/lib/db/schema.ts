@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	integer,
+	primaryKey,
+	real,
+	sqliteTable,
+	text,
+} from "drizzle-orm/sqlite-core";
 
 // ─── Better Auth tables ───────────────────────────────────────────────────────
 
@@ -105,6 +111,28 @@ export const transactions = sqliteTable("transactions", {
 	pixBeneficiary: text("pix_beneficiary"),
 	createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
+
+export const tags = sqliteTable("tags", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	name: text("name").notNull(),
+	color: text("color").notNull().default("#6366f1"),
+});
+
+export const transactionTags = sqliteTable(
+	"transaction_tags",
+	{
+		transactionId: integer("transaction_id")
+			.notNull()
+			.references(() => transactions.id, { onDelete: "cascade" }),
+		tagId: integer("tag_id")
+			.notNull()
+			.references(() => tags.id, { onDelete: "cascade" }),
+	},
+	(table) => [primaryKey({ columns: [table.transactionId, table.tagId] })],
+);
 
 export const bills = sqliteTable("bills", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
@@ -216,6 +244,8 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
 export type Bill = typeof bills.$inferSelect;
 export type NewBill = typeof bills.$inferInsert;
 export type BillPayment = typeof billPayments.$inferSelect;

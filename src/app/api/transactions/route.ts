@@ -3,7 +3,12 @@ export const dynamic = "force-dynamic";
 import { and, desc, eq, gte, inArray, like, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { categories, transactions } from "@/lib/db/schema";
+import {
+	categories,
+	tags,
+	transactionTags,
+	transactions,
+} from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth-session";
 import { getMonthRange } from "@/lib/utils";
 
@@ -16,6 +21,7 @@ export async function GET(request: Request) {
 	const year = searchParams.get("year");
 	const type = searchParams.get("type");
 	const categoryId = searchParams.get("categoryId");
+	const tagId = searchParams.get("tagId");
 	const search = searchParams.get("search");
 	const page = Number(searchParams.get("page") ?? 1);
 	const limit = Number(searchParams.get("limit") ?? 50);
@@ -34,6 +40,16 @@ export async function GET(request: Request) {
 
 	if (categoryId) {
 		conditions.push(eq(transactions.categoryId, Number(categoryId)));
+	}
+
+	if (tagId) {
+		const taggedRows = await db
+			.select({ id: transactionTags.transactionId })
+			.from(transactionTags)
+			.where(eq(transactionTags.tagId, Number(tagId)));
+		conditions.push(
+			inArray(transactions.id, taggedRows.map((r) => r.id).concat(-1)),
+		);
 	}
 
 	if (search) {
@@ -77,8 +93,37 @@ export async function GET(request: Request) {
 			.where(where),
 	]);
 
+	const txIds = data.map((t) => t.id);
+	const tagRows = txIds.length
+		? await db
+				.select({
+					transactionId: transactionTags.transactionId,
+					id: tags.id,
+					name: tags.name,
+					color: tags.color,
+				})
+				.from(transactionTags)
+				.innerJoin(tags, eq(transactionTags.tagId, tags.id))
+				.where(inArray(transactionTags.transactionId, txIds))
+		: [];
+
+	const tagsByTx = new Map<
+		number,
+		{ id: number; name: string; color: string }[]
+	>();
+	for (const row of tagRows) {
+		const list = tagsByTx.get(row.transactionId) ?? [];
+		list.push({ id: row.id, name: row.name, color: row.color });
+		tagsByTx.set(row.transactionId, list);
+	}
+
+	const dataWithTags = data.map((t) => ({
+		...t,
+		tags: tagsByTx.get(t.id) ?? [],
+	}));
+
 	return NextResponse.json({
-		data,
+		data: dataWithTags,
 		totals: {
 			income: Number(totals[0].income),
 			expense: Number(totals[0].expense),
@@ -169,8 +214,16 @@ export async function POST(request: Request) {
 	if (unauthorized) return unauthorized;
 
 	const body = await request.json();
-	const { date, description, amount, type, categoryId, accountId, notes } =
-		body;
+	const {
+		date,
+		description,
+		amount,
+		type,
+		categoryId,
+		accountId,
+		notes,
+		tagIds,
+	} = body;
 
 	if (!date || !description || !amount || !type) {
 		return NextResponse.json(
@@ -192,6 +245,15 @@ export async function POST(request: Request) {
 			notes: notes || null,
 		})
 		.returning();
+
+	if (Array.isArray(tagIds) && tagIds.length > 0) {
+		await db.insert(transactionTags).values(
+			tagIds.map((tagId: number) => ({
+				transactionId: transaction.id,
+				tagId: Number(tagId),
+			})),
+		);
+	}
 
 	return NextResponse.json(transaction, { status: 201 });
 }

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { tags, transactionTags, transactions } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth-session";
 
 export async function GET(
@@ -23,7 +23,14 @@ export async function GET(
 
 	if (!tx)
 		return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
-	return NextResponse.json(tx);
+
+	const txTags = await db
+		.select({ id: tags.id, name: tags.name, color: tags.color })
+		.from(transactionTags)
+		.innerJoin(tags, eq(transactionTags.tagId, tags.id))
+		.where(eq(transactionTags.transactionId, tx.id));
+
+	return NextResponse.json({ ...tx, tags: txTags });
 }
 
 export async function PUT(
@@ -35,8 +42,16 @@ export async function PUT(
 
 	const { id } = await params;
 	const body = await request.json();
-	const { date, description, amount, type, categoryId, accountId, notes } =
-		body;
+	const {
+		date,
+		description,
+		amount,
+		type,
+		categoryId,
+		accountId,
+		notes,
+		tagIds,
+	} = body;
 
 	const [updated] = await db
 		.update(transactions)
@@ -56,6 +71,21 @@ export async function PUT(
 
 	if (!updated)
 		return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+	if (Array.isArray(tagIds)) {
+		await db
+			.delete(transactionTags)
+			.where(eq(transactionTags.transactionId, updated.id));
+		if (tagIds.length > 0) {
+			await db.insert(transactionTags).values(
+				tagIds.map((tagId: number) => ({
+					transactionId: updated.id,
+					tagId: Number(tagId),
+				})),
+			);
+		}
+	}
+
 	return NextResponse.json(updated);
 }
 
