@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import path from "node:path";
 
-const dbPath = path.join(process.cwd(), "reconta.db");
+const dbPath = path.join(process.cwd(), "drizzle", "reconta.db");
 const sqlite = new Database(dbPath);
 const db = drizzle(sqlite);
 

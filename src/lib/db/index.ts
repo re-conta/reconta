@@ -9,7 +9,7 @@ declare global {
 }
 
 function createDb() {
-	const dbPath = path.join(process.cwd(), "reconta.db");
+	const dbPath = path.join(process.cwd(), "drizzle", "reconta.db");
 	const sqlite = new Database(dbPath);
 	sqlite.pragma("journal_mode = WAL");
 	sqlite.pragma("foreign_keys = ON");
