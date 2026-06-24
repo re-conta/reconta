@@ -57,14 +57,15 @@ export async function POST() {
 	}
 
 	if (updates.length > 0) {
-		await db.transaction(async (tx) => {
+		db.transaction((tx) => {
 			for (const u of updates) {
-				await tx
+				tx
 					.update(transactions)
 					.set({ categoryId: u.categoryId })
 					.where(
 						and(eq(transactions.id, u.id), eq(transactions.userId, userId)),
-					);
+					)
+					.run();
 			}
 		});
 	}
