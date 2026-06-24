@@ -702,7 +702,7 @@ export function TransacoesClient() {
 													tabIndex={readOnly ? undefined : 0}
 													title={readOnly ? undefined : "Clique para editar"}
 												>
-													<div className="flex items-center gap-1.5 text-zinc-200 font-medium truncate max-w-xs">
+													<div className="flex items-center gap-1.5 text-zinc-200 font-medium truncate">
 														{tx.description}
 														{!readOnly && (
 															<Pencil className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
