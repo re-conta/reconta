@@ -1,1 +1,0 @@
-- Além de categorias permita tags em despesas e receitas

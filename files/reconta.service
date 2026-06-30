@@ -1,16 +1,16 @@
 [Unit]
-Description=ReConta Next.js Application Service
+Description=ReConta Go API Service
 After=network.target
 
 [Service]
 Type=simple
 User=nginx
-WorkingDirectory=/var/www/reconta
-ExecStart=/home/nginx/.local/share/pnpm/pnpm run start
+WorkingDirectory=/var/www/reconta/api
+ExecStart=/var/www/reconta/api/bin/server
 ExecStop=/usr/bin/kill -TERM $MAINPID
 Restart=always
 RestartSec=10s
-
+EnvironmentFile=/var/www/reconta/api/.env.production
 
 [Install]
 WantedBy=multi-user.target

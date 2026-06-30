@@ -1,140 +1,73 @@
-# ReConta — Controle Financeiro Pessoal
+# Reconta
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./public/images/banner.svg" />
-    <img src="./public/images/banner-light.svg" alt="ReConta" />
-  </picture>
-</p>
+Aplicação web para controle financeiro pessoal — gerenciamento de contas a pagar/receber, categorização de transações e notificações de vencimento.
 
-> **reconta.app** · Gerencie suas finanças, analise extratos bancários e acompanhe sua poupança.
-
-[![Deploy](https://github.com/sistematico/reconta/actions/workflows/deploy.yml/badge.svg)](https://github.com/sistematico/reconta/actions/workflows/deploy.yml)
+**Site:** [reconta.app](https://reconta.app)
 
 ## Stack
 
-- **Next.js 16** (TypeScript · App Router)
-- **Drizzle ORM + SQLite** (banco de dados local em `reconta.db`)
-- **Tailwind CSS v4** (tema dark)
-- **Recharts** (gráficos)
-- **Radix UI** (componentes acessíveis)
-- **Biome** (linting e formatação)
-- **pnpm**
+- **Frontend:** Vue.js 3 + Vite + TypeScript (`web/`)
+- **Backend:** Go 1.26+ (`api/`)
+- **Runtime JS:** Bun
+- **Banco de dados:** SQLite
+- **Servidor:** VPS Linux com Nginx + systemd
 
----
+## Estrutura
 
-## Instalação
-
-```bash
-# Clone e entre no diretório
-cd reconta
-
-# Instale as dependências
-pnpm install
-
-# Crie o banco de dados (SQLite)
-pnpm push
+```
+reconta/
+├── web/          # Frontend Vue.js 3 + Vite
+├── api/          # Backend Go
+├── files/        # Configurações Nginx e systemd para a VPS
+├── scripts/      # Scripts de deploy
+└── .github/      # Workflows de CI/CD
 ```
 
 ## Desenvolvimento
 
-```bash
-pnpm dev
+Pré-requisitos: [Bun](https://bun.sh) e [Go 1.26+](https://go.dev)
+
+```sh
+# Instalar dependências JS
+bun install
+
+# Iniciar frontend (Vite dev server)
+bun run dev
+
+# Iniciar backend Go
+bun run api:dev
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000).
+O frontend roda em `http://localhost:5173` por padrão.  
+A API Go roda em `http://localhost:3020` por padrão.
 
-O banco é criado automaticamente em `reconta.db` na raiz do projeto. As categorias e conta padrão são inseridas na primeira execução via `src/instrumentation.ts`.
+## Build
 
-## Produção
+```sh
+# Build do frontend
+bun run build
 
-```bash
-pnpm build
-pnpm start
+# Build da API Go
+bun run api:build   # gera api/bin/server
 ```
 
----
+## Deploy
 
-## Páginas
+O deploy é automático: push para `main` dispara o GitHub Actions que envia os arquivos para a VPS via SCP e executa `scripts/deploy.sh` remotamente.
 
-| Página | Rota | Descrição |
-|--------|------|-----------|
-| **Dashboard** | `/` | Visão geral: KPIs do mês, gráfico dos últimos 6 meses, gastos por categoria, contas pendentes e últimos lançamentos |
-| **Lançamentos** | `/transacoes` | Livro-caixa completo com filtros por tipo/mês, busca por descrição, totalizadores e CRUD |
-| **Contas Fixas** | `/contas` | Alertas de cobranças recorrentes (condomínio, luz, internet etc.) com controle de pagamento por mês |
-| **Relatórios** | `/relatorios` | Comparativo mês atual vs anterior, gráfico de poupança, análise por categoria |
-| **Importar Extrato** | `/importar` | Upload de extrato bancário em PDF via drag & drop com parsing automático de transações |
-| **Categorias** | `/categorias` | CRUD de categorias com cores customizáveis (receita, despesa ou ambos) |
-| **Contas Bancárias** | `/contas-bancarias` | Gerenciamento de contas (corrente, poupança, crédito, investimentos) com saldo total |
+O script de deploy:
+1. Preserva `.env` e o banco SQLite
+2. Instala dependências e gera o build de produção
+3. Para o serviço, substitui os arquivos e reinicia
 
----
+Segredos necessários no repositório: `SSH_HOST`, `SSH_USER`, `SSH_PASS`, `SSH_PORT`, `PROJECT_PATH`.
 
-## Funcionalidades
+## Testes
 
-- **Importação de extrato PDF** — tenta detectar automaticamente o formato de extratos brasileiros (Itaú, Bradesco, BB, Nubank etc.). O PDF precisa conter texto selecionável (não apenas imagem).
-- **Alertas de contas fixas** — contas vencidas aparecem em vermelho; contas com vencimento em até 3 dias aparecem em amarelo.
-- **Taxa de poupança** — calculada automaticamente como `(receitas - despesas) / receitas × 100`.
-- **Comparativo mensal** — variação percentual em relação ao mês anterior para receitas, despesas e saldo.
-- **Navegação por mês/ano** — todas as views permitem navegar entre meses.
-- **Seed automático** — categorias padrão e conta inicial são criados automaticamente na primeira execução.
+```sh
+# Frontend
+bun test
 
----
-
-## Scripts disponíveis
-
-```bash
-pnpm dev          # Servidor de desenvolvimento
-pnpm build        # Build de produção
-pnpm start        # Servidor de produção
-pnpm push         # Aplica o schema ao banco SQLite
-pnpm generate     # Gera arquivos de migração (drizzle-kit)
-pnpm studio       # Abre o Drizzle Studio (GUI para o banco)
-pnpm lint         # Verifica problemas com Biome
-pnpm format       # Formata o código com Biome
-pnpm check        # Checa o código por erros de sintaxe
-```
-
----
-
-## Estrutura do projeto
-
-```
-src/
-├── app/
-│   ├── api/                  # Rotas da API REST
-│   │   ├── accounts/
-│   │   ├── bills/
-│   │   ├── categories/
-│   │   ├── dashboard/
-│   │   ├── import/
-│   │   └── transactions/
-│   ├── categorias/
-│   ├── contas/
-│   ├── contas-bancarias/
-│   ├── importar/
-│   ├── relatorios/
-│   ├── transacoes/
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx              # Dashboard
-├── components/
-│   ├── ui/                   # Componentes base (Button, Card, Dialog…)
-│   ├── layout/               # Sidebar e Header
-│   ├── dashboard/            # Gráficos e cards do dashboard
-│   ├── transactions/         # Lista e formulário de lançamentos
-│   ├── bills/                # Lista e formulário de contas fixas
-│   ├── reports/              # Gráficos de relatórios
-│   ├── import/               # Upload de PDF
-│   ├── categories/           # CRUD de categorias
-│   └── accounts/             # CRUD de contas bancárias
-├── hooks/
-│   └── use-accounts.ts
-├── lib/
-│   ├── db/
-│   │   ├── index.ts          # Conexão Drizzle + SQLite
-│   │   ├── schema.ts         # Tabelas e tipos
-│   │   └── seed.ts           # Dados iniciais
-│   ├── pdf-parser.ts         # Parsing de extratos PDF
-│   └── utils.ts              # Helpers (formatação, datas)
-└── instrumentation.ts        # Seed executado na inicialização
+# Backend Go
+bun run api:test
 ```

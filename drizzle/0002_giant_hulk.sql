@@ -1,1 +1,0 @@
-ALTER TABLE `bills` ADD `frequency` text DEFAULT 'monthly' NOT NULL;
