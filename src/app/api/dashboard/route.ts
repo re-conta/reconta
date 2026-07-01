@@ -5,7 +5,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { billPayments, bills, categories, transactions } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth-session";
-import { getMonthRange, getPreviousMonth } from "@/lib/utils";
+import {
+	getMonthRange,
+	getPreviousMonth,
+	getPreviousPeriod,
+	getYearRange,
+} from "@/lib/utils";
 
 async function getTotal(
 	type: "income" | "expense",
@@ -34,20 +39,44 @@ export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
 	const month = Number(searchParams.get("month") ?? new Date().getMonth() + 1);
 	const year = Number(searchParams.get("year") ?? new Date().getFullYear());
+	const scope = searchParams.get("scope") ?? "month";
 
-	const { start, end } = getMonthRange(month, year);
-	const prev = getPreviousMonth(month, year);
-	const { start: prevStart, end: prevEnd } = getMonthRange(
-		prev.month,
-		prev.year,
-	);
+	let start: string;
+	let end: string;
+	let hasComparison = true;
+	let prevStart = "";
+	let prevEnd = "";
+
+	if (scope === "year") {
+		({ start, end } = getYearRange(year));
+		({ start: prevStart, end: prevEnd } = getYearRange(year - 1));
+	} else if (scope === "all") {
+		start = "1970-01-01";
+		end = new Date().toISOString().split("T")[0];
+		hasComparison = false;
+	} else if (scope === "custom") {
+		start = searchParams.get("start") ?? new Date().toISOString().split("T")[0];
+		end = searchParams.get("end") ?? new Date().toISOString().split("T")[0];
+		({ start: prevStart, end: prevEnd } = getPreviousPeriod(start, end));
+	} else {
+		({ start, end } = getMonthRange(month, year));
+		const prev = getPreviousMonth(month, year);
+		({ start: prevStart, end: prevEnd } = getMonthRange(
+			prev.month,
+			prev.year,
+		));
+	}
 
 	const [currentIncome, currentExpense, prevIncome, prevExpense] =
 		await Promise.all([
 			getTotal("income", start, end, userId),
 			getTotal("expense", start, end, userId),
-			getTotal("income", prevStart, prevEnd, userId),
-			getTotal("expense", prevStart, prevEnd, userId),
+			hasComparison
+				? getTotal("income", prevStart, prevEnd, userId)
+				: Promise.resolve(0),
+			hasComparison
+				? getTotal("expense", prevStart, prevEnd, userId)
+				: Promise.resolve(0),
 		]);
 
 	const expensesByCategory = await db
@@ -118,10 +147,14 @@ export async function GET(request: Request) {
 			),
 		);
 
+	const trendEnd = new Date(`${end}T00:00:00`);
+	const trendMonth = trendEnd.getMonth() + 1;
+	const trendYear = trendEnd.getFullYear();
+
 	const monthlyBalance = [];
 	for (let i = 5; i >= 0; i--) {
-		let m = month - i;
-		let y = year;
+		let m = trendMonth - i;
+		let y = trendYear;
 		while (m <= 0) {
 			m += 12;
 			y -= 1;
@@ -151,6 +184,7 @@ export async function GET(request: Request) {
 			expense: prevExpense,
 			balance: prevIncome - prevExpense,
 		},
+		hasComparison,
 		expensesByCategory,
 		recentTransactions,
 		pendingBills,

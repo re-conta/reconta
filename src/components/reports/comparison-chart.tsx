@@ -20,24 +20,31 @@ interface MonthData {
 interface Props {
 	current: MonthData;
 	previous: MonthData;
+	currentLabel?: string;
+	previousLabel?: string;
 }
 
-export function ComparisonChart({ current, previous }: Props) {
+export function ComparisonChart({
+	current,
+	previous,
+	currentLabel = "Período atual",
+	previousLabel = "Período anterior",
+}: Props) {
 	const data = [
 		{
 			name: "Receitas",
-			"Mês atual": current.income,
-			"Mês anterior": previous.income,
+			[currentLabel]: current.income,
+			[previousLabel]: previous.income,
 		},
 		{
 			name: "Despesas",
-			"Mês atual": current.expense,
-			"Mês anterior": previous.expense,
+			[currentLabel]: current.expense,
+			[previousLabel]: previous.expense,
 		},
 		{
 			name: "Saldo",
-			"Mês atual": current.balance,
-			"Mês anterior": previous.balance,
+			[currentLabel]: current.balance,
+			[previousLabel]: previous.balance,
 		},
 	];
 
@@ -72,8 +79,8 @@ export function ComparisonChart({ current, previous }: Props) {
 						}}
 						formatter={(value) => formatCurrency(Number(value))}
 					/>
-					<Bar dataKey="Mês anterior" fill="#52525b" radius={[4, 4, 0, 0]} />
-					<Bar dataKey="Mês atual" fill="#6366f1" radius={[4, 4, 0, 0]} />
+					<Bar dataKey={previousLabel} fill="#52525b" radius={[4, 4, 0, 0]} />
+					<Bar dataKey={currentLabel} fill="#6366f1" radius={[4, 4, 0, 0]} />
 				</BarChart>
 			</ResponsiveContainer>
 			<div className="grid grid-cols-3 gap-3 mt-4">

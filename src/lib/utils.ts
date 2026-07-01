@@ -50,6 +50,30 @@ export function getPreviousMonth(
 	return { month: month - 1, year };
 }
 
+export function getYearRange(year: number): { start: string; end: string } {
+	return { start: `${year}-01-01`, end: `${year}-12-31` };
+}
+
+export function getPreviousPeriod(
+	start: string,
+	end: string,
+): { start: string; end: string } {
+	const startDate = new Date(`${start}T00:00:00`);
+	const endDate = new Date(`${end}T00:00:00`);
+	const days =
+		Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+
+	const prevEnd = new Date(startDate);
+	prevEnd.setDate(prevEnd.getDate() - 1);
+	const prevStart = new Date(prevEnd);
+	prevStart.setDate(prevStart.getDate() - days + 1);
+
+	return {
+		start: prevStart.toISOString().split("T")[0],
+		end: prevEnd.toISOString().split("T")[0],
+	};
+}
+
 export const CATEGORY_ICONS: Record<string, string> = {
 	utensils: "🍽️",
 	home: "🏠",
