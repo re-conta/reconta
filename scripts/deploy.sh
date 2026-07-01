@@ -22,9 +22,15 @@ git clean -fxd -e web/.env -e api/.env -e api/data
 echo "📥 Instalando dependências..."
 bun install
 
-echo "🏗️ Buildando aplicação..."
+echo "🏗️ Buildando frontend..."
 if ! bun run build; then
-  echo "❌ Falha no build. Abortando deploy."
+  echo "❌ Falha no build do frontend. Abortando deploy."
+  exit 1
+fi
+
+echo "🏗️ Buildando backend (Go)..."
+if ! bun run api:build; then
+  echo "❌ Falha no build da API. Abortando deploy."
   exit 1
 fi
 echo "✅ Build concluído com sucesso!"

@@ -5,12 +5,12 @@ After=network.target
 [Service]
 Type=simple
 User=nginx
+EnvironmentFile=-/var/www/reconta/api/.env
 WorkingDirectory=/var/www/reconta/api
 ExecStart=/var/www/reconta/api/bin/server
 ExecStop=/usr/bin/kill -TERM $MAINPID
 Restart=always
 RestartSec=10s
-EnvironmentFile=/var/www/reconta/api/.env.production
 
 [Install]
 WantedBy=multi-user.target
