@@ -91,19 +91,19 @@ Go: 1.26+
 Estrutura esperada:
 ```
 api/
-├── cmd/server/main.go   # ponto de entrada
-├── internal/            # lógica de negócio (não exportada)
+├── main.go     # ponto de entrada
+├── internal/   # lógica de negócio (não exportada)
 └── go.mod
 ```
 
 ```sh
 # Na raiz (via package.json)
-bun run api:dev      # go run ./cmd/server
-bun run api:build    # go build -o bin/server ./cmd/server
+bun run api:dev      # go run .
+bun run api:build    # go build -o bin/server .
 bun run api:test     # go test ./...
 
 # Diretamente em api/
-go run ./cmd/server
+go run .
 go test ./...
 ```
 

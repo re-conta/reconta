@@ -1,1 +1,62 @@
 @import "tailwindcss";
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("/fonts/Nunito-Variable.woff2") format("woff2-variations");
+}
+
+@theme {
+  --font-sans: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Nunito", system-ui, sans-serif;
+
+  --color-brand-50: #fffaeb;
+  --color-brand-100: #fff3bf;
+  --color-brand-200: #ffe58a;
+  --color-brand-300: #ffd62c;
+  --color-brand-400: #ffb42e;
+  --color-brand-500: #ff9c43;
+  --color-brand-600: #f2751f;
+  --color-brand-700: #c9581a;
+  --color-brand-800: #9b4419;
+  --color-brand-900: #7a3717;
+
+  --color-coral-50: #fff1f2;
+  --color-coral-100: #ffe1e4;
+  --color-coral-200: #fecdd3;
+  --color-coral-300: #fda4af;
+  --color-coral-400: #fb7185;
+  --color-coral-500: #e8496b;
+  --color-coral-600: #d63163;
+  --color-coral-700: #b91c52;
+  --color-coral-800: #8f1440;
+
+  --color-ink-50: #fbf9f7;
+  --color-ink-100: #f4f0ec;
+  --color-ink-200: #e6ded5;
+  --color-ink-300: #d3c6b8;
+  --color-ink-400: #a3937f;
+  --color-ink-500: #7c6d5c;
+  --color-ink-600: #5c5044;
+  --color-ink-700: #453b32;
+  --color-ink-800: #2e2721;
+  --color-ink-900: #1c1712;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink-50);
+  color: var(--color-ink-800);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-ink-900);
+}

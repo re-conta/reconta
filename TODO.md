@@ -1,0 +1,1 @@
+Liste todos os endpoints da api no arquivo README.md

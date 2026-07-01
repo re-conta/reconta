@@ -6,15 +6,17 @@
     "web"
   ],
   "scripts": {
-    "dev": "bun run --cwd web dev",
+    "dev": "concurrently -n api,web -c blue,green \"bun run api:dev\" \"bun run web:dev\"",
+    "web:dev": "bun run --cwd web dev",
     "build": "bun run --cwd web build",
     "preview": "bun run --cwd web preview",
-    "api:dev": "cd api && go run ./cmd/server",
-    "api:build": "cd api && go build -o bin/server ./cmd/server",
+    "api:dev": "cd api && go run .",
+    "api:build": "cd api && go build -o bin/server .",
     "api:test": "cd api && go test ./..."
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "concurrently": "^9.1.0"
   },
   "peerDependencies": {
     "typescript": "^5"

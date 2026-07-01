@@ -15,9 +15,9 @@ echo "📦 Preparando ambiente de deploy..."
 cd "$TMPDIR" || exit 1
 
 # Mantém .env e o banco de dados (incluindo arquivos WAL/SHM do SQLite) intactos
-git clean -fxd -e web/.env -e api/.env
-cp web/.env web/.env.production
-cp api/.env api/.env.production
+git clean -fxd -e web/.env -e api/.env -e api/data
+#cp web/.env web/.env.production
+#cp api/.env api/.env.production
 
 echo "📥 Instalando dependências..."
 bun install
