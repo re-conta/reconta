@@ -45,6 +45,9 @@ const appName = import.meta.env.VITE_APP_NAME;
             <RouterLink to="/transacoes" class="transition hover:text-ink-900" active-class="text-ink-900">
               Transações
             </RouterLink>
+            <RouterLink to="/importar-extrato" class="transition hover:text-ink-900" active-class="text-ink-900">
+              Importar extrato
+            </RouterLink>
             <RouterLink to="/contas-bancarias" class="transition hover:text-ink-900" active-class="text-ink-900">
               Contas
             </RouterLink>

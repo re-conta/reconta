@@ -3,6 +3,7 @@ import { createWebHistory, createRouter } from "vue-router";
 import AccountsView from "./views/accounts.vue";
 import CategoriesView from "./views/categories.vue";
 import HomeView from "./views/home.vue";
+import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
 import RegisterView from "./views/register.vue";
 import TagsView from "./views/tags.vue";
@@ -33,6 +34,12 @@ const routes = [
     path: "/transacoes",
     name: "Transactions",
     component: TransactionsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/importar-extrato",
+    name: "Import",
+    component: ImportView,
     meta: { requiresAuth: true },
   },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound },

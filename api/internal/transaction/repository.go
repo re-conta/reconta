@@ -23,20 +23,24 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 type Input struct {
-	Date        string
-	Description string
-	Amount      float64
-	Type        string
-	CategoryID  *int64
-	AccountID   *int64
-	Notes       *string
+	Date           string
+	Description    string
+	Amount         float64
+	Type           string
+	CategoryID     *int64
+	AccountID      *int64
+	Notes          *string
+	ImportedFrom   *string
+	Bank           *string
+	PixBeneficiary *string
 }
 
 func (r *Repository) Create(ctx context.Context, userID int64, in Input) (*Transaction, error) {
 	res, err := r.db.ExecContext(ctx,
-		`INSERT INTO transactions (user_id, date, description, amount, type, category_id, account_id, notes)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO transactions (user_id, date, description, amount, type, category_id, account_id, notes, imported_from, bank, pix_beneficiary)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		userID, in.Date, in.Description, in.Amount, in.Type, in.CategoryID, in.AccountID, in.Notes,
+		in.ImportedFrom, in.Bank, in.PixBeneficiary,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserindo transação: %w", err)
@@ -349,6 +353,21 @@ func (r *Repository) UpsertOpeningBalance(ctx context.Context, userID int64, mon
 		return fmt.Errorf("salvando saldo de abertura: %w", err)
 	}
 	return nil
+}
+
+// FindDuplicate verifica se já existe uma transação do usuário com a mesma
+// data, valor e descrição — usado para sinalizar possíveis duplicatas ao
+// importar um extrato já lançado anteriormente.
+func (r *Repository) FindDuplicate(ctx context.Context, userID int64, date string, amount float64, description string) (bool, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM transactions WHERE user_id = ? AND date = ? AND amount = ? AND description = ?`,
+		userID, date, amount, description,
+	).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("verificando duplicidade de transação: %w", err)
+	}
+	return count > 0, nil
 }
 
 func monthRange(month, year int) (start, end string) {

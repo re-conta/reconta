@@ -13,6 +13,7 @@ import (
 	"github.com/lucasbrum/reconta/api/internal/category"
 	"github.com/lucasbrum/reconta/api/internal/db"
 	"github.com/lucasbrum/reconta/api/internal/seed"
+	"github.com/lucasbrum/reconta/api/internal/statement"
 	"github.com/lucasbrum/reconta/api/internal/tag"
 	"github.com/lucasbrum/reconta/api/internal/transaction"
 	"github.com/lucasbrum/reconta/api/internal/user"
@@ -72,6 +73,7 @@ func main() {
 	category.NewHandler(categoryRepo, authHandler).RegisterRoutes(mux)
 	tag.NewHandler(tagRepo, authHandler).RegisterRoutes(mux)
 	transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, authHandler).RegisterRoutes(mux)
+	statement.NewHandler(transactionRepo, categoryRepo, authHandler).RegisterRoutes(mux)
 
 	addr := ":" + port
 	log.Printf("servidor rodando em %s (db: %s)", addr, dbPath)
