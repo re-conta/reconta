@@ -1,5 +1,6 @@
 import type {
   BulkUpdateFields,
+  Period,
   Transaction,
   TransactionFilters,
   TransactionInput,
@@ -28,6 +29,10 @@ export function listTransactions(filters: TransactionFilters = {}): Promise<Tran
   return fetch(`/api/transactions${query ? `?${query}` : ""}`, { credentials: "include" }).then((res) =>
     parseResponse<TransactionListResult>(res),
   );
+}
+
+export function listPeriods(): Promise<Period[]> {
+  return fetch("/api/transactions/periods", { credentials: "include" }).then((res) => parseResponse<Period[]>(res));
 }
 
 export function getTransaction(id: number): Promise<Transaction> {

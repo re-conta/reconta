@@ -67,3 +67,8 @@ export interface BulkUpdateFields {
   accountId?: number | "_none";
   date?: string;
 }
+
+export interface Period {
+  month: number;
+  year: number;
+}

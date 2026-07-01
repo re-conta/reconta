@@ -11,6 +11,7 @@ import {
   createTransaction,
   deleteTransaction,
   getOpeningBalance,
+  listPeriods,
   listTransactions,
   setOpeningBalance,
   updateTransaction,
@@ -18,7 +19,7 @@ import {
 import type { Account } from "../types/account";
 import type { Category } from "../types/category";
 import type { Tag } from "../types/tag";
-import type { Transaction, TransactionInput } from "../types/transaction";
+import type { Period, Transaction, TransactionInput } from "../types/transaction";
 
 const now = new Date();
 const filters = reactive({
@@ -34,6 +35,7 @@ const filters = reactive({
 const categories = ref<Category[]>([]);
 const tags = ref<Tag[]>([]);
 const accounts = ref<Account[]>([]);
+const periods = ref<Period[]>([]);
 
 const transactions = ref<Transaction[]>([]);
 const totals = ref({ income: 0, expense: 0, balance: 0, count: 0 });
@@ -71,10 +73,16 @@ function formatCurrency(value: number) {
 }
 
 async function loadReferenceData() {
-  const [c, t, a] = await Promise.all([listCategories(), listTags(), listAccounts()]);
+  const [c, t, a, p] = await Promise.all([listCategories(), listTags(), listAccounts(), listPeriods()]);
   categories.value = c;
   tags.value = t;
   accounts.value = a;
+  periods.value = p;
+
+  if (p.length > 0 && !p.some((period) => period.month === filters.month && period.year === filters.year)) {
+    filters.month = p[0].month;
+    filters.year = p[0].year;
+  }
 }
 
 async function loadTransactions() {
@@ -221,10 +229,30 @@ async function saveOpeningBalance() {
   }
 }
 
-const monthOptions = Array.from({ length: 12 }, (_, i) => ({
-  value: i + 1,
-  label: new Date(2000, i, 1).toLocaleDateString("pt-BR", { month: "long" }),
-}));
+const monthLabel = (month: number) => new Date(2000, month - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
+
+const yearOptions = computed(() => {
+  if (periods.value.length === 0) return [now.getFullYear()];
+  return [...new Set(periods.value.map((p) => p.year))].sort((a, b) => b - a);
+});
+
+const monthOptions = computed(() => {
+  if (periods.value.length === 0) {
+    return Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: monthLabel(i + 1) }));
+  }
+  return [...new Set(periods.value.filter((p) => p.year === filters.year).map((p) => p.month))]
+    .sort((a, b) => a - b)
+    .map((value) => ({ value, label: monthLabel(value) }));
+});
+
+watch(
+  () => filters.year,
+  () => {
+    if (!monthOptions.value.some((m) => m.value === filters.month) && monthOptions.value.length > 0) {
+      filters.month = monthOptions.value[0].value;
+    }
+  },
+);
 
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.value.total / pagination.value.limit)));
 
@@ -301,7 +329,9 @@ onMounted(async () => {
       </label>
       <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
         Ano
-        <input v-model.number="filters.year" type="number" class="w-24 rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm" />
+        <select v-model.number="filters.year" class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm">
+          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+        </select>
       </label>
       <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
         Tipo

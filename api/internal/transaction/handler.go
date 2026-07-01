@@ -29,6 +29,7 @@ func NewHandler(repo *Repository, tags *tag.Repository, categories *category.Rep
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/transactions", h.auth.RequireUser(h.list))
+	mux.HandleFunc("GET /api/transactions/periods", h.auth.RequireUser(h.periods))
 	mux.HandleFunc("POST /api/transactions", h.auth.RequireUser(h.create))
 	mux.HandleFunc("PATCH /api/transactions", h.auth.RequireUser(h.bulkUpdate))
 	mux.HandleFunc("DELETE /api/transactions", h.auth.RequireUser(h.bulkDelete))
@@ -68,6 +69,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request, userID int64) {
 	}
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) periods(w http.ResponseWriter, r *http.Request, userID int64) {
+	periods, err := h.repo.ListPeriods(r.Context(), userID)
+	if err != nil {
+		log.Printf("erro ao listar períodos: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	writeJSON(w, http.StatusOK, periods)
 }
 
 func (h *Handler) attachTags(r *http.Request, txs []Transaction) error {

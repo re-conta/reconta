@@ -370,6 +370,36 @@ func (r *Repository) FindDuplicate(ctx context.Context, userID int64, date strin
 	return count > 0, nil
 }
 
+// Period representa um mês/ano com pelo menos uma transação lançada.
+type Period struct {
+	Month int `json:"month"`
+	Year  int `json:"year"`
+}
+
+// ListPeriods retorna os meses/anos distintos em que o usuário possui transações lançadas.
+func (r *Repository) ListPeriods(ctx context.Context, userID int64) ([]Period, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT CAST(strftime('%m', date) AS INTEGER), CAST(strftime('%Y', date) AS INTEGER)
+		FROM transactions
+		WHERE user_id = ?
+		ORDER BY 2 DESC, 1 DESC`, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listando períodos com transações: %w", err)
+	}
+	defer rows.Close()
+
+	periods := []Period{}
+	for rows.Next() {
+		var p Period
+		if err := rows.Scan(&p.Month, &p.Year); err != nil {
+			return nil, err
+		}
+		periods = append(periods, p)
+	}
+	return periods, rows.Err()
+}
+
 func monthRange(month, year int) (start, end string) {
 	first := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	lastDay := first.AddDate(0, 1, -1)
