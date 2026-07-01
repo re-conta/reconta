@@ -16,7 +16,8 @@ async function handleSubmit() {
   submitting.value = true;
   try {
     await login(form.email, form.password);
-    router.push("/");
+    const redirect = router.currentRoute.value.query.redirect;
+    router.push(typeof redirect === "string" ? redirect : "/");
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao entrar";
   } finally {
@@ -31,7 +32,7 @@ async function handleSubmit() {
       <div class="mb-8 flex flex-col items-center text-center">
         <img src="/images/favicon.svg" alt="" class="h-12 w-12" />
         <h1 class="mt-4 font-display text-2xl font-bold text-ink-900">Bem-vindo de volta</h1>
-        <p class="mt-1 text-sm text-ink-500">Acesse sua conta Reconta</p>
+        <p class="mt-1 text-sm text-ink-500">Acesse sua conta</p>
       </div>
 
       <div class="rounded-3xl border border-ink-200/70 bg-white p-8 shadow-xl shadow-ink-900/5">

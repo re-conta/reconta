@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
   server: {
-    allowedHosts: ["erebus.paxa.dev", "localhost", "local.reconta.app"],
+    allowedHosts: ["reconta.app", "erebus.paxa.dev", "localhost", "local.reconta.app"],
     proxy: {
       "/api": {
         target: "http://localhost:3020",

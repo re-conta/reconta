@@ -123,6 +123,75 @@ O `api/.env` de produção precisa das mesmas três variáveis, mas com `GOOGLE_
 
 Lembre-se: o script de deploy (`scripts/deploy.sh`) preserva o `.env` existente na VPS entre deploys, então essas variáveis só precisam ser configuradas manualmente uma vez no servidor.
 
+## Endpoints da API
+
+Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **protegidas** exigem sessão autenticada (cookie `session_token`), validada pelo middleware `auth.Handler.RequireUser()`.
+
+### Health check
+
+| Método | Rota | Auth |
+|--------|------|------|
+| GET | `/api/health` | Não |
+
+### Usuários
+
+| Método | Rota | Auth |
+|--------|------|------|
+| POST | `/api/users` | Não |
+| GET | `/api/users` | Não |
+
+### Autenticação
+
+| Método | Rota | Auth |
+|--------|------|------|
+| POST | `/api/auth/login` | Não |
+| POST | `/api/auth/logout` | Não |
+| GET | `/api/auth/me` | Não |
+| GET | `/api/auth/google/login` | Não |
+| GET | `/api/auth/google/callback` | Não |
+
+### Contas (`accounts`)
+
+| Método | Rota | Auth |
+|--------|------|------|
+| GET | `/api/accounts` | Sim |
+| POST | `/api/accounts` | Sim |
+| PUT | `/api/accounts/{id}` | Sim |
+| DELETE | `/api/accounts/{id}` | Sim |
+
+### Categorias (`categories`)
+
+| Método | Rota | Auth |
+|--------|------|------|
+| GET | `/api/categories` | Sim |
+| POST | `/api/categories` | Sim |
+| PUT | `/api/categories/{id}` | Sim |
+| DELETE | `/api/categories/{id}` | Sim |
+
+### Tags
+
+| Método | Rota | Auth |
+|--------|------|------|
+| GET | `/api/tags` | Sim |
+| POST | `/api/tags` | Sim |
+| PUT | `/api/tags/{id}` | Sim |
+| DELETE | `/api/tags/{id}` | Sim |
+
+### Transações (`transactions`)
+
+| Método | Rota | Auth |
+|--------|------|------|
+| GET | `/api/transactions` | Sim |
+| POST | `/api/transactions` | Sim |
+| PATCH | `/api/transactions` | Sim |
+| DELETE | `/api/transactions` | Sim |
+| POST | `/api/transactions/auto-categorize` | Sim |
+| GET | `/api/transactions/opening-balance` | Sim |
+| POST | `/api/transactions/opening-balance` | Sim |
+| GET | `/api/transactions/{id}` | Sim |
+| PUT | `/api/transactions/{id}` | Sim |
+| DELETE | `/api/transactions/{id}` | Sim |
+
 ## Testes
 
 ```sh

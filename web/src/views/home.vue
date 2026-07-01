@@ -2,6 +2,7 @@
 import { useAuth } from "../composables/useAuth";
 
 const { currentUser } = useAuth();
+const appName = import.meta.env.VITE_APP_NAME;
 </script>
 
 <template>
@@ -13,7 +14,7 @@ const { currentUser } = useAuth();
         Suas finanças, organizadas
       </span>
       <h1 class="mt-5 font-display text-4xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl">
-        Reconta seu dinheiro com
+        {{ appName }} seu dinheiro com
         <span class="bg-gradient-to-r from-brand-500 to-coral-500 bg-clip-text text-transparent">clareza</span>
       </h1>
       <p class="mt-5 text-lg leading-relaxed text-ink-500">
