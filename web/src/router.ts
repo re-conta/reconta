@@ -13,10 +13,10 @@ import NotFound from "./views/notfound.vue";
 import { useAuth } from "./composables/useAuth";
 
 const routes = [
-  { path: "/", component: HomeView },
+  { path: "/", name: "Home", component: HomeView },
   { path: "/login", name: "Login", component: LoginView },
   { path: "/register", name: "Register", component: RegisterView },
-  { path: "/users", name: "Users", component: UsersView },
+  { path: "/users", name: "Users", component: UsersView, meta: { requiresAuth: true, requiresAdmin: true } },
   {
     path: "/contas-bancarias",
     name: "Accounts",
@@ -58,6 +58,10 @@ router.beforeEach(async (to) => {
 
   if (!currentUser.value) {
     return { name: "Login", query: { redirect: to.fullPath } };
+  }
+
+  if (to.meta.requiresAdmin && currentUser.value.role !== "admin" && currentUser.value.role !== "super_admin") {
+    return { name: "Home" };
   }
 
   return true;

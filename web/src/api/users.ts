@@ -1,4 +1,4 @@
-import type { CreateUserInput, User } from "../types/user";
+import type { CreateUserInput, User, UserRole } from "../types/user";
 
 export class ApiError extends Error {}
 
@@ -20,5 +20,14 @@ export function createUser(input: CreateUserInput): Promise<User> {
 }
 
 export function listUsers(): Promise<User[]> {
-  return fetch("/api/users").then((res) => parseResponse<User[]>(res));
+  return fetch("/api/users", { credentials: "include" }).then((res) => parseResponse<User[]>(res));
+}
+
+export function updateUserRole(id: number, role: UserRole): Promise<User> {
+  return fetch(`/api/users/${id}/role`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ role }),
+  }).then((res) => parseResponse<User>(res));
 }

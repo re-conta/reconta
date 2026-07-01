@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ApiError, listUsers } from "../api/users";
-import type { User } from "../types/user";
+import { useAuth } from "../composables/useAuth";
+import { ApiError, listUsers, updateUserRole } from "../api/users";
+import type { User, UserRole } from "../types/user";
+
+const { currentUser } = useAuth();
 
 const users = ref<User[]>([]);
 const errorMessage = ref("");
 const loading = ref(true);
+const roleUpdatingId = ref<number | null>(null);
+
+const isSuperAdmin = computed(() => currentUser.value?.role === "super_admin");
+
+const roleLabels: Record<UserRole, string> = {
+  user: "Usuário",
+  admin: "Admin",
+  super_admin: "Super Admin",
+};
 
 async function loadUsers() {
   loading.value = true;
@@ -16,6 +28,20 @@ async function loadUsers() {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao carregar usuários";
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleRoleChange(target: User, role: UserRole) {
+  roleUpdatingId.value = target.id;
+  errorMessage.value = "";
+  try {
+    const updated = await updateUserRole(target.id, role);
+    const idx = users.value.findIndex((u) => u.id === target.id);
+    if (idx !== -1) users.value[idx] = updated;
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao atualizar role";
+  } finally {
+    roleUpdatingId.value = null;
   }
 }
 
@@ -85,10 +111,33 @@ onMounted(loadUsers);
           >
             {{ initialsFor(user.name) }}
           </span>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold text-ink-900">{{ user.name }}</p>
             <p class="truncate text-xs text-ink-500">{{ user.email }}</p>
           </div>
+          <select
+            v-if="isSuperAdmin && user.role !== 'super_admin'"
+            :value="user.role"
+            :disabled="roleUpdatingId === user.id"
+            class="shrink-0 rounded-full border border-ink-200 bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100 disabled:opacity-50"
+            @change="handleRoleChange(user, ($event.target as HTMLSelectElement).value as UserRole)"
+          >
+            <option value="user">Usuário</option>
+            <option value="admin">Admin</option>
+          </select>
+          <span
+            v-else
+            class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold"
+            :class="
+              user.role === 'super_admin'
+                ? 'bg-ink-900 text-white'
+                : user.role === 'admin'
+                  ? 'bg-brand-100 text-brand-700'
+                  : 'bg-ink-100 text-ink-600'
+            "
+          >
+            {{ roleLabels[user.role] }}
+          </span>
         </li>
       </ul>
     </div>

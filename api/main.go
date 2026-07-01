@@ -51,12 +51,17 @@ func main() {
 		}
 	}
 
-	userHandler := user.NewHandler(userRepo)
-	userHandler.SetAfterCreate(seedDefaults)
-	userHandler.RegisterRoutes(mux)
+	if err := userRepo.SyncSuperAdmins(context.Background()); err != nil {
+		log.Printf("erro ao sincronizar super admins: %v", err)
+	}
 
 	authHandler := auth.NewHandler(auth.NewRepository(conn), userRepo, secureCookies)
 	authHandler.RegisterRoutes(mux)
+
+	userHandler := user.NewHandler(userRepo)
+	userHandler.SetAfterCreate(seedDefaults)
+	userHandler.SetAuth(authHandler.CurrentUser)
+	userHandler.RegisterRoutes(mux)
 
 	if clientID := getEnv("GOOGLE_CLIENT_ID", ""); clientID != "" {
 		googleHandler := auth.NewGoogleHandler(

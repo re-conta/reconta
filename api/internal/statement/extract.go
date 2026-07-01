@@ -9,6 +9,13 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
+// columnGapThreshold é o salto horizontal (em pontos) acima do qual dois
+// fragmentos de texto na mesma linha são considerados colunas diferentes de
+// uma tabela, e não caracteres/palavras adjacentes. Calibrado observando que
+// o espaçamento normal entre caracteres fica abaixo de ~45pt, enquanto saltos
+// de coluna passam de 130pt.
+const columnGapThreshold = 60
+
 // ExtractText lê o texto de um PDF a partir dos bytes do arquivo, agrupando
 // os fragmentos de texto por linha (mesma posição vertical) para preservar o
 // layout tabular típico de extratos bancários. Isso é mais confiável do que
@@ -31,11 +38,24 @@ func ExtractText(data []byte) (string, error) {
 			continue
 		}
 		for _, row := range rows {
-			parts := make([]string, len(row.Content))
+			var line strings.Builder
+			var prevEndX float64
 			for j, text := range row.Content {
-				parts[j] = text.S
+				// Alguns geradores de PDF (ex.: extratos Sicredi) emitem cada
+				// glifo como um fragmento de texto isolado, já incluindo os
+				// espaços "reais" do texto como fragmentos próprios — então
+				// unir tudo com espaço (como antes) duplicava espaços e
+				// quebrava cada caractere isoladamente. Só sintetizamos um
+				// espaço quando o salto horizontal é grande demais para ser
+				// espaçamento normal de caractere (indicando um pulo de
+				// coluna da tabela, ex.: de "Data" para "Descrição").
+				if j > 0 && text.X-prevEndX > columnGapThreshold {
+					line.WriteString(" ")
+				}
+				line.WriteString(text.S)
+				prevEndX = text.X + text.W
 			}
-			buf.WriteString(strings.Join(parts, " "))
+			buf.WriteString(line.String())
 			buf.WriteString("\n")
 		}
 	}

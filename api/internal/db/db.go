@@ -38,6 +38,7 @@ func migrate(conn *sql.DB) error {
 		name          TEXT NOT NULL,
 		email         TEXT NOT NULL UNIQUE,
 		password_hash TEXT NOT NULL,
+		role          TEXT NOT NULL DEFAULT 'user',
 		created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
@@ -130,6 +131,16 @@ func addMissingColumns(conn *sql.DB) error {
 		}
 		if _, err := conn.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)`); err != nil {
 			return fmt.Errorf("criando índice único de google_id: %w", err)
+		}
+	}
+
+	hasRole, err := columnExists(conn, "users", "role")
+	if err != nil {
+		return fmt.Errorf("verificando coluna role: %w", err)
+	}
+	if !hasRole {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`); err != nil {
+			return fmt.Errorf("adicionando coluna role: %w", err)
 		}
 	}
 	return nil
