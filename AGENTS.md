@@ -27,8 +27,6 @@ reconta/
 │   └── go.mod              # module github.com/lucasbrum/reconta/api
 ├── files/                  # Configurações do servidor (não editar sem contexto)
 │   ├── reconta.service     # Systemd: processo principal da aplicação
-│   ├── reconta-cron.service # Systemd: job de notificações (oneshot)
-│   ├── reconta-cron.timer  # Systemd: timer diário às 08:00
 │   └── reconta.conf        # Nginx: proxy reverso + SSL
 ├── scripts/
 │   └── deploy.sh           # Deploy na VPS

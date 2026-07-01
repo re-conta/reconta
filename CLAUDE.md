@@ -19,8 +19,6 @@ reconta/
 │   └── go.mod              # module github.com/lucasbrum/reconta/api
 ├── files/                  # Arquivos de configuração do servidor (VPS)
 │   ├── reconta.service     # Systemd service da aplicação
-│   ├── reconta-cron.service
-│   ├── reconta-cron.timer
 │   └── reconta.conf        # Configuração Nginx
 ├── scripts/
 │   └── deploy.sh           # Script de deploy executado na VPS
