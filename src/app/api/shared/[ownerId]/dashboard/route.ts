@@ -72,10 +72,7 @@ export async function GET(
 	} else {
 		({ start, end } = getMonthRange(month, year));
 		const prev = getPreviousMonth(month, year);
-		({ start: prevStart, end: prevEnd } = getMonthRange(
-			prev.month,
-			prev.year,
-		));
+		({ start: prevStart, end: prevEnd } = getMonthRange(prev.month, prev.year));
 	}
 
 	const [currentIncome, currentExpense, prevIncome, prevExpense] =

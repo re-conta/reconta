@@ -133,10 +133,7 @@ export function RelatoriosClient() {
 			<Card>
 				<CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex flex-wrap items-center gap-2">
-						<Select
-							value={scope}
-							onValueChange={(v) => setScope(v as Scope)}
-						>
+						<Select value={scope} onValueChange={(v) => setScope(v as Scope)}>
 							<SelectTrigger className="w-44">
 								<SelectValue />
 							</SelectTrigger>
@@ -301,9 +298,7 @@ function SummaryStat({ label, value }: { label: string; value: number }) {
 	return (
 		<div className="rounded-lg bg-zinc-800/50 p-3 text-center">
 			<p className="text-xs text-zinc-500 mb-1">{label}</p>
-			<p className="text-sm font-bold text-zinc-100">
-				{formatCurrency(value)}
-			</p>
+			<p className="text-sm font-bold text-zinc-100">{formatCurrency(value)}</p>
 		</div>
 	);
 }
