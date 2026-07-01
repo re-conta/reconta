@@ -33,6 +33,16 @@ const { currentUser } = useAuth();
       <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-8">
         <nav class="flex gap-6 text-sm font-medium text-ink-500">
           <RouterLink to="/" class="transition hover:text-ink-900" active-class="text-ink-900">Início</RouterLink>
+          <RouterLink to="/transacoes" class="transition hover:text-ink-900" active-class="text-ink-900">
+            Transações
+          </RouterLink>
+          <RouterLink to="/contas-bancarias" class="transition hover:text-ink-900" active-class="text-ink-900">
+            Contas
+          </RouterLink>
+          <RouterLink to="/categorias" class="transition hover:text-ink-900" active-class="text-ink-900">
+            Categorias
+          </RouterLink>
+          <RouterLink to="/tags" class="transition hover:text-ink-900" active-class="text-ink-900"> Tags </RouterLink>
           <RouterLink to="/users" class="transition hover:text-ink-900" active-class="text-ink-900">
             Usuários
           </RouterLink>

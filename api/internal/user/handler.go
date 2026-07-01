@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -11,11 +12,19 @@ import (
 )
 
 type Handler struct {
-	repo *Repository
+	repo        *Repository
+	afterCreate func(ctx context.Context, userID int64)
 }
 
 func NewHandler(repo *Repository) *Handler {
 	return &Handler{repo: repo}
+}
+
+// SetAfterCreate registra um callback executado logo após a criação de um
+// usuário (ex.: popular categorias/conta padrão). Deve ser chamado antes de
+// RegisterRoutes.
+func (h *Handler) SetAfterCreate(fn func(ctx context.Context, userID int64)) {
+	h.afterCreate = fn
 }
 
 // RegisterRoutes registra as rotas de usuário no mux informado.
@@ -69,6 +78,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		log.Printf("erro ao criar usuário: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
+	}
+
+	if h.afterCreate != nil {
+		h.afterCreate(r.Context(), u.ID)
 	}
 
 	writeJSON(w, http.StatusCreated, u)

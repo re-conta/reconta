@@ -71,6 +71,19 @@ async function handleSubmit() {
           {{ errorMessage }}
         </p>
 
+        <div class="mt-6 flex items-center gap-3 text-xs text-ink-400">
+          <span class="h-px flex-1 bg-ink-200"></span>
+          ou
+          <span class="h-px flex-1 bg-ink-200"></span>
+        </div>
+
+        <a
+          href="/api/auth/google/login"
+          class="mt-4 flex items-center justify-center gap-2 rounded-full border border-ink-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 shadow-sm transition hover:bg-ink-100"
+        >
+          Continuar com Google
+        </a>
+
         <p class="mt-6 text-center text-sm text-ink-500">
           Não tem conta?
           <RouterLink to="/register" class="font-semibold text-brand-700 hover:text-brand-800">

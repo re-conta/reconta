@@ -70,6 +70,53 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 	return &u, passwordHash, nil
 }
 
+// GetByGoogleID busca um usuário previamente vinculado a uma conta Google.
+func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, name, email, created_at FROM users WHERE google_id = ?`, googleID,
+	)
+	return scanUser(row)
+}
+
+// GetByEmail busca um usuário pelo e-mail, usado para vincular uma conta Google
+// a um cadastro já existente por e-mail/senha.
+func (r *Repository) GetByEmail(ctx context.Context, email string) (*User, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, name, email, created_at FROM users WHERE email = ?`, email,
+	)
+	return scanUser(row)
+}
+
+// CreateWithGoogle cria um usuário autenticado apenas via Google, sem senha.
+func (r *Repository) CreateWithGoogle(ctx context.Context, name, email, googleID string) (*User, error) {
+	res, err := r.db.ExecContext(ctx,
+		`INSERT INTO users (name, email, password_hash, google_id) VALUES (?, ?, '', ?)`,
+		name, email, googleID,
+	)
+	if err != nil {
+		if isUniqueConstraintErr(err) {
+			return nil, ErrEmailTaken
+		}
+		return nil, fmt.Errorf("inserindo usuário via Google: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("obtendo id do usuário: %w", err)
+	}
+
+	return r.GetByID(ctx, id)
+}
+
+// LinkGoogleID vincula um google_id a um usuário existente (cadastrado antes via e-mail/senha).
+func (r *Repository) LinkGoogleID(ctx context.Context, id int64, googleID string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE users SET google_id = ? WHERE id = ?`, googleID, id)
+	if err != nil {
+		return fmt.Errorf("vinculando conta Google: %w", err)
+	}
+	return nil
+}
+
 func (r *Repository) List(ctx context.Context) ([]User, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, name, email, created_at FROM users ORDER BY id DESC`,

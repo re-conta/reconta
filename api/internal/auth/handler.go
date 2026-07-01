@@ -68,18 +68,27 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := generateToken()
-	if err != nil {
-		log.Printf("erro ao gerar token de sessão: %v", err)
+	if err := h.createSession(w, r, u.ID); err != nil {
+		log.Printf("erro ao criar sessão: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
 
+	writeJSON(w, http.StatusOK, u)
+}
+
+// createSession gera um token de sessão para o usuário informado e o grava
+// como cookie na resposta. Reutilizado pelo login por e-mail/senha e pelo
+// callback do Google OAuth.
+func (h *Handler) createSession(w http.ResponseWriter, r *http.Request, userID int64) error {
+	token, err := generateToken()
+	if err != nil {
+		return err
+	}
+
 	expiresAt := time.Now().Add(sessionTTL)
-	if err := h.sessions.Create(r.Context(), token, u.ID, expiresAt); err != nil {
-		log.Printf("erro ao criar sessão: %v", err)
-		writeError(w, http.StatusInternalServerError, "erro interno")
-		return
+	if err := h.sessions.Create(r.Context(), token, userID, expiresAt); err != nil {
+		return err
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -91,8 +100,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		Secure:   h.secure,
 		SameSite: http.SameSiteLaxMode,
 	})
-
-	writeJSON(w, http.StatusOK, u)
+	return nil
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +145,19 @@ func (h *Handler) CurrentUser(r *http.Request) (*user.User, error) {
 	}
 
 	return h.users.GetByID(r.Context(), session.UserID)
+}
+
+// RequireUser envolve um handler que precisa do usuário autenticado, resolvendo-o
+// a partir da sessão e respondendo 401 automaticamente quando ausente/inválida.
+func (h *Handler) RequireUser(next func(w http.ResponseWriter, r *http.Request, userID int64)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u, err := h.CurrentUser(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "não autenticado")
+			return
+		}
+		next(w, r, u.ID)
+	}
 }
 
 func generateToken() (string, error) {
