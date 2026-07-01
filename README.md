@@ -62,6 +62,67 @@ O script de deploy:
 
 Segredos necessários no repositório: `SSH_HOST`, `SSH_USER`, `SSH_PASS`, `SSH_PORT`, `PROJECT_PATH`.
 
+## Login via Google (variáveis de ambiente)
+
+O login via Google é opcional: se `GOOGLE_CLIENT_ID` estiver vazio no `.env`, essa opção fica desabilitada e a aplicação funciona normalmente só com login por email/senha.
+
+As variáveis usadas (`api/.env`, veja `api/.env.example`):
+
+```sh
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URL=http://localhost:3020/api/auth/google/callback
+```
+
+### Como gerar as credenciais no Google Cloud Console
+
+1. **Crie (ou selecione) um projeto**
+   - Acesse [console.cloud.google.com](https://console.cloud.google.com/)
+   - No topo, clique no seletor de projetos → **Novo Projeto**
+   - Dê um nome (ex.: `reconta`) e clique em **Criar**
+
+2. **Configure a tela de consentimento OAuth**
+   - No menu lateral: **APIs e Serviços** → **Tela de consentimento OAuth**
+   - Escolha o tipo **Externo** (a menos que você use Google Workspace) e clique em **Criar**
+   - Preencha os campos obrigatórios:
+     - Nome do app: `Reconta`
+     - Email de suporte do usuário: seu email
+     - Email de contato do desenvolvedor: seu email
+   - Em **Escopos**, adicione `openid`, `.../auth/userinfo.email` e `.../auth/userinfo.profile` (são os escopos que a API usa — veja `api/internal/auth/google.go`)
+   - Em **Usuários de teste** (se o app estiver em modo "Teste"), adicione os emails do Google que farão login durante o desenvolvimento
+   - Salve e continue até finalizar
+
+3. **Crie as credenciais OAuth 2.0**
+   - Menu lateral: **APIs e Serviços** → **Credenciais**
+   - Clique em **Criar Credenciais** → **ID do cliente OAuth**
+   - Tipo de aplicativo: **Aplicativo da Web**
+   - Nome: `Reconta Web` (ou outro nome interno, sem impacto funcional)
+   - Em **URIs de redirecionamento autorizados**, adicione as URLs de callback correspondentes a cada ambiente:
+     - Desenvolvimento: `http://localhost:3020/api/auth/google/callback`
+     - Produção: `https://reconta.app/api/auth/google/callback`
+   - Clique em **Criar**
+
+4. **Copie o Client ID e o Client Secret**
+   - Um modal exibirá o **ID do cliente** e a **Chave secreta do cliente**
+   - Copie esses valores para `api/.env`:
+     ```sh
+     GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
+     GOOGLE_CLIENT_SECRET=sua-chave-secreta
+     GOOGLE_REDIRECT_URL=http://localhost:3020/api/auth/google/callback
+     ```
+   - Se perder a chave depois, você pode gerar uma nova em **Credenciais** → clique no ID do cliente criado → **Adicionar chave secreta**
+
+5. **Publique o app (opcional, para produção)**
+   - Enquanto a tela de consentimento estiver em modo **Teste**, só os usuários de teste cadastrados no passo 2 conseguem logar
+   - Para permitir qualquer conta Google, volte em **Tela de consentimento OAuth** e clique em **Publicar aplicativo**
+   - Se os escopos usados forem apenas `openid`/`email`/`profile` (não sensíveis), a publicação costuma ser aprovada automaticamente, sem revisão manual do Google
+
+### Configuração em produção (VPS)
+
+O `api/.env` de produção precisa das mesmas três variáveis, mas com `GOOGLE_REDIRECT_URL` apontando para o domínio real (`https://reconta.app/api/auth/google/callback`) — essa URL **precisa** estar cadastrada nos "URIs de redirecionamento autorizados" do passo 3, senão o Google recusa o callback com erro `redirect_uri_mismatch`.
+
+Lembre-se: o script de deploy (`scripts/deploy.sh`) preserva o `.env` existente na VPS entre deploys, então essas variáveis só precisam ser configuradas manualmente uma vez no servidor.
+
 ## Testes
 
 ```sh
