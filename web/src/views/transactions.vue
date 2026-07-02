@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { listAccounts } from "../api/accounts";
 import { listCategories } from "../api/categories";
 import { listTags } from "../api/tags";
+import TransactionCalendar from "../components/TransactionCalendar.vue";
 import {
   ApiError,
   autoCategorize,
@@ -67,6 +68,39 @@ const editingOpeningBalance = ref(false);
 const openingBalanceInput = ref(0);
 
 const autoCategorizeMessage = ref("");
+
+const selectedDate = ref<string | null>(null);
+
+const sortedPeriods = computed(() =>
+  [...periods.value].sort((a, b) => a.year - b.year || a.month - b.month),
+);
+
+const currentPeriodIndex = computed(() =>
+  sortedPeriods.value.findIndex((p) => p.month === filters.month && p.year === filters.year),
+);
+
+const canGoPrevPeriod = computed(() => currentPeriodIndex.value > 0);
+const canGoNextPeriod = computed(
+  () => currentPeriodIndex.value !== -1 && currentPeriodIndex.value < sortedPeriods.value.length - 1,
+);
+
+function goToPrevPeriod() {
+  if (!canGoPrevPeriod.value) return;
+  const target = sortedPeriods.value[currentPeriodIndex.value - 1];
+  filters.month = target.month;
+  filters.year = target.year;
+}
+
+function goToNextPeriod() {
+  if (!canGoNextPeriod.value) return;
+  const target = sortedPeriods.value[currentPeriodIndex.value + 1];
+  filters.month = target.month;
+  filters.year = target.year;
+}
+
+const displayedTransactions = computed(() =>
+  selectedDate.value ? transactions.value.filter((tx) => tx.date === selectedDate.value) : transactions.value,
+);
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -272,6 +306,7 @@ watch(
   () => {
     loadOpeningBalance();
     editingOpeningBalance.value = false;
+    selectedDate.value = null;
   },
 );
 
@@ -323,6 +358,23 @@ onMounted(async () => {
       {{ autoCategorizeMessage }}
     </p>
 
+    <div class="flex flex-col gap-6 md:flex-row md:items-start">
+    <!-- Calendário -->
+    <div class="order-first md:sticky md:top-6 md:order-2 md:w-64 md:shrink-0 xl:w-72">
+      <TransactionCalendar
+        :month="filters.month"
+        :year="filters.year"
+        :transactions="transactions"
+        :selected-date="selectedDate"
+        :can-go-prev="canGoPrevPeriod"
+        :can-go-next="canGoNextPeriod"
+        @prev="goToPrevPeriod"
+        @next="goToNextPeriod"
+        @select-date="(d) => (selectedDate = d)"
+      />
+    </div>
+
+    <div class="flex min-w-0 flex-1 flex-col gap-6 md:order-1">
     <!-- Filtros -->
     <div class="flex flex-wrap items-end gap-3 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
       <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
@@ -505,12 +557,16 @@ onMounted(async () => {
         Carregando...
       </div>
       <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">{{ errorMessage }}</p>
-      <div v-else-if="transactions.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
-        <p class="text-sm font-medium text-ink-600">Nenhuma transação neste período</p>
-        <p class="text-sm text-ink-400">Lance a primeira transação para começar.</p>
+      <div v-else-if="displayedTransactions.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
+        <p class="text-sm font-medium text-ink-600">
+          {{ selectedDate ? "Nenhuma transação neste dia" : "Nenhuma transação neste período" }}
+        </p>
+        <p class="text-sm text-ink-400">
+          {{ selectedDate ? "Escolha outro dia no calendário." : "Lance a primeira transação para começar." }}
+        </p>
       </div>
       <ul v-else class="divide-y divide-ink-100">
-        <li v-for="tx in transactions" :key="tx.id" class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60">
+        <li v-for="tx in displayedTransactions" :key="tx.id" class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60">
           <input type="checkbox" :checked="selectedIds.has(tx.id)" @change="toggleSelected(tx.id)" />
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold text-ink-900">{{ tx.description }}</p>
@@ -561,6 +617,8 @@ onMounted(async () => {
         <span>Página {{ pagination.page }} de {{ totalPages }}</span>
         <button type="button" :disabled="filters.page >= totalPages" class="disabled:opacity-30" @click="filters.page++">Próxima</button>
       </div>
+    </div>
+    </div>
     </div>
   </div>
 </template>

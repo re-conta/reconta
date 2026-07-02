@@ -1,8 +1,22 @@
 <script setup lang="ts">
+import { ref, watchEffect } from "vue";
 import { useAuth } from "../composables/useAuth";
+import { listTransactions } from "../api/transactions";
 
 const { currentUser } = useAuth();
 const appName = import.meta.env.VITE_APP_NAME;
+
+const hasTransactions = ref(false);
+
+watchEffect(async () => {
+  if (!currentUser.value) return;
+  try {
+    const result = await listTransactions({ limit: 1 });
+    hasTransactions.value = result.pagination.total > 0;
+  } catch {
+    hasTransactions.value = false;
+  }
+});
 </script>
 
 <template>
@@ -23,24 +37,24 @@ const appName = import.meta.env.VITE_APP_NAME;
       <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
         <RouterLink
           v-if="!currentUser"
-          to="/register"
+          to="/login"
           class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
         >
-          Começar agora
+          Entre
+        </RouterLink>
+        <RouterLink
+          v-else-if="!hasTransactions"
+          to="/importar-extrato"
+          class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
+        >
+          Comece
         </RouterLink>
         <RouterLink
           v-else
-          to="/users"
+          to="/transacoes"
           class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
         >
-          Ver usuários
-        </RouterLink>
-        <RouterLink
-          v-if="!currentUser"
-          to="/login"
-          class="rounded-full border border-ink-200 bg-white px-6 py-3 text-sm font-semibold text-ink-700 transition hover:border-ink-300 hover:bg-ink-100"
-        >
-          Já tenho conta
+          Transações
         </RouterLink>
       </div>
     </div>

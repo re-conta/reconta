@@ -13,6 +13,7 @@ type Bank struct {
 var SupportedBanks = []Bank{
 	{"bb", "Banco do Brasil"},
 	{"sicredi", "Sicredi"},
+	{"bradesco", "Bradesco"},
 	{"nubank", "Nubank"},
 	{"mercadopago", "Mercado Pago"},
 	{"itau", "Itaú"},
@@ -27,15 +28,27 @@ func DetectBank(text string) Bank {
 		return BankByKey("bb")
 	case strings.Contains(lower, "sicredi"):
 		return BankByKey("sicredi")
+	case strings.Contains(lower, "bradesco"):
+		return BankByKey("bradesco")
 	case strings.Contains(lower, "nubank") || strings.Contains(lower, "nu pagamentos"):
 		return BankByKey("nubank")
 	case strings.Contains(lower, "mercado pago") || strings.Contains(lower, "mercadopago"):
 		return BankByKey("mercadopago")
 	case strings.Contains(lower, "itaú") || strings.Contains(lower, "itau unibanco") || strings.Contains(lower, "banco itau"):
 		return BankByKey("itau")
+	case isBBLayout(lower):
+		return BankByKey("bb")
 	default:
 		return BankByKey("generic")
 	}
+}
+
+// isBBLayout reconhece extratos do Banco do Brasil exportados pelo app
+// mobile: o texto não menciona "Banco do Brasil" em lugar nenhum, então só
+// dá para identificar pelas colunas características do extrato ("Lote" é
+// exclusiva desse layout entre os bancos suportados).
+func isBBLayout(lower string) bool {
+	return strings.Contains(lower, "lote") && strings.Contains(lower, "histórico")
 }
 
 // BankByKey retorna o banco correspondente à chave, ou o genérico se não existir.

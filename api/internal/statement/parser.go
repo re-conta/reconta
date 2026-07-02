@@ -6,37 +6,131 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // ParseStatement extrai os lançamentos do texto de um extrato bancário.
 //
-// Os bancos suportados (Banco do Brasil, Sicredi, Nubank, Mercado Pago,
-// Itaú) exportam PDFs com layouts diferentes, mas todos seguem o mesmo
-// padrão de linha: data no início, valor monetário (com marcador opcional
-// de crédito/débito) em algum ponto da linha, e a descrição entre os dois.
-// Por isso um único motor genérico cobre todos eles; o bankKey só existe
-// para permitir ajustes futuros específicos de um banco, se necessário.
+// Os bancos suportados (Banco do Brasil, Sicredi, Bradesco, Nubank, Mercado
+// Pago, Itaú) exportam PDFs com layouts diferentes. A maioria segue um
+// padrão de linha única: data no início, valor monetário (com marcador
+// opcional de crédito/débito) em algum ponto da linha, e a descrição entre
+// os dois. Mas Banco do Brasil e Bradesco quebram a descrição em linhas
+// separadas (um rótulo antes e/ou um detalhe depois da linha com
+// data+valor), já que o texto do PDF é extraído por linha visual, não por
+// registro lógico. Por isso, quando a linha com data+valor não traz uma
+// descrição com texto real (só número de documento/lote), buscamos a
+// descrição nas linhas vizinhas sem data/valor. O bankKey só existe para
+// permitir ajustes futuros específicos de um banco, se necessário.
 func ParseStatement(bankKey string, text string) []ParsedTransaction {
 	_ = bankKey
 	year := fallbackYear(text)
 
+	lines := strings.Split(text, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimSpace(lines[i])
+	}
+
 	var results []ParsedTransaction
-	for line := range strings.SplitSeq(text, "\n") {
-		line = strings.TrimSpace(line)
+	var pendingDescription string
+
+	for i, line := range lines {
 		if line == "" {
 			continue
 		}
-		if tx, ok := parseLine(line, year); ok {
-			results = append(results, tx)
+
+		raw, ok := parseLine(line, year)
+		if !ok {
+			pendingDescription = line
+			continue
 		}
+
+		description := raw.description
+		if !hasMeaningfulText(description) {
+			description = pendingDescription
+			if cont := continuationLine(lines, i, year); cont != "" {
+				description = joinDescription(description, cont)
+			}
+		}
+		pendingDescription = ""
+
+		description = strings.Trim(description, "-–—:; ")
+		if description == "" || isBalanceLine(description) {
+			continue
+		}
+
+		tx := ParsedTransaction{
+			Date:        raw.date,
+			Description: description,
+			Amount:      raw.amount,
+			Type:        classify(description, raw.sign),
+			RawLine:     line,
+		}
+		if m := pixNameRe.FindStringSubmatch(description); m != nil {
+			if name := strings.TrimSpace(m[1]); name != "" {
+				tx.PixBeneficiary = &name
+			}
+		}
+		results = append(results, tx)
 	}
 	return results
+}
+
+// hasMeaningfulText reporta se s contém pelo menos uma letra, distinguindo
+// uma descrição real de sobras como número de documento/lote ("13601
+// 511058923").
+func hasMeaningfulText(s string) bool {
+	for _, r := range s {
+		if unicode.IsLetter(r) {
+			return true
+		}
+	}
+	return false
+}
+
+// continuationLine retorna a linha seguinte a lines[i] quando ela parece ser
+// um complemento de descrição (não é uma nova linha de lançamento, nem
+// vazia) — usado pelo layout do Banco do Brasil, onde o detalhe da operação
+// vem depois da linha com data+valor.
+func continuationLine(lines []string, i int, year int) string {
+	if i+1 >= len(lines) {
+		return ""
+	}
+	next := lines[i+1]
+	if next == "" {
+		return ""
+	}
+	if _, ok := parseLine(next, year); ok {
+		return ""
+	}
+	return next
+}
+
+func joinDescription(a, b string) string {
+	a = strings.TrimSpace(a)
+	b = strings.TrimSpace(b)
+	switch {
+	case a == "":
+		return b
+	case b == "":
+		return a
+	default:
+		return a + " - " + b
+	}
+}
+
+// isBalanceLine identifica linhas de saldo (não são lançamentos reais):
+// "Saldo Anterior", "Saldo do dia" ou "SALDO" no Banco do Brasil, e
+// "COD. LANC. 0" no Bradesco (marca o saldo de abertura entre páginas).
+func isBalanceLine(description string) bool {
+	lower := strings.ToLower(strings.TrimSpace(description))
+	return strings.HasPrefix(lower, "saldo") || strings.HasPrefix(lower, "cod. lanc. 0")
 }
 
 var (
 	dateNumericRe = regexp.MustCompile(`^(\d{2})/(\d{2})(?:/(\d{2,4}))?\s+(.*)$`)
 	dateMonthRe   = regexp.MustCompile(`(?i)^(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*\.?\s+(\d{4})?\s*(.*)$`)
-	amountRe      = regexp.MustCompile(`(?i)(-)?\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2})(-)?\s*(DB|D|CR|C)?`)
+	amountRe      = regexp.MustCompile(`(?i)(-)?\s*(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2})(-)?\s*(DB|D|CR|C|\(-\)|\(\+\))?`)
 	periodYearRe  = regexp.MustCompile(`\d{2}/\d{2}/(\d{4})`)
 	pixNameRe     = regexp.MustCompile(`(?i)pix\s+(?:enviado|recebido|transferido)(?:\s+(?:para|de))?\s*[:\-]?\s*(.+)$`)
 
@@ -49,11 +143,13 @@ var (
 		"recebido", "recebimento", "credito", "crédito", "deposito", "depósito",
 		"estorno", "reembolso", "salario", "salário", "rendimento",
 		"transferencia recebida", "transferência recebida", "ted recebida", "doc recebido",
+		"rem:", // Bradesco: "REM:" identifica o remetente de um PIX recebido
 	}
 	expenseHints = []string{
 		"pago", "pagamento de", "compra", "debito", "débito", "enviado", "saque",
 		"boleto", "fatura", "tarifa", "anuidade", "encargo", "juros",
 		"transferencia enviada", "transferência enviada", "ted enviada", "doc enviado",
+		"des:", // Bradesco: "DES:" identifica o destinatário de um PIX enviado
 	}
 )
 
@@ -66,35 +162,29 @@ func fallbackYear(text string) int {
 	return time.Now().Year()
 }
 
-func parseLine(line string, defaultYear int) (ParsedTransaction, bool) {
+// rawLine é o resultado de reconhecer data + valor em uma linha, antes de
+// resolver a descrição final (que pode vir de linhas vizinhas) e classificar
+// o tipo do lançamento.
+type rawLine struct {
+	date        string
+	description string
+	amount      float64
+	sign        int
+}
+
+func parseLine(line string, defaultYear int) (rawLine, bool) {
 	date, rest, ok := extractDate(line, defaultYear)
 	if !ok {
-		return ParsedTransaction{}, false
+		return rawLine{}, false
 	}
 
 	amount, sign, rest, ok := extractAmount(rest)
 	if !ok || amount == 0 {
-		return ParsedTransaction{}, false
+		return rawLine{}, false
 	}
 
 	description := strings.Trim(strings.TrimSpace(rest), "-–—:; ")
-	if description == "" {
-		return ParsedTransaction{}, false
-	}
-
-	tx := ParsedTransaction{
-		Date:        date,
-		Description: description,
-		Amount:      amount,
-		Type:        classify(description, sign),
-		RawLine:     line,
-	}
-	if m := pixNameRe.FindStringSubmatch(description); m != nil {
-		if name := strings.TrimSpace(m[1]); name != "" {
-			tx.PixBeneficiary = &name
-		}
-	}
-	return tx, true
+	return rawLine{date: date, description: description, amount: amount, sign: sign}, true
 }
 
 // extractDate reconhece datas no início da linha em formato numérico
@@ -171,9 +261,9 @@ func extractAmount(s string) (amount float64, sign int, description string, ok b
 	}
 
 	switch {
-	case leadingSign == "-" || trailingSign == "-" || suffix == "D" || suffix == "DB":
+	case leadingSign == "-" || trailingSign == "-" || suffix == "D" || suffix == "DB" || suffix == "(-)":
 		sign = -1
-	case suffix == "C" || suffix == "CR":
+	case suffix == "C" || suffix == "CR" || suffix == "(+)":
 		sign = 1
 	}
 
