@@ -72,6 +72,10 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function accountName(accountId: number | null) {
+  return accounts.value.find((a) => a.id === accountId)?.name ?? null;
+}
+
 async function loadReferenceData() {
   const [c, t, a, p] = await Promise.all([listCategories(), listTags(), listAccounts(), listPeriods()]);
   categories.value = c;
@@ -510,11 +514,34 @@ onMounted(async () => {
           <input type="checkbox" :checked="selectedIds.has(tx.id)" @change="toggleSelected(tx.id)" />
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold text-ink-900">{{ tx.description }}</p>
-            <p class="truncate text-xs text-ink-500">
-              {{ tx.date }}
-              <span v-if="tx.categoryName"> &middot; {{ tx.categoryName }}</span>
-              <span v-for="t in tx.tags" :key="t.id" class="ml-1 rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px]">{{ t.name }}</span>
-            </p>
+            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+              <span>{{ tx.date }}</span>
+              <span v-if="accountName(tx.accountId)">&middot; {{ accountName(tx.accountId) }}</span>
+              <span
+                v-if="tx.categoryName"
+                class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                :style="{ backgroundColor: `${tx.categoryColor ?? '#94a3b8'}1a`, color: tx.categoryColor ?? '#64748b' }"
+              >
+                <span class="h-1.5 w-1.5 rounded-full" :style="{ backgroundColor: tx.categoryColor ?? '#94a3b8' }"></span>
+                {{ tx.categoryName }}
+              </span>
+              <span
+                v-for="t in tx.tags"
+                :key="t.id"
+                class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                :style="{ backgroundColor: `${t.color}1a`, color: t.color }"
+              >
+                {{ t.name }}
+              </span>
+              <span
+                v-if="tx.importedFrom"
+                class="rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] text-ink-500"
+                :title="tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined"
+              >
+                importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
+              </span>
+            </div>
+            <p v-if="tx.notes" class="mt-1 truncate text-xs italic text-ink-400" :title="tx.notes">{{ tx.notes }}</p>
           </div>
           <p class="shrink-0 text-sm font-semibold" :class="tx.type === 'income' ? 'text-brand-600' : 'text-coral-600'">
             {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}

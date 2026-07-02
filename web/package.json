@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bunx --bun vite",
-    "build": "vue-tsc -b && bunx --bun vite build",
+    "build": "vue-tsc -b && /home/nginx/.bun/bin/bunx --bun vite build",
     "preview": "vite preview",
     "lint": "oxlint",
     "fix": "oxlint --fix",
