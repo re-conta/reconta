@@ -9,16 +9,16 @@ const appName = import.meta.env.VITE_APP_NAME;
 <template>
   <div class="flex min-h-screen flex-col bg-ink-50">
     <div
-      class="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[480px] bg-[radial-gradient(60%_60%_at_15%_0%,theme(colors.brand.200/60%),transparent),radial-gradient(50%_50%_at_85%_10%,theme(colors.coral.200/50%),transparent)]"
+      class="pointer-events-none fixed inset-x-0 top-0 -z-10 h-120 bg-[radial-gradient(60%_60%_at_15%_0%,--theme(--color-brand-200/60%),transparent),radial-gradient(50%_50%_at_85%_10%,--theme(--color-coral-200/50%),transparent)]"
     ></div>
 
     <header
       class="sticky top-0 z-50 flex flex-col gap-3 border-b border-ink-200/70 bg-ink-50/80 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:px-8"
     >
       <div class="flex items-center justify-between gap-4">
-        <RouterLink to="/" class="flex items-center gap-2.5">
+        <RouterLink to="/" class="flex items-center gap-1.5">
           <img src="/images/favicon.svg" alt="" class="h-8 w-8" />
-          <span class="font-display text-lg font-bold tracking-tight text-ink-900">{{ appName }}</span>
+          <span class="font-display text-xl md:text-2xl font-bold tracking-tight text-ink-900">{{ appName }}</span>
         </RouterLink>
         <div class="flex items-center gap-4 sm:hidden">
           <RouterLink to="/" class="text-sm font-medium text-ink-500 transition hover:text-ink-900" active-class="text-ink-900">

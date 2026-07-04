@@ -1,25 +1,27 @@
-.PHONY: prod-build prod-up prod-down prod-restart prod-logs prod-status prod-clean
+.PHONY: build up down restart logs status clean
 
-POD          := reconta-prod
+POD          := reconta
 WEB_PORT     := 8080
 API_IMAGE    := reconta-api:local
 WEB_IMAGE    := reconta-web:local
 DATA_VOLUME  := reconta-api-data
 ENV_FILE     := $(if $(wildcard api/.env),api/.env,api/.env.example)
 
-## Builda as imagens da API (Go) e do Web (Vue via nginx)
-prod-build:
+help: ## Mostra esta ajuda
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	  awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+build: ## Builda as imagens da API (Go) e do Web (Vue via nginx)
 	podman build -t $(API_IMAGE) -f deploy/podman/Containerfile.api .
 	podman build -t $(WEB_IMAGE) -f deploy/podman/Containerfile.web .
 
-## Sobe API + Nginx/Web no mesmo pod, simulando o ambiente de produção
-prod-up: prod-build
+up: build ## Sobe API + Nginx/Web no mesmo pod, simulando o ambiente de produção
 	podman pod exists $(POD) && podman pod rm -f $(POD) || true
 	podman pod create --name $(POD) -p $(WEB_PORT):$(WEB_PORT)
 	podman volume exists $(DATA_VOLUME) || podman volume create $(DATA_VOLUME)
 	# ENV=development apenas para desativar cookies Secure (não há HTTPS local);
 	# build, binário e nginx continuam idênticos aos de produção.
-	podman run -d --pod $(POD) --name reconta-prod-api \
+	podman run -d --pod $(POD) --name reconta-api \
 		--env-file $(ENV_FILE) \
 		-e PORT=3020 \
 		-e ENV=development \
@@ -27,27 +29,23 @@ prod-up: prod-build
 		-e DB_PATH=./data/reconta.db \
 		-v $(DATA_VOLUME):/app/data \
 		$(API_IMAGE)
-	podman run -d --pod $(POD) --name reconta-prod-web $(WEB_IMAGE)
+	podman run -d --pod $(POD) --name reconta-web $(WEB_IMAGE)
 	@echo "✅ Disponível em http://localhost:$(WEB_PORT)"
 
-## Para e remove o pod (mantém o volume com o banco de dados)
-prod-down:
+down: ## Para e remove o pod (mantém o volume com o banco de dados)
 	podman pod rm -f $(POD) || true
 
-## Reinicia containers já buildados, sem rebuild
-prod-restart:
+
+restart: ## Reinicia containers já buildados, sem rebuild
 	podman pod restart $(POD)
 
-## Segue os logs de API e Web
-prod-logs:
+logs: ## Segue os logs de API e Web
 	podman pod logs -f $(POD)
 
-## Mostra o status do pod e containers
-prod-status:
+status: ## Mostra o status do pod e containers
 	podman pod ps --filter name=$(POD)
 	podman ps --pod --filter pod=$(POD)
 
-## Remove pod, imagens e volume (apaga o banco de dados local)
-prod-clean: prod-down
+clean: down ## Remove pod, imagens e volume (apaga o banco de dados local)
 	podman rmi -f $(API_IMAGE) $(WEB_IMAGE) || true
 	podman volume rm -f $(DATA_VOLUME) || true

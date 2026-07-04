@@ -4,6 +4,8 @@ import { Pencil, Trash2 } from "lucide-vue-next";
 import { listAccounts } from "../api/accounts";
 import { listCategories } from "../api/categories";
 import { listTags } from "../api/tags";
+import CashFlowChart from "../components/charts/CashFlowChart.vue";
+import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import TransactionCalendar from "../components/TransactionCalendar.vue";
 import {
   ApiError,
@@ -460,6 +462,12 @@ onMounted(async () => {
         <p class="text-xs font-medium text-ink-500">Saldo</p>
         <p class="mt-1 font-display text-lg font-bold text-ink-900">{{ formatCurrency(totals.balance) }}</p>
       </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="grid gap-6 lg:grid-cols-2">
+      <CashFlowChart :month="filters.month" :year="filters.year" :transactions="transactions" />
+      <CategoryExpenseChart :transactions="transactions" />
     </div>
 
     <!-- Formulário -->
