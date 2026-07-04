@@ -1,0 +1,18 @@
+FROM docker.io/oven/bun:1 AS build
+WORKDIR /src
+
+# web/package.json chama bunx pelo caminho absoluto usado na VPS de produção
+# (ver CLAUDE.md); criamos o mesmo caminho aqui para não alterar o script.
+RUN mkdir -p /home/nginx/.bun/bin && ln -s "$(which bunx)" /home/nginx/.bun/bin/bunx
+
+COPY package.json bun.lock ./
+COPY web/package.json web/package.json
+RUN bun install --frozen-lockfile
+
+COPY web/ web/
+RUN bun run --cwd web build
+
+FROM docker.io/library/nginx:1.27-alpine
+COPY --from=build /src/web/dist /usr/share/nginx/html
+COPY deploy/podman/nginx.local.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080

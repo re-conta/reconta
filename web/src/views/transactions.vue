@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
+import { Pencil, Trash2 } from "lucide-vue-next";
 import { listAccounts } from "../api/accounts";
 import { listCategories } from "../api/categories";
 import { listTags } from "../api/tags";
@@ -603,11 +604,21 @@ onMounted(async () => {
             {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
           </p>
           <div class="flex shrink-0 gap-2">
-            <button type="button" class="text-xs font-semibold text-brand-700 hover:text-brand-800" @click="startEdit(tx)">
-              Editar
+            <button
+              type="button"
+              class="text-brand-700 hover:text-brand-800"
+              title="Editar"
+              @click="startEdit(tx)"
+            >
+              <Pencil class="h-4 w-4" />
             </button>
-            <button type="button" class="text-xs font-semibold text-coral-600 hover:text-coral-700" @click="handleDelete(tx.id)">
-              Excluir
+            <button
+              type="button"
+              class="text-coral-600 hover:text-coral-700"
+              title="Excluir"
+              @click="handleDelete(tx.id)"
+            >
+              <Trash2 class="h-4 w-4" />
             </button>
           </div>
         </li>
