@@ -7,7 +7,7 @@ const appName = import.meta.env.VITE_APP_NAME;
 </script>
 <template>
   <footer
-    class="flex flex-col items-center gap-3 border-t border-ink-200/70 p-2 md:p-4 text-center text-sm text-ink-400"
+    class="flex flex-col items-center gap-2.5 border-t border-ink-200/70 p-2 md:p-4 text-center text-sm text-ink-400"
   >
     <nav class="flex flex-wrap items-center justify-center gap-x-2 md:gap-x-5 gap-y-1.5 text-xs font-medium">
       <button type="button" class="transition hover:text-ink-700" @click="openSiteModal('help')">

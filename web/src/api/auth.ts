@@ -30,6 +30,6 @@ export async function logout(): Promise<void> {
 
 export async function fetchCurrentUser(): Promise<User | null> {
   const res = await fetch("/api/auth/me", { credentials: "include" });
-  if (res.status === 401) return null;
-  return parseResponse<User>(res);
+  const user = await parseResponse<User | null>(res);
+  return user ?? null;
 }

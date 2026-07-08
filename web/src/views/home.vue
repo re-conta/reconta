@@ -31,18 +31,18 @@ watchEffect(async () => {
         Suas finanças, organizadas
       </span>
       <h1
-        class="mt-5 font-display text-3xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl"
+        class="mt-5 font-display text-2xl md:text-5xl font-bold leading-tight tracking-tight text-ink-900"
       >
         {{ appName }} seu dinheiro com
         <span class="bg-linear-to-r from-brand-500 to-coral-500 bg-clip-text text-transparent"
           >clareza</span
         >
       </h1>
-      <p class="mt-4 text-base leading-relaxed text-ink-500 sm:mt-5 sm:text-lg">
+      <p class="mt-2 md:mt-4 text-sm md:text-lg leading-relaxed text-ink-500">
         Centralize contas, transações e categorias em um só lugar &mdash; sem planilhas, sem
         complicação.
       </p>
-      <div class="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:justify-center lg:justify-start">
+      <div class="mt-3 md:mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
         <RouterLink
           v-if="!currentUser"
           to="/login"
@@ -68,7 +68,7 @@ watchEffect(async () => {
     </div>
 
     <div
-      class="relative order-first w-4/5 max-w-xs shrink-0 sm:max-w-sm lg:order-last lg:w-full lg:max-w-md"
+      class="relative order-first w-3/5 max-w-xs shrink-0 sm:max-w-sm lg:order-last lg:w-full lg:max-w-md"
     >
       <div
         class="absolute -inset-6 -z-10 rounded-full bg-linear-to-br from-brand-200 via-coral-100 to-transparent blur-2xl"
@@ -77,7 +77,7 @@ watchEffect(async () => {
       <LazyImage
         src="/images/moneybag.svg"
         alt="Ilustração de um cofre de dinheiro"
-        class="w-full drop-shadow-xl"
+        class="w-1/2 md:w-full drop-shadow-xl"
       />
     </div>
   </div>

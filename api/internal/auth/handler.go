@@ -122,10 +122,14 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// me informa o usuário autenticado atual. Retorna sempre 200: o front-end
+// verifica ausência de sessão em toda carga de página, então tratar isso como
+// 401 gera ruído constante no console/network do navegador para um caso
+// esperado (usuário ainda não logado).
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 	u, err := h.CurrentUser(r)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "não autenticado")
+		writeJSON(w, http.StatusOK, nil)
 		return
 	}
 	writeJSON(w, http.StatusOK, u)
