@@ -37,7 +37,7 @@ onBeforeUnmount(() => {
       leave-to-class="opacity-0"
     >
       <div
-        class="fixed inset-0 z-[100] flex items-end justify-center bg-ink-900/50 backdrop-blur-sm p-0 sm:items-center sm:p-4"
+        class="fixed inset-0 z-100 flex items-end justify-center bg-ink-900/60 backdrop-blur-md p-0 sm:items-center sm:p-4"
         @mousedown.self="emit('close')"
       >
         <Transition
