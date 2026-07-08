@@ -14,10 +14,10 @@ const { unreadCount } = useNotifications();
     aria-label="Ver notificações"
     @click="router.push('/notificacoes')"
   >
-    <Bell class="h-4.5 w-4.5" />
+    <Bell class="h-4 w-4" />
     <span
       v-if="unreadCount > 0"
-      class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-coral-500 px-1 text-[11px] font-bold text-white"
+      class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral-500 px-1 text-[10px] font-bold text-white"
     >
       {{ unreadCount > 99 ? "99+" : unreadCount }}
     </span>
