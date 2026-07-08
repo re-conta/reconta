@@ -6,6 +6,7 @@ import {
   ApiError as NotificationApiError,
 } from "../api/notificationSettings";
 import { ApiError, updatePassword, updateProfile } from "../api/users";
+import PasswordInput from "../components/PasswordInput.vue";
 import { useAuth } from "../composables/useAuth";
 import { OFFSET_OPTIONS } from "../types/notification";
 import type { NotificationSettings } from "../types/notification";
@@ -247,34 +248,28 @@ async function handlePasswordSubmit() {
       <div class="grid gap-4 sm:grid-cols-2">
         <label v-if="currentUser?.hasPassword" class="flex flex-col gap-1.5 sm:col-span-2">
           <span class="text-sm font-medium text-ink-700">Senha atual</span>
-          <input
+          <PasswordInput
             v-model="passwordForm.currentPassword"
-            type="password"
             required
             autocomplete="current-password"
-            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
           />
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Nova senha</span>
-          <input
+          <PasswordInput
             v-model="passwordForm.newPassword"
-            type="password"
             required
-            minlength="8"
+            :minlength="8"
             autocomplete="new-password"
-            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
           />
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Confirmar nova senha</span>
-          <input
+          <PasswordInput
             v-model="passwordForm.confirmPassword"
-            type="password"
             required
-            minlength="8"
+            :minlength="8"
             autocomplete="new-password"
-            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
           />
         </label>
       </div>

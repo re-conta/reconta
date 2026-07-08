@@ -4,12 +4,14 @@ import AccountsView from "./views/accounts.vue";
 import CategoriesView from "./views/categories.vue";
 import FixedBillsView from "./views/contas-fixas.vue";
 import ExportView from "./views/export.vue";
+import ForgotPasswordView from "./views/forgot-password.vue";
 import HomeView from "./views/home.vue";
 import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
 import NotificationsView from "./views/notificacoes.vue";
 import RegisterView from "./views/register.vue";
 import ReportsView from "./views/reports.vue";
+import ResetPasswordView from "./views/reset-password.vue";
 import SettingsView from "./views/settings.vue";
 import TagsView from "./views/tags.vue";
 import TransactionsView from "./views/transactions.vue";
@@ -21,6 +23,8 @@ const routes = [
   { path: "/", name: "Home", component: HomeView },
   { path: "/login", name: "Login", component: LoginView },
   { path: "/register", name: "Register", component: RegisterView },
+  { path: "/esqueci-senha", name: "ForgotPassword", component: ForgotPasswordView },
+  { path: "/redefinir-senha", name: "ResetPassword", component: ResetPasswordView },
   {
     path: "/users",
     name: "Users",

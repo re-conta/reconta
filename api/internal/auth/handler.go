@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -12,18 +13,22 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/re-conta/reconta/api/internal/email"
 	"github.com/re-conta/reconta/api/internal/user"
 )
 
 const (
-	cookieName = "session_token"
-	sessionTTL = 7 * 24 * time.Hour
+	cookieName    = "session_token"
+	sessionTTL    = 7 * 24 * time.Hour
+	resetTokenTTL = 1 * time.Hour
 )
 
 type Handler struct {
 	sessions *Repository
 	users    *user.Repository
 	secure   bool
+	mail     *email.Queue
+	appURL   string
 }
 
 // NewHandler cria o handler de autenticação. secure define se o cookie de
@@ -32,10 +37,21 @@ func NewHandler(sessions *Repository, users *user.Repository, secure bool) *Hand
 	return &Handler{sessions: sessions, users: users, secure: secure}
 }
 
+// SetMail registra a fila de e-mail e a URL base do front-end, usadas para
+// enviar o link de redefinição de senha. Deve ser chamado antes de
+// RegisterRoutes. Se não for chamado, a rota de "esqueci minha senha" fica
+// habilitada mas os e-mails apenas serão registrados em log (ver email.Mailer).
+func (h *Handler) SetMail(mail *email.Queue, appURL string) {
+	h.mail = mail
+	h.appURL = appURL
+}
+
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/login", h.login)
 	mux.HandleFunc("POST /api/auth/logout", h.logout)
 	mux.HandleFunc("GET /api/auth/me", h.me)
+	mux.HandleFunc("POST /api/auth/forgot-password", h.forgotPassword)
+	mux.HandleFunc("POST /api/auth/reset-password", h.resetPassword)
 }
 
 type loginRequest struct {
@@ -51,6 +67,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
+	password := strings.TrimSpace(req.Password)
 
 	u, passwordHash, err := h.users.GetByEmailWithPasswordHash(r.Context(), email)
 	if err != nil {
@@ -63,7 +80,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)); err != nil {
 		writeError(w, http.StatusUnauthorized, "e-mail ou senha inválidos")
 		return
 	}
@@ -118,6 +135,106 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		Secure:   h.secure,
 		SameSite: http.SameSiteLaxMode,
 	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// forgotPassword gera um token de redefinição de senha e envia um e-mail com
+// o link para o usuário, caso o e-mail exista. Sempre responde 204, mesmo
+// quando o e-mail não é encontrado, para não revelar quais e-mails estão
+// cadastrados.
+func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	u, err := h.users.GetByEmail(r.Context(), email)
+	if err != nil {
+		if !errors.Is(err, user.ErrNotFound) {
+			log.Printf("erro ao buscar usuário para redefinição de senha: %v", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	token, err := generateToken()
+	if err != nil {
+		log.Printf("erro ao gerar token de redefinição de senha: %v", err)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if err := h.sessions.CreateResetToken(r.Context(), token, u.ID, time.Now().Add(resetTokenTTL)); err != nil {
+		log.Printf("erro ao criar token de redefinição de senha: %v", err)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if h.mail != nil {
+		link := fmt.Sprintf("%s/redefinir-senha?token=%s", strings.TrimRight(h.appURL, "/"), token)
+		body := fmt.Sprintf(
+			"Olá, %s!\n\nRecebemos uma solicitação para redefinir sua senha no Reconta.\n\nClique no link abaixo para criar uma nova senha (válido por 1 hora):\n%s\n\nSe você não solicitou isso, pode ignorar este e-mail.",
+			u.Name, link,
+		)
+		h.mail.Enqueue(u.Email, "Redefinição de senha - Reconta", body)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type resetPasswordRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+// resetPassword define uma nova senha a partir de um token válido gerado por
+// forgotPassword.
+func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	password := strings.TrimSpace(req.Password)
+	if len(password) < 8 {
+		writeError(w, http.StatusUnprocessableEntity, "senha deve ter no mínimo 8 caracteres")
+		return
+	}
+
+	userID, err := h.sessions.GetResetToken(r.Context(), req.Token)
+	if err != nil {
+		if errors.Is(err, ErrResetTokenNotFound) {
+			writeError(w, http.StatusUnprocessableEntity, "link de redefinição inválido ou expirado")
+			return
+		}
+		log.Printf("erro ao buscar token de redefinição de senha: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("erro ao gerar hash de senha: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	if err := h.users.UpdatePassword(r.Context(), userID, string(hash)); err != nil {
+		log.Printf("erro ao atualizar senha do usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	_ = h.sessions.DeleteResetToken(r.Context(), req.Token)
 
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -96,6 +96,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 
 	req.Name = strings.TrimSpace(req.Name)
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.Password = strings.TrimSpace(req.Password)
 
 	if req.Name == "" {
 		writeError(w, http.StatusUnprocessableEntity, "nome é obrigatório")

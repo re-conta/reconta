@@ -48,6 +48,12 @@ func migrate(conn *sql.DB) error {
 		expires_at TEXT NOT NULL
 	);
 
+	CREATE TABLE IF NOT EXISTS password_reset_tokens (
+		token      TEXT PRIMARY KEY,
+		user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		expires_at TEXT NOT NULL
+	);
+
 	CREATE TABLE IF NOT EXISTS accounts (
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -95,9 +95,9 @@ async function handleLogout() {
       >
         {{ initials }}
       </span>
-      <span class="hidden max-w-32 truncate text-sm font-medium text-ink-800 sm:inline">
+      <!-- <span class="hidden max-w-32 truncate text-sm font-medium text-ink-800 sm:inline">
         {{ currentUser.name }}
-      </span>
+      </span> -->
       <svg
         class="hidden h-4 w-4 shrink-0 text-ink-500 transition-transform sm:block"
         :class="{ 'rotate-180': open }"

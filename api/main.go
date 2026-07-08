@@ -59,7 +59,10 @@ func main() {
 		log.Printf("erro ao sincronizar super admins: %v", err)
 	}
 
+	mailQueue := email.NewQueue(email.NewFromEnv())
+
 	authHandler := auth.NewHandler(auth.NewRepository(conn), userRepo, secureCookies)
+	authHandler.SetMail(mailQueue, appURL)
 	authHandler.RegisterRoutes(mux)
 
 	userHandler := user.NewHandler(userRepo)
@@ -90,7 +93,6 @@ func main() {
 
 	notificationHub := notification.NewHub()
 	notificationRepo := notification.NewRepository(conn)
-	mailQueue := email.NewQueue(email.NewFromEnv())
 	internalToken := getEnv("INTERNAL_API_TOKEN", "")
 	if internalToken == "" {
 		log.Print("INTERNAL_API_TOKEN não definido: rota de varredura de notificações desabilitada")

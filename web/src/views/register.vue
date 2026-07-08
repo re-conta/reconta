@@ -2,6 +2,7 @@
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ApiError, createUser } from "../api/users";
+import PasswordInput from "../components/PasswordInput.vue";
 
 const router = useRouter();
 
@@ -13,7 +14,11 @@ async function handleSubmit() {
   errorMessage.value = "";
   submitting.value = true;
   try {
-    await createUser({ ...form });
+    await createUser({
+      name: form.name.trim(),
+      email: form.email.trim(),
+      password: form.password.trim(),
+    });
     router.push("/users");
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao cadastrar usuário";
@@ -57,14 +62,12 @@ async function handleSubmit() {
           </label>
           <label class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-ink-700">Senha</span>
-            <input
+            <PasswordInput
               v-model="form.password"
-              type="password"
               placeholder="Mínimo 8 caracteres"
-              minlength="8"
+              :minlength="8"
               required
               autocomplete="new-password"
-              class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition placeholder:text-ink-400 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
             />
           </label>
           <button
