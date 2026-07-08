@@ -9,15 +9,16 @@ meta:
 collection:
   - name: Health
     meta:
-      id: fld_health
+      id: fld_42d9be66e9124318890eaaf2ace14c1e
       created: 1783525600000
       modified: 1783525600000
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/health"
         name: Health check
         meta:
-          id: req_65b527edc12a403ebcbe625c342ea973
+          id: req_5c9bad82469d4662ab9b4f549a1dabec
           created: 1783525461969
           modified: 1783525544428
           isPrivate: false
@@ -32,28 +33,30 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Autenticação
     meta:
-      id: fld_auth
+      id: fld_65f646be57884fe987e6a90e9c71e757
       created: 1783525600100
-      modified: 1783525600100
+      modified: 1783535683597
+      sortKey: -100
       description: ""
     children:
       - url: "{{ _.url }}/auth/login"
         name: Login
         meta:
-          id: req_auth_login
+          id: req_2799e496cccc468bbd2224d7cb2df820
           created: 1783525600101
-          modified: 1783525600101
+          modified: 1783535911120
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
           text: |-
             {
-              "email": "user@example.com",
-              "password": "senha123"
+              "email": "{{ _.user }}",
+              "password": "{{ _.pass }}"
             }
         headers:
           - name: Content-Type
@@ -66,14 +69,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/auth/logout"
         name: Logout
         meta:
-          id: req_auth_logout
+          id: req_e8e90595b34142109a4bc9f0d2e15794
           created: 1783525600102
           modified: 1783525600102
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -83,14 +87,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/auth/me"
         name: Usuário autenticado
         meta:
-          id: req_auth_me
+          id: req_3e8ecf9d5af24dd2a72b667a8a8e934e
           created: 1783525600103
           modified: 1783525600103
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -100,21 +105,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Login com Google (OAuth2)
     meta:
-      id: fld_google
+      id: fld_fb688901b3ec4bfdb43d645ca0f2d9ea
       created: 1783525600200
       modified: 1783525600200
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/auth/google/login"
         name: Iniciar login com Google
         meta:
-          id: req_google_login
+          id: req_dd647c39438a48eda2ee13ac0f7c215f
           created: 1783525600201
           modified: 1783525600201
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -124,14 +131,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/auth/google/callback"
         name: Callback do Google
         meta:
-          id: req_google_callback
+          id: req_1e72b5c7b3f347ce9b375e8ebb109513
           created: 1783525600202
           modified: 1783525600202
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         parameters:
           - name: state
@@ -146,21 +154,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Usuários
     meta:
-      id: fld_users
+      id: fld_ca4a73c654374b3b805c9730fd9bc506
       created: 1783525600300
-      modified: 1783525600300
+      modified: 1783535705468
+      sortKey: -50
       description: ""
     children:
       - url: "{{ _.url }}/users"
         name: Criar usuário (cadastro)
         meta:
-          id: req_users_create
+          id: req_60f930dc3ea34c958f02aa45df4aa67c
           created: 1783525600301
           modified: 1783525600301
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -181,15 +191,22 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/users"
         name: Listar usuários (admin+)
         meta:
-          id: req_users_list
+          id: req_aae00085c35d4d96a06ee17292da4bb4
           created: 1783525600302
-          modified: 1783525600302
+          modified: 1783535843708
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
+        body:
+          mimeType: application/json
+          text: ""
+        headers:
+          - name: Content-Type
+            value: application/json
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -198,14 +215,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/users/1/role"
         name: Alterar papel do usuário (super_admin)
         meta:
-          id: req_users_role
+          id: req_fcd29d37b4c344618b63e0fda54afbfa
           created: 1783525600303
           modified: 1783525600303
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PATCH
         body:
           mimeType: application/json
@@ -224,14 +242,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/users/me"
         name: Atualizar perfil (nome/e-mail)
         meta:
-          id: req_users_me_update
+          id: req_60bed62a367f4c51aec3bcc3e2e28f66
           created: 1783525600304
           modified: 1783525600304
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PATCH
         body:
           mimeType: application/json
@@ -251,14 +270,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/users/me/password"
         name: Atualizar senha
         meta:
-          id: req_users_me_password
+          id: req_de057ccc236141aab2faa9dbfd7ad8ad
           created: 1783525600305
           modified: 1783525600305
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PATCH
         body:
           mimeType: application/json
@@ -278,21 +298,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Contas (accounts)
     meta:
-      id: fld_accounts
+      id: fld_ab4009dcee9d4e048c38fc83521bb506
       created: 1783525600400
       modified: 1783525600400
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/accounts"
         name: Listar contas
         meta:
-          id: req_accounts_list
+          id: req_24138225762047269d1d16e7e8ebcb56
           created: 1783525600401
           modified: 1783525600401
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -302,14 +324,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/accounts"
         name: Criar conta
         meta:
-          id: req_accounts_create
+          id: req_cafe66eb34494306994fe73b520f8fa2
           created: 1783525600402
           modified: 1783525600402
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -330,14 +353,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/accounts/1"
         name: Atualizar conta
         meta:
-          id: req_accounts_update
+          id: req_1c898fab128e4488b408d39bdba5fc78
           created: 1783525600403
           modified: 1783525600403
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PUT
         body:
           mimeType: application/json
@@ -358,14 +382,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/accounts/1"
         name: Remover conta
         meta:
-          id: req_accounts_delete
+          id: req_7d4b01e708ab40fbbef523fc22581c0f
           created: 1783525600404
           modified: 1783525600404
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: DELETE
         settings:
           renderRequestBody: true
@@ -375,21 +400,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Categorias
     meta:
-      id: fld_categories
+      id: fld_433b0b2d5ddc475d84c34edf9f5c0684
       created: 1783525600500
       modified: 1783525600500
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/categories"
         name: Listar categorias
         meta:
-          id: req_categories_list
+          id: req_4c97b69e5e6a4b3690e987ae9aa6c3e5
           created: 1783525600501
           modified: 1783525600501
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -399,14 +426,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/categories"
         name: Criar categoria
         meta:
-          id: req_categories_create
+          id: req_7c5b6a276246424cb4e96a052ff7a5fb
           created: 1783525600502
           modified: 1783525600502
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -429,14 +457,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/categories/1"
         name: Atualizar categoria
         meta:
-          id: req_categories_update
+          id: req_b8c5ef3f1bf54568b3c9747d67d2d5ed
           created: 1783525600503
           modified: 1783525600503
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PUT
         body:
           mimeType: application/json
@@ -459,14 +488,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/categories/1"
         name: Remover categoria
         meta:
-          id: req_categories_delete
+          id: req_a1066f2f3781430da2fea6f6ea3e8dd2
           created: 1783525600504
           modified: 1783525600504
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: DELETE
         settings:
           renderRequestBody: true
@@ -476,21 +506,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Tags
     meta:
-      id: fld_tags
+      id: fld_c5d3d352e08a4a1fae343880ae579d47
       created: 1783525600600
       modified: 1783525600600
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/tags"
         name: Listar tags
         meta:
-          id: req_tags_list
+          id: req_44b8435e46234facbcaf0911ed1d2c8f
           created: 1783525600601
           modified: 1783525600601
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -500,14 +532,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/tags"
         name: Criar tag
         meta:
-          id: req_tags_create
+          id: req_bee8b34f1a494b98adc288ad0e6abd82
           created: 1783525600602
           modified: 1783525600602
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -527,14 +560,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/tags/1"
         name: Atualizar tag
         meta:
-          id: req_tags_update
+          id: req_ef52540c2837426782371fd56ad2374f
           created: 1783525600603
           modified: 1783525600603
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PUT
         body:
           mimeType: application/json
@@ -554,14 +588,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/tags/1"
         name: Remover tag
         meta:
-          id: req_tags_delete
+          id: req_667dba1dcddf45caacd2dbe8ac5fa531
           created: 1783525600604
           modified: 1783525600604
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: DELETE
         settings:
           renderRequestBody: true
@@ -571,21 +606,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Transações
     meta:
-      id: fld_transactions
+      id: fld_c8d75192926a4468b1bf4fe30d9010ed
       created: 1783525600700
       modified: 1783525600700
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/transactions"
         name: Listar transações
         meta:
-          id: req_transactions_list
+          id: req_e6a6745865924652a4b76c2c5d1ad6d5
           created: 1783525600701
           modified: 1783525600701
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         parameters:
           - name: type
@@ -620,14 +657,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/periods"
         name: Listar períodos com transações
         meta:
-          id: req_transactions_periods
+          id: req_c118ca535f4841f0b78e6c20b9c7c99a
           created: 1783525600702
           modified: 1783525600702
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -637,14 +675,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions"
         name: Criar transação
         meta:
-          id: req_transactions_create
+          id: req_0fdf2de88d69419c80237a8b1359b07c
           created: 1783525600703
           modified: 1783525600703
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -670,14 +709,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/1"
         name: Buscar transação por ID
         meta:
-          id: req_transactions_get
+          id: req_4cac70ab81ef4afc80a1b82c9278a842
           created: 1783525600704
           modified: 1783525600704
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -687,14 +727,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/1"
         name: Atualizar transação
         meta:
-          id: req_transactions_update
+          id: req_ac8c001cd7544aafbba03cf6a3a895db
           created: 1783525600705
           modified: 1783525600705
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PUT
         body:
           mimeType: application/json
@@ -720,14 +761,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/1"
         name: Remover transação
         meta:
-          id: req_transactions_delete
+          id: req_ec5a2626cb4a4c3f88eab7b92cfc38c8
           created: 1783525600706
           modified: 1783525600706
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: DELETE
         settings:
           renderRequestBody: true
@@ -737,14 +779,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions"
         name: Atualização em massa
         meta:
-          id: req_transactions_bulk_update
+          id: req_29c1a5f2dcce4d86a6fbfb0836743f1a
           created: 1783525600707
           modified: 1783525600707
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PATCH
         body:
           mimeType: application/json
@@ -769,14 +812,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions"
         name: Remoção em massa por escopo
         meta:
-          id: req_transactions_bulk_delete
+          id: req_1bb97ed4e8b942be8015c8351df679e9
           created: 1783525600708
           modified: 1783525600708
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: DELETE
         body:
           mimeType: application/json
@@ -797,14 +841,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/auto-categorize"
         name: Auto-categorizar transações
         meta:
-          id: req_transactions_auto_categorize
+          id: req_9f373766c2554f6eaba2ff0038222a01
           created: 1783525600709
           modified: 1783525600709
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -814,14 +859,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/opening-balance"
         name: Consultar saldo de abertura
         meta:
-          id: req_transactions_opening_balance_get
+          id: req_14f8fbf553814389bff01374d6495d64
           created: 1783525600710
           modified: 1783525600710
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         parameters:
           - name: month
@@ -836,14 +882,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/opening-balance"
         name: Definir saldo de abertura
         meta:
-          id: req_transactions_opening_balance_set
+          id: req_0022b596fff44e7880d37a3728df2470
           created: 1783525600711
           modified: 1783525600711
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -864,21 +911,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Importação de extratos (PDF)
     meta:
-      id: fld_import
+      id: fld_876a54400a5540d999cf31146c74cb24
       created: 1783525600800
       modified: 1783525600800
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/transactions/import/banks"
         name: Listar bancos suportados
         meta:
-          id: req_import_banks
+          id: req_13319ad1a4b7442991330f735c34e368
           created: 1783525600801
           modified: 1783525600801
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -888,21 +937,22 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/import/preview"
         name: Pré-visualizar importação (upload PDF)
         meta:
-          id: req_import_preview
+          id: req_e537c4c3cefb4156bf46705ae66f7f19
           created: 1783525600802
           modified: 1783525600802
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: multipart/form-data
           params:
             - name: file
-              type: file
               fileName: ""
+              type: file
             - name: bank
               value: ""
               disabled: true
@@ -914,14 +964,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/transactions/import/confirm"
         name: Confirmar importação
         meta:
-          id: req_import_confirm
+          id: req_f3f927ca602a4996bfa895f84efae9d7
           created: 1783525600803
           modified: 1783525600803
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -949,21 +1000,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Relatórios e backup
     meta:
-      id: fld_reports
+      id: fld_7aeaf97e20b04fd8864ef9a8e862e8b2
       created: 1783525600900
       modified: 1783525600900
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/reports/export"
         name: Exportar relatório
         meta:
-          id: req_reports_export
+          id: req_9171bcac0e9f40b9b60d217a3e99a5db
           created: 1783525600901
           modified: 1783525600901
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -988,21 +1041,22 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/reports/import"
         name: Importar backup (upload JSON)
         meta:
-          id: req_reports_import
+          id: req_5d73f910ebf74c56bdef2ee0e4d36571
           created: 1783525600902
           modified: 1783525600902
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: multipart/form-data
           params:
             - name: file
-              type: file
               fileName: ""
+              type: file
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -1011,21 +1065,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Contas fixas
     meta:
-      id: fld_fixed_bills
+      id: fld_6e0e3d8060034a2fb206462a71e2f5d6
       created: 1783525601000
       modified: 1783525601000
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/fixed-bills"
         name: Listar contas fixas
         meta:
-          id: req_fixed_bills_list
+          id: req_d572cad5d9b5495f92378504d0bd1f08
           created: 1783525601001
           modified: 1783525601001
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -1035,14 +1091,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills"
         name: Criar conta fixa
         meta:
-          id: req_fixed_bills_create
+          id: req_284a8797f1684c0db7a860739c8397b1
           created: 1783525601002
           modified: 1783525601002
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -1067,14 +1124,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1"
         name: Atualizar conta fixa
         meta:
-          id: req_fixed_bills_update
+          id: req_07f288fac5244c7c932645b98f152bc5
           created: 1783525601003
           modified: 1783525601003
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PUT
         body:
           mimeType: application/json
@@ -1099,14 +1157,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1"
         name: Remover conta fixa
         meta:
-          id: req_fixed_bills_delete
+          id: req_8fc37895b7c341cb914bb267926663f0
           created: 1783525601004
           modified: 1783525601004
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: DELETE
         settings:
           renderRequestBody: true
@@ -1116,14 +1175,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1/freeze"
         name: Congelar conta fixa
         meta:
-          id: req_fixed_bills_freeze
+          id: req_7d1db76c267640158cc8fdf2ecffce36
           created: 1783525601005
           modified: 1783525601005
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -1133,14 +1193,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1/reactivate"
         name: Reativar conta fixa
         meta:
-          id: req_fixed_bills_reactivate
+          id: req_56fb0ca3a1f641a7b682119f8b426779
           created: 1783525601006
           modified: 1783525601006
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -1150,14 +1211,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1/close"
         name: Encerrar conta fixa
         meta:
-          id: req_fixed_bills_close
+          id: req_e6201da37f4b4d72828c6534403c1a78
           created: 1783525601007
           modified: 1783525601007
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -1167,14 +1229,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1/pay"
         name: Registrar pagamento
         meta:
-          id: req_fixed_bills_pay
+          id: req_e3c7eab25f534f84997dd0ab09171b6d
           created: 1783525601008
           modified: 1783525601008
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         body:
           mimeType: application/json
@@ -1198,14 +1261,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/fixed-bills/1/payments"
         name: Histórico de pagamentos
         meta:
-          id: req_fixed_bills_payments
+          id: req_6ca8a3fc63f549b1bfd2f9e09ef72b63
           created: 1783525601009
           modified: 1783525601009
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -1215,21 +1279,23 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
   - name: Notificações
     meta:
-      id: fld_notifications
+      id: fld_e4ed20653b554c6eac7d778d2153eb22
       created: 1783525601100
       modified: 1783525601100
+      sortKey: 0
       description: ""
     children:
       - url: "{{ _.url }}/notifications"
         name: Listar notificações
         meta:
-          id: req_notifications_list
+          id: req_ca7088a40847462f8e61bb37a6861fd2
           created: 1783525601101
           modified: 1783525601101
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -1239,14 +1305,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/notifications/unread-count"
         name: Contagem de não lidas
         meta:
-          id: req_notifications_unread_count
+          id: req_dd6d4493c40d4c96bd8619c81e8b1b03
           created: 1783525601102
           modified: 1783525601102
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -1256,14 +1323,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/notifications/stream"
         name: Stream de notificações (SSE)
         meta:
-          id: req_notifications_stream
+          id: req_b05987235096498c88a11d8233e26b82
           created: 1783525601103
           modified: 1783525601103
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         headers:
           - name: Accept
@@ -1276,14 +1344,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/notifications/1/read"
         name: Marcar notificação como lida
         meta:
-          id: req_notifications_read
+          id: req_2a83bf1ed2d748aa8e58a0fd465f0f93
           created: 1783525601104
           modified: 1783525601104
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -1293,14 +1362,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/notifications/read-all"
         name: Marcar todas como lidas
         meta:
-          id: req_notifications_read_all
+          id: req_1b5b0929c7d7478ea5eca016ec1ec3a2
           created: 1783525601105
           modified: 1783525601105
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         settings:
           renderRequestBody: true
@@ -1310,14 +1380,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/notification-settings"
         name: Consultar preferências de notificação
         meta:
-          id: req_notification_settings_get
+          id: req_ba124ca7a49a437fa923e9e5f5cab01b
           created: 1783525601106
           modified: 1783525601106
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: GET
         settings:
           renderRequestBody: true
@@ -1327,14 +1398,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/notification-settings"
         name: Atualizar preferências de notificação
         meta:
-          id: req_notification_settings_update
+          id: req_372b848bec3c4674896b8c417cdd21bd
           created: 1783525601107
           modified: 1783525601107
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: PUT
         body:
           mimeType: application/json
@@ -1355,14 +1427,15 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
       - url: "{{ _.url }}/internal/notifications/scan"
         name: Varredura interna de notificações (systemd)
         meta:
-          id: req_notifications_internal_scan
+          id: req_3b0c6e2b81f4408d804e69df41d5e723
           created: 1783525601108
           modified: 1783525601108
+          isPrivate: false
           description: ""
+          sortKey: 0
         method: POST
         headers:
           - name: X-Internal-Token
@@ -1375,21 +1448,29 @@ collection:
             send: true
             store: true
           rebuildPath: true
-
 cookieJar:
   name: Default Jar
   meta:
     id: jar_4b45e3bf5eecadd42cbaa022bd1f264d79b73c7c
     created: 1783525315821
-    modified: 1783525315821
-
+    modified: 1783535913175
+  cookies:
+    - id: 99839a41-19da-43f3-8cd2-3e6f47590182
+      key: session_token
+      value: a0ce550f517e20f44f4b5941da968c3bddf4cdf705834fd907e475fc50bb6cce
+      domain: reconta.local
+      path: /
+      secure: true
+      httpOnly: true
+      hostOnly: true
 environments:
   name: Base Environment
   meta:
     id: env_4b45e3bf5eecadd42cbaa022bd1f264d79b73c7c
     created: 1783525315776
-    modified: 1783525523629
+    modified: 1783535807122
     isPrivate: false
   data:
-    url: http://localhost:3020/api
-    internalToken: ""
+    url: https://reconta.local/api
+    user: lsbrum@icloud.com
+    pass: password123

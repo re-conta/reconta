@@ -22,9 +22,6 @@ const previewTransactions = ref<Transaction[]>([]);
 const loadingPreview = ref(false);
 const previewError = ref("");
 
-const cashFlowRef = ref<InstanceType<typeof CashFlowChart>>();
-const categoryChartRef = ref<InstanceType<typeof CategoryExpenseChart>>();
-
 function scopeLabel() {
   if (scopeKind.value === "month") {
     return `${String(month.value).padStart(2, "0")}/${year.value}`;
@@ -211,12 +208,11 @@ onMounted(async () => {
     <div v-if="!loadingPreview" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <CashFlowChart
         v-if="scopeKind === 'month'"
-        ref="cashFlowRef"
         :month="month"
         :year="year"
         :transactions="previewTransactions"
       />
-      <CategoryExpenseChart ref="categoryChartRef" :transactions="previewTransactions" />
+      <CategoryExpenseChart :transactions="previewTransactions" />
     </div>
   </div>
 </template>

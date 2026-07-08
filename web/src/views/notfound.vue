@@ -1,8 +1,12 @@
+<script setup lang="ts">
+import LazyImage from "../components/LazyImage.vue";
+</script>
 <template>
   <div
-    class="mx-auto flex min-h-[calc(100vh-140px)] max-w-md flex-col items-center justify-center gap-6 px-6 text-center"
+    class="mx-auto flex flex-1 max-w-lg flex-col items-center justify-center gap-5 px-2 md:px-4 text-center"
   >
-    <img src="/images/not-found.svg" alt="" class="w-56 drop-shadow-lg" />
+    <!-- <img src="/images/not-found.svg" alt="" class="w-56 drop-shadow-lg" /> -->
+    <LazyImage src="/images/not-found.svg" alt="Página não encontrada" class="max-w-72 drop-shadow-lg" />
     <div>
       <h1 class="font-display text-2xl font-bold text-ink-900">Página não encontrada</h1>
       <p class="mt-2 text-sm text-ink-500">O endereço que você acessou não existe ou foi movido.</p>
