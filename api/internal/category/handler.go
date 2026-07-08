@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lucasbrum/reconta/api/internal/auth"
+	"github.com/re-conta/reconta/api/internal/auth"
 )
 
 type Handler struct {

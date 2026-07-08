@@ -23,13 +23,6 @@ const appName = import.meta.env.VITE_APP_NAME;
           }}</span>
         </RouterLink>
         <div class="flex items-center gap-4 sm:hidden">
-          <RouterLink
-            to="/"
-            class="text-sm font-medium text-ink-500 transition hover:text-ink-900"
-            active-class="text-ink-900"
-          >
-            Início
-          </RouterLink>
           <UserMenu v-if="currentUser" />
           <RouterLink
             v-else
@@ -42,11 +35,11 @@ const appName = import.meta.env.VITE_APP_NAME;
       </div>
       <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-8">
         <nav
-          class="flex max-h-32 w-full flex-col gap-3 overflow-y-auto text-sm font-medium text-ink-500 sm:max-h-none sm:w-auto sm:flex-row sm:items-center sm:gap-6 sm:overflow-visible"
+          class="no-scrollbar flex w-full flex-row flex-nowrap items-center gap-5 overflow-x-auto text-sm font-medium text-ink-500 sm:w-auto sm:gap-6 sm:overflow-visible"
         >
           <RouterLink
             to="/"
-            class="hidden transition hover:text-ink-900 sm:inline"
+            class="shrink-0 whitespace-nowrap transition hover:text-ink-900"
             active-class="text-ink-900"
           >
             Início
@@ -54,38 +47,45 @@ const appName = import.meta.env.VITE_APP_NAME;
           <template v-if="currentUser">
             <RouterLink
               to="/transacoes"
-              class="transition hover:text-ink-900"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
               active-class="text-ink-900"
             >
               Transações
             </RouterLink>
             <RouterLink
               to="/importar-extrato"
-              class="transition hover:text-ink-900"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
               active-class="text-ink-900"
             >
               Importar extrato
             </RouterLink>
             <RouterLink
               to="/contas-bancarias"
-              class="transition hover:text-ink-900"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
               active-class="text-ink-900"
             >
               Contas
             </RouterLink>
             <RouterLink
               to="/categorias"
-              class="transition hover:text-ink-900"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
               active-class="text-ink-900"
             >
               Categorias
             </RouterLink>
             <RouterLink
               to="/tags"
-              class="transition hover:text-ink-900"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
               active-class="text-ink-900"
             >
               Tags
+            </RouterLink>
+            <RouterLink
+              to="/relatorios"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
+              active-class="text-ink-900"
+            >
+              Relatórios
             </RouterLink>
           </template>
         </nav>

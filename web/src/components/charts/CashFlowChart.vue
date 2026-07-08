@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Bar } from "vue-chartjs";
 import {
   BarController,
@@ -127,6 +127,11 @@ const chartOptions = computed(() => ({
 }));
 
 const hasData = computed(() => props.transactions.length > 0);
+
+const barRef = ref<InstanceType<typeof Bar>>();
+defineExpose({
+  toImage: () => barRef.value?.chart?.toBase64Image(),
+});
 </script>
 
 <template>
@@ -136,7 +141,7 @@ const hasData = computed(() => props.transactions.length > 0);
       <p class="text-xs text-ink-500">Receitas e despesas por dia no período</p>
     </div>
     <div v-if="hasData" class="h-56 sm:h-64">
-      <Bar :data="chartData" :options="chartOptions" />
+      <Bar ref="barRef" :data="chartData" :options="chartOptions" />
     </div>
     <p v-else class="flex h-56 items-center justify-center text-sm text-ink-400 sm:h-64">
       Sem dados para exibir neste período

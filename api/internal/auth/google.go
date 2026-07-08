@@ -13,7 +13,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"github.com/lucasbrum/reconta/api/internal/user"
+	"github.com/re-conta/reconta/api/internal/user"
 )
 
 const (

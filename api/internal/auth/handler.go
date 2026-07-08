@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/lucasbrum/reconta/api/internal/user"
+	"github.com/re-conta/reconta/api/internal/user"
 )
 
 const (

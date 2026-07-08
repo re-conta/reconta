@@ -63,6 +63,23 @@ func (r *Repository) List(ctx context.Context, userID int64) ([]Account, error) 
 	return accounts, rows.Err()
 }
 
+// FindOrCreateByName retorna a conta do usuário com o nome informado (case-insensitive),
+// criando uma nova com saldo zero se não existir — usado ao restaurar backups.
+func (r *Repository) FindOrCreateByName(ctx context.Context, userID int64, name, accType string) (*Account, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, name, type, balance, created_at FROM accounts WHERE user_id = ? AND LOWER(name) = LOWER(?)`,
+		userID, name,
+	)
+	a, err := scanAccount(row)
+	if err == nil {
+		return a, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	return r.Create(ctx, userID, name, accType, 0)
+}
+
 func (r *Repository) Update(ctx context.Context, userID, id int64, name, accType string, balance float64) (*Account, error) {
 	res, err := r.db.ExecContext(ctx,
 		`UPDATE accounts SET name = ?, type = ?, balance = ? WHERE id = ? AND user_id = ?`,

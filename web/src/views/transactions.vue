@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from "vue";
-import { Pencil, Trash2 } from "lucide-vue-next";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { Pencil, Plus, Trash2, X } from "lucide-vue-next";
 import { listAccounts } from "../api/accounts";
-import { listCategories } from "../api/categories";
-import { listTags } from "../api/tags";
+import { createCategory, listCategories } from "../api/categories";
+import { createTag, listTags } from "../api/tags";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import TransactionCalendar from "../components/TransactionCalendar.vue";
@@ -21,7 +21,7 @@ import {
   updateTransaction,
 } from "../api/transactions";
 import type { Account } from "../types/account";
-import type { Category } from "../types/category";
+import type { Category, CategoryInput } from "../types/category";
 import type { Tag } from "../types/tag";
 import type { Period, Transaction, TransactionInput } from "../types/transaction";
 
@@ -62,6 +62,99 @@ const emptyForm = (): TransactionInput => ({
   tagIds: [],
 });
 const form = reactive<TransactionInput>(emptyForm());
+
+// Criação rápida de tag
+const showTagInput = ref(false);
+const newTagName = ref("");
+const tagSubmitting = ref(false);
+const tagError = ref("");
+const TAG_COLORS = [
+  "#f2751f",
+  "#d63163",
+  "#6366f1",
+  "#0ea5e9",
+  "#10b981",
+  "#a855f7",
+  "#f59e0b",
+  "#64748b",
+];
+
+function startNewTag() {
+  showTagInput.value = true;
+  newTagName.value = "";
+  tagError.value = "";
+}
+
+function cancelNewTag() {
+  showTagInput.value = false;
+  newTagName.value = "";
+  tagError.value = "";
+}
+
+async function submitNewTag() {
+  const name = newTagName.value.trim();
+  if (!name) return;
+  tagSubmitting.value = true;
+  tagError.value = "";
+  try {
+    const color = TAG_COLORS[tags.value.length % TAG_COLORS.length];
+    const created = await createTag({ name, color });
+    tags.value = [...tags.value, created];
+    form.tagIds = [...form.tagIds, created.id];
+    cancelNewTag();
+  } catch (err) {
+    tagError.value = err instanceof ApiError ? err.message : "Falha ao criar tag";
+  } finally {
+    tagSubmitting.value = false;
+  }
+}
+
+// Criação rápida de categoria
+const categoryModalOpen = ref(false);
+const categorySubmitting = ref(false);
+const categoryError = ref("");
+const categoryTypeOptions = [
+  { value: "expense", label: "Despesa" },
+  { value: "income", label: "Receita" },
+  { value: "both", label: "Ambos" },
+] as const;
+const categoryForm = reactive<CategoryInput>({
+  name: "",
+  color: "#6366f1",
+  icon: "circle",
+  type: "both",
+  patterns: "",
+});
+
+function openCategoryModal() {
+  categoryForm.name = "";
+  categoryForm.color = "#6366f1";
+  categoryForm.icon = "circle";
+  categoryForm.type = "both";
+  categoryForm.patterns = "";
+  categoryError.value = "";
+  categoryModalOpen.value = true;
+}
+
+function closeCategoryModal() {
+  categoryModalOpen.value = false;
+}
+
+async function submitNewCategory() {
+  if (!categoryForm.name.trim()) return;
+  categorySubmitting.value = true;
+  categoryError.value = "";
+  try {
+    const created = await createCategory({ ...categoryForm });
+    categories.value = [...categories.value, created];
+    form.categoryId = created.id;
+    categoryModalOpen.value = false;
+  } catch (err) {
+    categoryError.value = err instanceof ApiError ? err.message : "Falha ao criar categoria";
+  } finally {
+    categorySubmitting.value = false;
+  }
+}
 
 const selectedIds = ref<Set<number>>(new Set());
 const bulkCategoryId = ref<number | "_none" | "">("");
@@ -174,6 +267,8 @@ function resetForm() {
   Object.assign(form, emptyForm());
   editingId.value = null;
   showForm.value = false;
+  cancelNewTag();
+  categoryModalOpen.value = false;
 }
 
 function startCreate() {
@@ -350,15 +445,34 @@ watch(
   },
 );
 
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key !== "Escape") return;
+  if (categoryModalOpen.value) {
+    closeCategoryModal();
+  } else if (showForm.value) {
+    resetForm();
+  }
+}
+
+watch(showForm, (open) => {
+  document.body.style.overflow = open ? "hidden" : "";
+});
+
 onMounted(async () => {
+  window.addEventListener("keydown", handleKeydown);
   await loadReferenceData();
   await loadTransactions();
   await loadOpeningBalance();
 });
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeydown);
+  document.body.style.overflow = "";
+});
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-8">
+  <div class="mx-auto flex max-w-7xl flex-col gap-6 px-2 md:px-4 py-4 md:py-8">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Transações</h1>
@@ -387,8 +501,10 @@ onMounted(async () => {
     </p>
 
     <div class="flex flex-col gap-6 md:flex-row md:items-start">
-      <!-- Calendário -->
-      <div class="order-first md:sticky md:top-20 md:order-2 md:w-64 md:shrink-0 xl:w-72">
+      <!-- Barra lateral: calendário + gráficos -->
+      <div
+        class="order-first flex flex-col gap-6 md:sticky md:top-20 md:order-2 md:w-80 md:shrink-0 xl:w-96"
+      >
         <TransactionCalendar
           :month="filters.month"
           :year="filters.year"
@@ -400,6 +516,8 @@ onMounted(async () => {
           @next="goToNextPeriod"
           @select-date="(d) => (selectedDate = d)"
         />
+        <CashFlowChart :month="filters.month" :year="filters.year" :transactions="transactions" />
+        <CategoryExpenseChart :transactions="transactions" />
       </div>
 
       <div class="flex min-w-0 flex-1 flex-col gap-6 md:order-1">
@@ -540,121 +658,314 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Gráficos -->
-        <div class="grid gap-6 lg:grid-cols-2">
-          <CashFlowChart :month="filters.month" :year="filters.year" :transactions="transactions" />
-          <CategoryExpenseChart :transactions="transactions" />
-        </div>
+        <!-- Modal: formulário de transação -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="showForm"
+              class="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/50 p-4 backdrop-blur-sm"
+              @click.self="resetForm"
+            >
+              <Transition
+                appear
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 scale-95 opacity-0"
+                enter-to-class="translate-y-0 scale-100 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="translate-y-0 scale-100 opacity-100"
+                leave-to-class="translate-y-2 scale-95 opacity-0"
+              >
+                <form
+                  v-if="showForm"
+                  class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+                  @submit.prevent="handleSubmit"
+                >
+                  <div
+                    class="flex shrink-0 items-center justify-between border-b border-ink-100 px-6 py-4"
+                  >
+                    <h2 class="font-display text-lg font-bold text-ink-900">
+                      {{ editingId ? "Editar transação" : "Nova transação" }}
+                    </h2>
+                    <button
+                      type="button"
+                      class="rounded-full p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                      title="Fechar"
+                      @click="resetForm"
+                    >
+                      <X class="h-5 w-5" />
+                    </button>
+                  </div>
 
-        <!-- Formulário -->
-        <form
-          v-if="showForm"
-          class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
-          @submit.prevent="handleSubmit"
-        >
-          <div class="grid gap-4 sm:grid-cols-3">
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium text-ink-700">Data</span>
-              <input
-                v-model="form.date"
-                type="date"
-                required
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              />
-            </label>
-            <label class="flex flex-col gap-1.5 sm:col-span-2">
-              <span class="text-sm font-medium text-ink-700">Descrição</span>
-              <input
-                v-model="form.description"
-                type="text"
-                required
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              />
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium text-ink-700">Valor</span>
-              <input
-                v-model.number="form.amount"
-                type="number"
-                step="0.01"
-                required
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              />
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium text-ink-700">Tipo</span>
-              <select
-                v-model="form.type"
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              >
-                <option value="expense">Despesa</option>
-                <option value="income">Receita</option>
-              </select>
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium text-ink-700">Categoria</span>
-              <select
-                v-model="form.categoryId"
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              >
-                <option :value="null">Sem categoria</option>
-                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-              </select>
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium text-ink-700">Conta</span>
-              <select
-                v-model="form.accountId"
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              >
-                <option :value="null">Sem conta</option>
-                <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
-              </select>
-            </label>
-            <label class="flex flex-col gap-1.5 sm:col-span-2">
-              <span class="text-sm font-medium text-ink-700">Notas</span>
-              <input
-                v-model="form.notes"
-                type="text"
-                class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm"
-              />
-            </label>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <span class="text-sm font-medium text-ink-700">Tags</span>
-            <div class="flex flex-wrap gap-2">
-              <label
-                v-for="t in tags"
-                :key="t.id"
-                class="flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium"
-                :class="
-                  form.tagIds.includes(t.id)
-                    ? 'border-brand-400 bg-brand-50 text-brand-700'
-                    : 'border-ink-200 text-ink-600'
-                "
-              >
-                <input type="checkbox" class="hidden" :value="t.id" v-model="form.tagIds" />
-                {{ t.name }}
-              </label>
+                  <div class="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+                    <div class="grid gap-4 sm:grid-cols-3">
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-700">Data</span>
+                        <input
+                          v-model="form.date"
+                          type="date"
+                          required
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        />
+                      </label>
+                      <label class="flex flex-col gap-1.5 sm:col-span-2">
+                        <span class="text-sm font-medium text-ink-700">Descrição</span>
+                        <input
+                          v-model="form.description"
+                          type="text"
+                          required
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        />
+                      </label>
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-700">Valor</span>
+                        <input
+                          v-model.number="form.amount"
+                          type="number"
+                          step="0.01"
+                          required
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        />
+                      </label>
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-700">Tipo</span>
+                        <select
+                          v-model="form.type"
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        >
+                          <option value="expense">Despesa</option>
+                          <option value="income">Receita</option>
+                        </select>
+                      </label>
+                      <label class="flex flex-col gap-1.5">
+                        <span class="flex items-center justify-between text-sm font-medium text-ink-700">
+                          Categoria
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-700 transition hover:text-brand-800"
+                            @click="openCategoryModal"
+                          >
+                            <Plus class="h-3 w-3" /> Nova
+                          </button>
+                        </span>
+                        <select
+                          v-model="form.categoryId"
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        >
+                          <option :value="null">Sem categoria</option>
+                          <option v-for="c in categories" :key="c.id" :value="c.id">
+                            {{ c.name }}
+                          </option>
+                        </select>
+                      </label>
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-700">Conta</span>
+                        <select
+                          v-model="form.accountId"
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        >
+                          <option :value="null">Sem conta</option>
+                          <option v-for="a in accounts" :key="a.id" :value="a.id">
+                            {{ a.name }}
+                          </option>
+                        </select>
+                      </label>
+                      <label class="flex flex-col gap-1.5 sm:col-span-2">
+                        <span class="text-sm font-medium text-ink-700">Notas</span>
+                        <input
+                          v-model="form.notes"
+                          type="text"
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        />
+                      </label>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                      <span class="text-sm font-medium text-ink-700">Tags</span>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <label
+                          v-for="t in tags"
+                          :key="t.id"
+                          class="flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition"
+                          :class="
+                            form.tagIds.includes(t.id)
+                              ? 'border-brand-400 bg-brand-50 text-brand-700'
+                              : 'border-ink-200 text-ink-600 hover:bg-ink-50'
+                          "
+                        >
+                          <input type="checkbox" class="hidden" :value="t.id" v-model="form.tagIds" />
+                          {{ t.name }}
+                        </label>
+
+                        <button
+                          v-if="!showTagInput"
+                          type="button"
+                          class="flex items-center gap-1 rounded-full border border-dashed border-ink-300 px-3 py-1 text-xs font-medium text-ink-500 transition hover:border-brand-400 hover:text-brand-700"
+                          @click="startNewTag"
+                        >
+                          <Plus class="h-3.5 w-3.5" /> Nova tag
+                        </button>
+                        <div v-else class="flex items-center gap-1.5">
+                          <input
+                            v-model="newTagName"
+                            type="text"
+                            autofocus
+                            placeholder="Nome da tag"
+                            maxlength="30"
+                            class="w-32 rounded-full border border-ink-200 px-3 py-1 text-xs transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                            @keydown.enter.prevent="submitNewTag"
+                            @keydown.escape.stop="cancelNewTag"
+                          />
+                          <button
+                            type="button"
+                            :disabled="!newTagName.trim() || tagSubmitting"
+                            class="rounded-full bg-ink-900 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-ink-800 disabled:opacity-50"
+                            @click="submitNewTag"
+                          >
+                            OK
+                          </button>
+                          <button
+                            type="button"
+                            class="text-ink-400 transition hover:text-ink-700"
+                            title="Cancelar"
+                            @click="cancelNewTag"
+                          >
+                            <X class="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <p v-if="tagError" class="text-xs text-coral-600">{{ tagError }}</p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4"
+                  >
+                    <button
+                      type="button"
+                      class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
+                      @click="resetForm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      :disabled="submitting"
+                      class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+                    >
+                      {{ submitting ? "Salvando..." : "Salvar" }}
+                    </button>
+                  </div>
+                </form>
+              </Transition>
             </div>
-          </div>
-          <div class="flex gap-3">
-            <button
-              type="submit"
-              :disabled="submitting"
-              class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+          </Transition>
+        </Teleport>
+
+        <!-- Modal: nova categoria (empilhado sobre o de transação) -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="categoryModalOpen"
+              class="fixed inset-0 z-60 flex items-center justify-center bg-ink-900/50 p-4 backdrop-blur-sm"
+              @click.self="closeCategoryModal"
             >
-              {{ submitting ? "Salvando..." : "Salvar" }}
-            </button>
-            <button
-              type="button"
-              class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
-              @click="resetForm"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
+              <Transition
+                appear
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 scale-95 opacity-0"
+                enter-to-class="translate-y-0 scale-100 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="translate-y-0 scale-100 opacity-100"
+                leave-to-class="translate-y-2 scale-95 opacity-0"
+              >
+                <form
+                  v-if="categoryModalOpen"
+                  class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+                  @submit.prevent="submitNewCategory"
+                >
+                  <div
+                    class="flex shrink-0 items-center justify-between border-b border-ink-100 px-6 py-4"
+                  >
+                    <h2 class="font-display text-lg font-bold text-ink-900">Nova categoria</h2>
+                    <button
+                      type="button"
+                      class="rounded-full p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                      title="Fechar"
+                      @click="closeCategoryModal"
+                    >
+                      <X class="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div class="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                      <label class="flex flex-col gap-1.5 sm:col-span-2">
+                        <span class="text-sm font-medium text-ink-700">Nome</span>
+                        <input
+                          v-model="categoryForm.name"
+                          type="text"
+                          required
+                          autofocus
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        />
+                      </label>
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-700">Tipo</span>
+                        <select
+                          v-model="categoryForm.type"
+                          class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                        >
+                          <option v-for="t in categoryTypeOptions" :key="t.value" :value="t.value">
+                            {{ t.label }}
+                          </option>
+                        </select>
+                      </label>
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-700">Cor</span>
+                        <input
+                          v-model="categoryForm.color"
+                          type="color"
+                          class="h-10.5 w-16 cursor-pointer rounded-xl border border-ink-200"
+                        />
+                      </label>
+                    </div>
+                    <p v-if="categoryError" class="text-xs text-coral-600">{{ categoryError }}</p>
+                  </div>
+
+                  <div class="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
+                    <button
+                      type="button"
+                      class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
+                      @click="closeCategoryModal"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      :disabled="categorySubmitting || !categoryForm.name.trim()"
+                      class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+                    >
+                      {{ categorySubmitting ? "Salvando..." : "Salvar" }}
+                    </button>
+                  </div>
+                </form>
+              </Transition>
+            </div>
+          </Transition>
+        </Teleport>
 
         <!-- Ações em lote -->
         <div
@@ -712,90 +1023,204 @@ onMounted(async () => {
               }}
             </p>
           </div>
-          <ul v-else class="divide-y divide-ink-100">
-            <li
-              v-for="tx in displayedTransactions"
-              :key="tx.id"
-              class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60"
-            >
-              <input
-                type="checkbox"
-                :checked="selectedIds.has(tx.id)"
-                @change="toggleSelected(tx.id)"
-              />
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-semibold text-ink-900">{{ tx.description }}</p>
-                <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
-                  <span>{{ tx.date }}</span>
-                  <span v-if="accountName(tx.accountId)"
-                    >&middot; {{ accountName(tx.accountId) }}</span
+          <template v-else>
+            <!-- Tabela (desktop) -->
+            <div class="hidden overflow-x-auto md:block">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-ink-100 text-left text-xs font-semibold text-ink-400">
+                    <th class="w-8 px-3 py-2"></th>
+                    <th class="whitespace-nowrap px-2 py-2">Data</th>
+                    <th class="px-2 py-2">Descrição</th>
+                    <th class="px-2 py-2">Categoria / Tags</th>
+                    <th class="px-2 py-2">Conta</th>
+                    <th class="px-2 py-2 text-right">Valor</th>
+                    <th class="w-16 px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-ink-100">
+                  <tr
+                    v-for="tx in displayedTransactions"
+                    :key="tx.id"
+                    class="transition hover:bg-ink-50/60"
                   >
-                  <span
-                    v-if="tx.categoryName"
-                    class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                    :style="{
-                      backgroundColor: `${tx.categoryColor ?? '#94a3b8'}1a`,
-                      color: tx.categoryColor ?? '#64748b',
-                    }"
-                  >
+                    <td class="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        :checked="selectedIds.has(tx.id)"
+                        @change="toggleSelected(tx.id)"
+                      />
+                    </td>
+                    <td class="whitespace-nowrap px-2 py-2 text-ink-500">{{ tx.date }}</td>
+                    <td class="min-w-0 max-w-xs px-2 py-2">
+                      <p class="truncate font-semibold text-ink-900" :title="tx.description">
+                        {{ tx.description }}
+                      </p>
+                      <p
+                        v-if="tx.notes"
+                        class="truncate text-xs italic text-ink-400"
+                        :title="tx.notes"
+                      >
+                        {{ tx.notes }}
+                      </p>
+                    </td>
+                    <td class="px-2 py-2">
+                      <div class="flex flex-wrap items-center gap-1">
+                        <span
+                          v-if="tx.categoryName"
+                          class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium"
+                          :style="{
+                            backgroundColor: `${tx.categoryColor ?? '#94a3b8'}1a`,
+                            color: tx.categoryColor ?? '#64748b',
+                          }"
+                        >
+                          <span
+                            class="h-1.5 w-1.5 rounded-full"
+                            :style="{ backgroundColor: tx.categoryColor ?? '#94a3b8' }"
+                          ></span>
+                          {{ tx.categoryName }}
+                        </span>
+                        <span
+                          v-for="t in tx.tags"
+                          :key="t.id"
+                          class="rounded-full px-1.5 py-0.5 text-xs font-medium"
+                          :style="{ backgroundColor: `${t.color}1a`, color: t.color }"
+                        >
+                          {{ t.name }}
+                        </span>
+                        <span
+                          v-if="tx.importedFrom"
+                          class="rounded-full bg-ink-100 px-1.5 py-0.5 text-xs text-ink-500"
+                          :title="
+                            tx.pixBeneficiary
+                              ? `Beneficiário PIX: ${tx.pixBeneficiary}`
+                              : undefined
+                          "
+                        >
+                          importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="whitespace-nowrap px-2 py-2 text-ink-500">
+                      {{ accountName(tx.accountId) ?? "-" }}
+                    </td>
+                    <td
+                      class="whitespace-nowrap px-2 py-2 text-right font-semibold"
+                      :class="tx.type === 'income' ? 'text-brand-600' : 'text-coral-600'"
+                    >
+                      {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
+                    </td>
+                    <td class="px-2 py-2">
+                      <div class="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          class="text-brand-700 hover:text-brand-800"
+                          title="Editar"
+                          @click="startEdit(tx)"
+                        >
+                          <Pencil class="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          class="text-coral-600 hover:text-coral-700"
+                          title="Excluir"
+                          @click="handleDelete(tx.id)"
+                        >
+                          <Trash2 class="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Cartões (mobile) -->
+            <ul class="divide-y divide-ink-100 md:hidden">
+              <li
+                v-for="tx in displayedTransactions"
+                :key="tx.id"
+                class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedIds.has(tx.id)"
+                  @change="toggleSelected(tx.id)"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-semibold text-ink-900">{{ tx.description }}</p>
+                  <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+                    <span>{{ tx.date }}</span>
+                    <span v-if="accountName(tx.accountId)"
+                      >&middot; {{ accountName(tx.accountId) }}</span
+                    >
                     <span
-                      class="h-1.5 w-1.5 rounded-full"
-                      :style="{ backgroundColor: tx.categoryColor ?? '#94a3b8' }"
-                    ></span>
-                    {{ tx.categoryName }}
-                  </span>
-                  <span
-                    v-for="t in tx.tags"
-                    :key="t.id"
-                    class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                    :style="{ backgroundColor: `${t.color}1a`, color: t.color }"
+                      v-if="tx.categoryName"
+                      class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium"
+                      :style="{
+                        backgroundColor: `${tx.categoryColor ?? '#94a3b8'}1a`,
+                        color: tx.categoryColor ?? '#64748b',
+                      }"
+                    >
+                      <span
+                        class="h-1.5 w-1.5 rounded-full"
+                        :style="{ backgroundColor: tx.categoryColor ?? '#94a3b8' }"
+                      ></span>
+                      {{ tx.categoryName }}
+                    </span>
+                    <span
+                      v-for="t in tx.tags"
+                      :key="t.id"
+                      class="rounded-full px-1.5 py-0.5 text-[11px] font-medium"
+                      :style="{ backgroundColor: `${t.color}1a`, color: t.color }"
+                    >
+                      {{ t.name }}
+                    </span>
+                    <span
+                      v-if="tx.importedFrom"
+                      class="rounded-full bg-ink-100 px-1.5 py-0.5 text-[11px] text-ink-500"
+                      :title="
+                        tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined
+                      "
+                    >
+                      importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
+                    </span>
+                  </div>
+                  <p
+                    v-if="tx.notes"
+                    class="mt-1 truncate text-xs italic text-ink-400"
+                    :title="tx.notes"
                   >
-                    {{ t.name }}
-                  </span>
-                  <span
-                    v-if="tx.importedFrom"
-                    class="rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] text-ink-500"
-                    :title="
-                      tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined
-                    "
-                  >
-                    importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
-                  </span>
+                    {{ tx.notes }}
+                  </p>
                 </div>
                 <p
-                  v-if="tx.notes"
-                  class="mt-1 truncate text-xs italic text-ink-400"
-                  :title="tx.notes"
+                  class="shrink-0 text-sm font-semibold"
+                  :class="tx.type === 'income' ? 'text-brand-600' : 'text-coral-600'"
                 >
-                  {{ tx.notes }}
+                  {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
                 </p>
-              </div>
-              <p
-                class="shrink-0 text-sm font-semibold"
-                :class="tx.type === 'income' ? 'text-brand-600' : 'text-coral-600'"
-              >
-                {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
-              </p>
-              <div class="flex shrink-0 gap-2">
-                <button
-                  type="button"
-                  class="text-brand-700 hover:text-brand-800"
-                  title="Editar"
-                  @click="startEdit(tx)"
-                >
-                  <Pencil class="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  class="text-coral-600 hover:text-coral-700"
-                  title="Excluir"
-                  @click="handleDelete(tx.id)"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </button>
-              </div>
-            </li>
-          </ul>
+                <div class="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    class="text-brand-700 hover:text-brand-800"
+                    title="Editar"
+                    @click="startEdit(tx)"
+                  >
+                    <Pencil class="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    class="text-coral-600 hover:text-coral-700"
+                    title="Excluir"
+                    @click="handleDelete(tx.id)"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </template>
           <div
             v-if="pagination.total > pagination.limit"
             class="flex items-center justify-between border-t border-ink-100 px-5 py-3 text-sm text-ink-500"

@@ -6,6 +6,7 @@ import HomeView from "./views/home.vue";
 import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
 import RegisterView from "./views/register.vue";
+import ReportsView from "./views/reports.vue";
 import SettingsView from "./views/settings.vue";
 import TagsView from "./views/tags.vue";
 import TransactionsView from "./views/transactions.vue";
@@ -52,6 +53,12 @@ const routes = [
     path: "/importar-extrato",
     name: "Import",
     component: ImportView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/relatorios",
+    name: "Reports",
+    component: ReportsView,
     meta: { requiresAuth: true },
   },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound },

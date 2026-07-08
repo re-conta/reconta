@@ -63,6 +63,23 @@ func (r *Repository) List(ctx context.Context, userID int64) ([]Tag, error) {
 	return tags, rows.Err()
 }
 
+// FindOrCreateByName retorna a tag do usuário com o nome informado (case-insensitive),
+// criando uma nova se não existir — usado ao restaurar backups.
+func (r *Repository) FindOrCreateByName(ctx context.Context, userID int64, name, color string) (*Tag, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, name, color FROM tags WHERE user_id = ? AND LOWER(name) = LOWER(?)`,
+		userID, name,
+	)
+	t, err := scanTag(row)
+	if err == nil {
+		return t, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	return r.Create(ctx, userID, name, color)
+}
+
 func (r *Repository) Update(ctx context.Context, userID, id int64, name, color string) (*Tag, error) {
 	res, err := r.db.ExecContext(ctx,
 		`UPDATE tags SET name = ?, color = ? WHERE id = ? AND user_id = ?`,

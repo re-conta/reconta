@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lucasbrum/reconta/api/internal/account"
-	"github.com/lucasbrum/reconta/api/internal/category"
+	"github.com/re-conta/reconta/api/internal/account"
+	"github.com/re-conta/reconta/api/internal/category"
 )
 
 type defaultCategory struct {

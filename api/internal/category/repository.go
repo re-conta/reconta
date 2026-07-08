@@ -84,6 +84,23 @@ func (r *Repository) ListWithPatterns(ctx context.Context, userID int64) ([]Cate
 	return categories, rows.Err()
 }
 
+// FindOrCreateByName retorna a categoria do usuário com o nome informado (case-insensitive),
+// criando uma nova (sem padrões de auto-categorização) se não existir — usado ao restaurar backups.
+func (r *Repository) FindOrCreateByName(ctx context.Context, userID int64, name, color, icon, catType string) (*Category, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, name, color, icon, type, patterns FROM categories WHERE user_id = ? AND LOWER(name) = LOWER(?)`,
+		userID, name,
+	)
+	c, err := scanCategory(row)
+	if err == nil {
+		return c, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	return r.Create(ctx, userID, name, color, icon, catType, "")
+}
+
 func (r *Repository) Update(ctx context.Context, userID, id int64, name, color, icon, catType, patterns string) (*Category, error) {
 	res, err := r.db.ExecContext(ctx,
 		`UPDATE categories SET name = ?, color = ?, icon = ?, type = ?, patterns = ? WHERE id = ? AND user_id = ?`,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Bar } from "vue-chartjs";
 import {
   BarController,
@@ -110,6 +110,11 @@ const chartOptions = computed(() => ({
 
 const hasData = computed(() => slices.value.length > 0);
 const chartHeight = computed(() => Math.max(160, slices.value.length * 36));
+
+const barRef = ref<InstanceType<typeof Bar>>();
+defineExpose({
+  toImage: () => barRef.value?.chart?.toBase64Image(),
+});
 </script>
 
 <template>
@@ -119,7 +124,7 @@ const chartHeight = computed(() => Math.max(160, slices.value.length * 36));
       <p class="text-xs text-ink-500">Ranking do período selecionado</p>
     </div>
     <div v-if="hasData" :style="{ height: `${chartHeight}px` }">
-      <Bar :data="chartData" :options="chartOptions" />
+      <Bar ref="barRef" :data="chartData" :options="chartOptions" />
     </div>
     <p v-else class="flex h-40 items-center justify-center text-sm text-ink-400">
       Sem despesas categorizadas neste período

@@ -3,7 +3,7 @@ package transaction
 import (
 	"time"
 
-	"github.com/lucasbrum/reconta/api/internal/tag"
+	"github.com/re-conta/reconta/api/internal/tag"
 )
 
 // Transaction representa um lançamento financeiro (receita ou despesa).
@@ -51,6 +51,8 @@ type ListResult struct {
 type ListFilters struct {
 	Month      int
 	Year       int
+	DateFrom   string // usado quando Month/Year não bastam (ano inteiro, intervalo livre)
+	DateTo     string
 	Type       string
 	CategoryID int64
 	TagID      int64

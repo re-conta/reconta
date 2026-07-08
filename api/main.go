@@ -8,15 +8,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lucasbrum/reconta/api/internal/account"
-	"github.com/lucasbrum/reconta/api/internal/auth"
-	"github.com/lucasbrum/reconta/api/internal/category"
-	"github.com/lucasbrum/reconta/api/internal/db"
-	"github.com/lucasbrum/reconta/api/internal/seed"
-	"github.com/lucasbrum/reconta/api/internal/statement"
-	"github.com/lucasbrum/reconta/api/internal/tag"
-	"github.com/lucasbrum/reconta/api/internal/transaction"
-	"github.com/lucasbrum/reconta/api/internal/user"
+	"github.com/re-conta/reconta/api/internal/account"
+	"github.com/re-conta/reconta/api/internal/auth"
+	"github.com/re-conta/reconta/api/internal/category"
+	"github.com/re-conta/reconta/api/internal/db"
+	"github.com/re-conta/reconta/api/internal/report"
+	"github.com/re-conta/reconta/api/internal/seed"
+	"github.com/re-conta/reconta/api/internal/statement"
+	"github.com/re-conta/reconta/api/internal/tag"
+	"github.com/re-conta/reconta/api/internal/transaction"
+	"github.com/re-conta/reconta/api/internal/user"
 )
 
 func main() {
@@ -79,6 +80,7 @@ func main() {
 	tag.NewHandler(tagRepo, authHandler).RegisterRoutes(mux)
 	transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, authHandler).RegisterRoutes(mux)
 	statement.NewHandler(transactionRepo, categoryRepo, authHandler).RegisterRoutes(mux)
+	report.NewHandler(transactionRepo, categoryRepo, accountRepo, tagRepo, authHandler).RegisterRoutes(mux)
 
 	addr := ":" + port
 	log.Printf("servidor rodando em %s (db: %s)", addr, dbPath)

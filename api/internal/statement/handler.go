@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lucasbrum/reconta/api/internal/auth"
-	"github.com/lucasbrum/reconta/api/internal/category"
-	"github.com/lucasbrum/reconta/api/internal/transaction"
+	"github.com/re-conta/reconta/api/internal/auth"
+	"github.com/re-conta/reconta/api/internal/category"
+	"github.com/re-conta/reconta/api/internal/transaction"
 )
 
 // maxUploadSize limita o tamanho do PDF de extrato aceito no upload.

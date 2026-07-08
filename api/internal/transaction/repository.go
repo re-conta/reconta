@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lucasbrum/reconta/api/internal/tag"
+	"github.com/re-conta/reconta/api/internal/tag"
 )
 
 // ErrNotFound é retornado quando a transação não existe (ou não pertence ao usuário).
@@ -91,8 +91,8 @@ func (r *Repository) Delete(ctx context.Context, userID, id int64) error {
 	return nil
 }
 
-// List retorna as transações que casam com os filtros, com totais e paginação.
-func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*ListResult, error) {
+// buildWhere monta a cláusula WHERE e os argumentos correspondentes aos filtros informados.
+func buildWhere(userID int64, f ListFilters) (string, []any) {
 	where := []string{"t.user_id = ?"}
 	args := []any{userID}
 
@@ -100,6 +100,9 @@ func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*Li
 		start, end := monthRange(f.Month, f.Year)
 		where = append(where, "t.date >= ?", "t.date <= ?")
 		args = append(args, start, end)
+	} else if f.DateFrom != "" && f.DateTo != "" {
+		where = append(where, "t.date >= ?", "t.date <= ?")
+		args = append(args, f.DateFrom, f.DateTo)
 	}
 	if f.Type == "income" || f.Type == "expense" {
 		where = append(where, "t.type = ?")
@@ -118,7 +121,12 @@ func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*Li
 		args = append(args, "%"+f.Search+"%")
 	}
 
-	whereClause := strings.Join(where, " AND ")
+	return strings.Join(where, " AND "), args
+}
+
+// List retorna as transações que casam com os filtros, com totais e paginação.
+func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*ListResult, error) {
+	whereClause, args := buildWhere(userID, f)
 
 	page := max(f.Page, 1)
 	limit := f.Limit
@@ -173,6 +181,53 @@ func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*Li
 		Totals:     totals,
 		Pagination: Pagination{Page: page, Limit: limit, Total: totals.Count},
 	}, nil
+}
+
+// ListAll retorna todas as transações que casam com os filtros, sem paginação,
+// ordenadas por data crescente — usado para gerar relatórios/exportações.
+func (r *Repository) ListAll(ctx context.Context, userID int64, f ListFilters) ([]Transaction, Totals, error) {
+	whereClause, args := buildWhere(userID, f)
+
+	var totals Totals
+	err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
+		SELECT
+			COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0),
+			COUNT(*)
+		FROM transactions t
+		WHERE %s`, whereClause), args...,
+	).Scan(&totals.Income, &totals.Expense, &totals.Count)
+	if err != nil {
+		return nil, Totals{}, fmt.Errorf("calculando totais das transações: %w", err)
+	}
+	totals.Balance = totals.Income - totals.Expense
+
+	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
+		SELECT t.id, t.date, t.description, t.amount, t.type, t.category_id, c.name, c.color,
+		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.created_at
+		FROM transactions t
+		LEFT JOIN categories c ON c.id = t.category_id
+		WHERE %s
+		ORDER BY t.date ASC, t.id ASC`, whereClause), args...,
+	)
+	if err != nil {
+		return nil, Totals{}, fmt.Errorf("listando transações: %w", err)
+	}
+	defer rows.Close()
+
+	data := []Transaction{}
+	for rows.Next() {
+		tx, err := scanTransaction(rows)
+		if err != nil {
+			return nil, Totals{}, err
+		}
+		data = append(data, *tx)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, Totals{}, err
+	}
+
+	return data, totals, nil
 }
 
 type BulkUpdateFields struct {

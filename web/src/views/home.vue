@@ -2,6 +2,7 @@
 import { ref, watchEffect } from "vue";
 import { useAuth } from "../composables/useAuth";
 import { listTransactions } from "../api/transactions";
+import LazyImage from "../components/LazyImage.vue";
 
 const { currentUser } = useAuth();
 const appName = import.meta.env.VITE_APP_NAME;
@@ -21,7 +22,7 @@ watchEffect(async () => {
 
 <template>
   <div
-    class="mx-auto flex max-w-6xl flex-col items-center gap-14 px-6 py-16 sm:py-24 lg:flex-row lg:items-center lg:justify-between lg:py-32"
+    class="mx-auto flex max-w-6xl flex-col items-center gap-8 px-2 md:px-6 py-4 md:py-10 sm:gap-12 sm:py-12 lg:flex-row lg:items-center lg:justify-between lg:py-32"
   >
     <div class="max-w-xl text-center lg:text-left">
       <span
@@ -30,18 +31,18 @@ watchEffect(async () => {
         Suas finanças, organizadas
       </span>
       <h1
-        class="mt-5 font-display text-4xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl"
+        class="mt-5 font-display text-3xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl"
       >
         {{ appName }} seu dinheiro com
         <span class="bg-linear-to-r from-brand-500 to-coral-500 bg-clip-text text-transparent"
           >clareza</span
         >
       </h1>
-      <p class="mt-5 text-lg leading-relaxed text-ink-500">
+      <p class="mt-4 text-base leading-relaxed text-ink-500 sm:mt-5 sm:text-lg">
         Centralize contas, transações e categorias em um só lugar &mdash; sem planilhas, sem
         complicação.
       </p>
-      <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+      <div class="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:justify-center lg:justify-start">
         <RouterLink
           v-if="!currentUser"
           to="/login"
@@ -66,11 +67,12 @@ watchEffect(async () => {
       </div>
     </div>
 
-    <div class="relative w-full max-w-sm shrink-0 lg:max-w-md">
+    <div class="relative order-first w-4/5 max-w-xs shrink-0 sm:max-w-sm lg:order-last lg:w-full lg:max-w-md">
       <div
         class="absolute -inset-6 -z-10 rounded-full bg-linear-to-br from-brand-200 via-coral-100 to-transparent blur-2xl"
       ></div>
-      <img
+
+      <LazyImage
         src="/images/moneybag.svg"
         alt="Ilustração de um cofre de dinheiro"
         class="w-full drop-shadow-xl"
