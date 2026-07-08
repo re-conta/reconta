@@ -2,9 +2,11 @@ import { createWebHistory, createRouter } from "vue-router";
 
 import AccountsView from "./views/accounts.vue";
 import CategoriesView from "./views/categories.vue";
+import FixedBillsView from "./views/contas-fixas.vue";
 import HomeView from "./views/home.vue";
 import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
+import NotificationsView from "./views/notificacoes.vue";
 import RegisterView from "./views/register.vue";
 import ReportsView from "./views/reports.vue";
 import SettingsView from "./views/settings.vue";
@@ -59,6 +61,18 @@ const routes = [
     path: "/relatorios",
     name: "Reports",
     component: ReportsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/contas-fixas",
+    name: "FixedBills",
+    component: FixedBillsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/notificacoes",
+    name: "Notifications",
+    component: NotificationsView,
     meta: { requiresAuth: true },
   },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound },

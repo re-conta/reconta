@@ -18,9 +18,12 @@ API REST em Go que dá suporte ao Reconta, uma aplicação de controle financeir
   - [Transações](#transações)
   - [Importação de extratos (PDF)](#importação-de-extratos-pdf)
   - [Relatórios e backup](#relatórios-e-backup)
+  - [Contas fixas](#contas-fixas)
+  - [Notificações](#notificações)
 - [Modelos de dados](#modelos-de-dados)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Executando localmente](#executando-localmente)
+- [Timer systemd de notificações (produção)](#timer-systemd-de-notificações-produção)
 
 ---
 
@@ -40,6 +43,9 @@ A API é servida por um único binário Go (`main.go`) que registra rotas em um 
 | `internal/report`       | Exportação de relatórios (XLSX/ODS/PDF/JSON) e importação de backup JSON          |
 | `internal/seed`         | Popula categorias/conta padrão para novos usuários                                |
 | `internal/db`           | Conexão e migrações do banco SQLite                                               |
+| `internal/fixedbill`    | Contas fixas (despesas recorrentes): ciclo de vida e pagamentos                    |
+| `internal/notification` | Notificações de contas fixas (site em tempo real via SSE + e-mail) e preferências  |
+| `internal/email`        | Envio de e-mail via SMTP (`net/smtp`)                                             |
 
 O banco de dados é SQLite (caminho configurável via `DB_PATH`).
 
@@ -188,6 +194,37 @@ Escopos de exportação (`scope`):
 - `range` — exige `dateFrom` e `dateTo` (formato `YYYY-MM-DD`).
 - `all` — todo o histórico, sem filtro de data.
 
+### Contas fixas
+
+Todas as rotas exigem sessão e operam apenas sobre as contas fixas do usuário autenticado.
+
+| Método | Rota                                | Auth   | Body / Parâmetros                                                                                                   | Descrição                                                                                                    |
+| ------ | ------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/fixed-bills`                   | Sessão | —                                                                                                                          | Lista as contas fixas do usuário (ativas, congeladas e encerradas).                                                 |
+| POST   | `/api/fixed-bills`                   | Sessão | `{ name, amount, categoryId?, accountId?, periodicity, dueDate, notes? }`                                                  | Cria uma conta fixa. `periodicity`: `weekly`, `biweekly`, `monthly`, `bimonthly`, `quarterly`, `semiannual`, `annual`, `biennial`. |
+| PUT    | `/api/fixed-bills/{id}`              | Sessão | Path: `id` · Body igual ao `POST`                                                                                          | Atualiza uma conta fixa.                                                                                             |
+| DELETE | `/api/fixed-bills/{id}`              | Sessão | Path: `id`                                                                                                                  | Remove uma conta fixa (e seu histórico de pagamentos).                                                              |
+| POST   | `/api/fixed-bills/{id}/freeze`       | Sessão | Path: `id`                                                                                                                  | Congela a conta (para de gerar lembretes e não pode ser paga até reativar).                                         |
+| POST   | `/api/fixed-bills/{id}/reactivate`   | Sessão | Path: `id`                                                                                                                  | Reativa uma conta congelada ou encerrada.                                                                            |
+| POST   | `/api/fixed-bills/{id}/close`        | Sessão | Path: `id`                                                                                                                  | Encerra definitivamente a conta.                                                                                     |
+| POST   | `/api/fixed-bills/{id}/pay`          | Sessão | Body opcional: `{ bank?, paymentMethod?, paidAt?, amountPaid?, accountId?, notes? }`                                       | Registra o pagamento do ciclo atual: cria uma transação de despesa (visível em `/transacoes`, gráficos e exports), grava o pagamento e avança `dueDate` conforme a periodicidade. Sem body, usa valor/data padrão. `422` se a conta não estiver ativa. |
+| GET    | `/api/fixed-bills/{id}/payments`     | Sessão | Path: `id`                                                                                                                  | Histórico de pagamentos da conta.                                                                                    |
+
+### Notificações
+
+Lembretes de contas fixas vencendo/vencidas, entregues em tempo real no site (SSE) e por e-mail conforme as preferências do usuário.
+
+| Método | Rota                                   | Auth     | Body / Parâmetros                                                     | Descrição                                                                                              |
+| ------ | ---------------------------------------- | -------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/notifications`                     | Sessão   | —                                                                            | Lista as últimas notificações do usuário (vazio se notificações no site estiverem desativadas).               |
+| GET    | `/api/notifications/unread-count`        | Sessão   | —                                                                            | Retorna `{ "count": n }` de notificações não lidas.                                                             |
+| GET    | `/api/notifications/stream`              | Sessão   | —                                                                            | Conexão SSE (`text/event-stream`) que emite cada notificação nova (`data: <Notification>`) assim que é criada. |
+| POST   | `/api/notifications/{id}/read`           | Sessão   | Path: `id`                                                                   | Marca uma notificação como lida.                                                                                 |
+| POST   | `/api/notifications/read-all`            | Sessão   | —                                                                            | Marca todas as notificações do usuário como lidas.                                                              |
+| GET    | `/api/notification-settings`             | Sessão   | —                                                                            | Retorna as preferências do usuário (cria com padrão na primeira vez).                                          |
+| PUT    | `/api/notification-settings`             | Sessão   | `{ siteEnabled, emailEnabled, offsets: number[] }`                            | Atualiza as preferências. `offsets` são minutos de antecedência antes do vencimento (ex.: `[2880,1440,120,60]`). |
+| POST   | `/api/internal/notifications/scan`       | Interno  | Header `X-Internal-Token: <INTERNAL_API_TOKEN>`                              | Varre todas as contas fixas ativas, gera notificações (dedupe automático) e dispara e-mails. Chamada pelo timer systemd, nunca pelo frontend. `401` sem o token correto. |
+
 ---
 
 ## Modelos de dados
@@ -267,6 +304,41 @@ Escopos de exportação (`scope`):
 }
 ```
 
+### `FixedBill`
+```jsonc
+{
+  "id": 1,
+  "name": "Energia elétrica",
+  "amount": 150.5,
+  "categoryId": 3,
+  "categoryName": "Utilidades",
+  "categoryColor": "#6366f1",
+  "accountId": 1,
+  "accountName": "Conta Corrente",
+  "periodicity": "monthly",
+  "dueDate": "2026-02-10",
+  "status": "active",        // "active" | "frozen" | "closed"
+  "notes": null,
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-10T00:00:00Z"
+}
+```
+
+### `Notification`
+```jsonc
+{
+  "id": 1,
+  "fixedBillId": 1,
+  "fixedBillName": "Energia elétrica",
+  "kind": "bill_due_soon",     // "bill_due_soon" | "bill_overdue"
+  "title": "Conta vencendo: Energia elétrica",
+  "message": "Energia elétrica vence em 2 dia(s) (2026-02-10).",
+  "dueDate": "2026-02-10",
+  "readAt": null,
+  "createdAt": "2026-02-08T13:00:00Z"
+}
+```
+
 ## Variáveis de ambiente
 
 | Variável                | Padrão                        | Descrição                                                                 |
@@ -278,6 +350,12 @@ Escopos de exportação (`scope`):
 | `GOOGLE_CLIENT_ID`        | —                                | Client ID do OAuth2 do Google. Se ausente, o login com Google fica desabilitado. |
 | `GOOGLE_CLIENT_SECRET`    | —                                | Client Secret do OAuth2 do Google.                                             |
 | `GOOGLE_REDIRECT_URL`     | —                                | URL de callback registrada no Google Cloud Console (`/api/auth/google/callback`). |
+| `INTERNAL_API_TOKEN`      | —                                | Token compartilhado exigido pelo header `X-Internal-Token` na rota `/api/internal/notifications/scan`. Sem ele, a rota fica desabilitada (sempre `401`). Gere um valor aleatório (ex.: `openssl rand -hex 32`). |
+| `SMTP_HOST`               | —                                | Host do servidor SMTP para envio de e-mails de lembrete. Se ausente, o envio vira no-op (apenas loga).           |
+| `SMTP_PORT`               | `587`                            | Porta do servidor SMTP.                                                        |
+| `SMTP_USER`               | —                                | Usuário para autenticação SMTP (`PlainAuth`). Também usado como remetente se `SMTP_FROM` não for definido. |
+| `SMTP_PASS`               | —                                | Senha/token do usuário SMTP.                                                    |
+| `SMTP_FROM`               | valor de `SMTP_USER`             | Endereço de remetente dos e-mails.                                              |
 
 Variáveis podem ser definidas em um arquivo `.env` na raiz de `api/` (carregado apenas em desenvolvimento; em produção o systemd injeta o `EnvironmentFile`).
 
@@ -295,3 +373,27 @@ bun run api:build    # equivalente a: cd api && go build -o bin/server .
 ```
 
 O servidor sobe em `http://localhost:3020` por padrão (ajustável via `PORT`), com CORS liberado para a origem do Vite em desenvolvimento (`http://localhost:5173`). Em produção, o Nginx faz proxy same-origin em `/api/`, dispensando CORS.
+
+## Timer systemd de notificações (produção)
+
+Os lembretes de contas fixas dependem de um timer systemd que chama `POST /api/internal/notifications/scan` a cada hora. Os arquivos de unidade ficam em `files/reconta-notifications.service` e `files/reconta-notifications.timer`.
+
+Instalação na VPS (uma vez, após o primeiro deploy):
+
+```sh
+sudo cp files/reconta-notifications.service files/reconta-notifications.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now reconta-notifications.timer
+```
+
+Requisitos:
+- `INTERNAL_API_TOKEN` definido em `api/.env` (o mesmo valor é lido pelo serviço via `EnvironmentFile`).
+- Para lembretes por e-mail, configurar também `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`.
+
+Verificação:
+
+```sh
+sudo systemctl list-timers reconta-notifications.timer
+sudo systemctl start reconta-notifications.service   # dispara uma varredura manualmente
+journalctl -u reconta-notifications.service -f
+```

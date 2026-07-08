@@ -1,9 +1,21 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import UserMenu from "../components/UserMenu.vue";
 import { useAuth } from "../composables/useAuth";
+import { useNotifications } from "../composables/useNotifications";
 
 const { currentUser } = useAuth();
+const { start: startNotifications, disconnect: disconnectNotifications } = useNotifications();
 const appName = import.meta.env.VITE_APP_NAME;
+
+watch(
+  currentUser,
+  (user) => {
+    if (user) startNotifications();
+    else disconnectNotifications();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -72,6 +84,13 @@ const appName = import.meta.env.VITE_APP_NAME;
               active-class="text-ink-900"
             >
               Categorias
+            </RouterLink>
+            <RouterLink
+              to="/contas-fixas"
+              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
+              active-class="text-ink-900"
+            >
+              Contas Fixas
             </RouterLink>
             <RouterLink
               to="/tags"

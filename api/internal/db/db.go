@@ -106,10 +106,64 @@ func migrate(conn *sql.DB) error {
 		UNIQUE (user_id, month, year)
 	);
 
+	CREATE TABLE IF NOT EXISTS fixed_bills (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		name        TEXT NOT NULL,
+		amount      REAL NOT NULL,
+		category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+		account_id  INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+		periodicity TEXT NOT NULL,
+		due_date    TEXT NOT NULL,
+		status      TEXT NOT NULL DEFAULT 'active',
+		notes       TEXT,
+		created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
+	CREATE TABLE IF NOT EXISTS fixed_bill_payments (
+		id             INTEGER PRIMARY KEY AUTOINCREMENT,
+		fixed_bill_id  INTEGER NOT NULL REFERENCES fixed_bills(id) ON DELETE CASCADE,
+		user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		due_date       TEXT NOT NULL,
+		paid_at        TEXT NOT NULL,
+		amount_paid    REAL NOT NULL,
+		bank           TEXT,
+		payment_method TEXT,
+		notes          TEXT,
+		transaction_id INTEGER REFERENCES transactions(id) ON DELETE SET NULL,
+		created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
+	CREATE TABLE IF NOT EXISTS notifications (
+		id             INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		fixed_bill_id  INTEGER REFERENCES fixed_bills(id) ON DELETE CASCADE,
+		kind           TEXT NOT NULL,
+		title          TEXT NOT NULL,
+		message        TEXT NOT NULL,
+		due_date       TEXT NOT NULL,
+		offset_minutes INTEGER NOT NULL,
+		read_at        TEXT,
+		created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		UNIQUE (fixed_bill_id, due_date, offset_minutes)
+	);
+
+	CREATE TABLE IF NOT EXISTS notification_settings (
+		user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+		site_enabled  INTEGER NOT NULL DEFAULT 1,
+		email_enabled INTEGER NOT NULL DEFAULT 0,
+		offsets       TEXT NOT NULL DEFAULT '[1440,120,60]',
+		updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 	CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
 	CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
 	CREATE INDEX IF NOT EXISTS idx_transactions_user_id_date ON transactions(user_id, date);
+	CREATE INDEX IF NOT EXISTS idx_fixed_bills_user_id ON fixed_bills(user_id);
+	CREATE INDEX IF NOT EXISTS idx_fixed_bill_payments_fixed_bill_id ON fixed_bill_payments(fixed_bill_id);
+	CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, read_at);
 	`
 	if _, err := conn.Exec(schema); err != nil {
 		return err
@@ -151,6 +205,16 @@ func addMissingColumns(conn *sql.DB) error {
 	if !hasAvatarURL {
 		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT`); err != nil {
 			return fmt.Errorf("adicionando coluna avatar_url: %w", err)
+		}
+	}
+
+	hasFixedBillPaymentID, err := columnExists(conn, "transactions", "fixed_bill_payment_id")
+	if err != nil {
+		return fmt.Errorf("verificando coluna fixed_bill_payment_id: %w", err)
+	}
+	if !hasFixedBillPaymentID {
+		if _, err := conn.Exec(`ALTER TABLE transactions ADD COLUMN fixed_bill_payment_id INTEGER REFERENCES fixed_bill_payments(id) ON DELETE SET NULL`); err != nil {
+			return fmt.Errorf("adicionando coluna fixed_bill_payment_id: %w", err)
 		}
 	}
 	return nil

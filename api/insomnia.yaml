@@ -1,0 +1,42 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: ReConta (local)
+meta:
+  id: wrk_d3743b3bf38c4f86b293a22a054c0fbb
+  created: 1783525308391
+  modified: 1783525334516
+  description: ""
+collection:
+  - url: "{{ _.url }}/health"
+    name: Health
+    meta:
+      id: req_65b527edc12a403ebcbe625c342ea973
+      created: 1783525461969
+      modified: 1783525544428
+      isPrivate: false
+      description: ""
+      sortKey: -1783525461969
+    method: GET
+    settings:
+      renderRequestBody: true
+      encodeUrl: true
+      followRedirects: global
+      cookies:
+        send: true
+        store: true
+      rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_4b45e3bf5eecadd42cbaa022bd1f264d79b73c7c
+    created: 1783525315821
+    modified: 1783525315821
+environments:
+  name: Base Environment
+  meta:
+    id: env_4b45e3bf5eecadd42cbaa022bd1f264d79b73c7c
+    created: 1783525315776
+    modified: 1783525523629
+    isPrivate: false
+  data:
+    url: http://localhost:3020/api

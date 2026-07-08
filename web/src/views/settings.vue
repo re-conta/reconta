@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
+import {
+  getNotificationSettings,
+  updateNotificationSettings,
+  ApiError as NotificationApiError,
+} from "../api/notificationSettings";
 import { ApiError, updatePassword, updateProfile } from "../api/users";
 import { useAuth } from "../composables/useAuth";
+import { OFFSET_OPTIONS } from "../types/notification";
+import type { NotificationSettings } from "../types/notification";
 
 const { currentUser, setCurrentUser } = useAuth();
 
@@ -58,6 +65,57 @@ async function handleProfileSubmit() {
     savingProfile.value = false;
   }
 }
+
+const notificationSettings = reactive<NotificationSettings>({
+  siteEnabled: true,
+  emailEnabled: false,
+  offsets: [],
+});
+const notificationsLoading = ref(true);
+const notificationsError = ref("");
+const notificationsSuccess = ref("");
+const savingNotifications = ref(false);
+
+async function loadNotificationSettings() {
+  notificationsLoading.value = true;
+  try {
+    const settings = await getNotificationSettings();
+    notificationSettings.siteEnabled = settings.siteEnabled;
+    notificationSettings.emailEnabled = settings.emailEnabled;
+    notificationSettings.offsets = settings.offsets;
+  } catch (err) {
+    notificationsError.value =
+      err instanceof NotificationApiError ? err.message : "Falha ao carregar preferências";
+  } finally {
+    notificationsLoading.value = false;
+  }
+}
+
+function toggleOffset(value: number) {
+  const idx = notificationSettings.offsets.indexOf(value);
+  if (idx >= 0) notificationSettings.offsets.splice(idx, 1);
+  else notificationSettings.offsets.push(value);
+}
+
+async function handleNotificationSubmit() {
+  notificationsError.value = "";
+  notificationsSuccess.value = "";
+  savingNotifications.value = true;
+  try {
+    const saved = await updateNotificationSettings({ ...notificationSettings });
+    notificationSettings.siteEnabled = saved.siteEnabled;
+    notificationSettings.emailEnabled = saved.emailEnabled;
+    notificationSettings.offsets = saved.offsets;
+    notificationsSuccess.value = "Preferências de notificação salvas.";
+  } catch (err) {
+    notificationsError.value =
+      err instanceof NotificationApiError ? err.message : "Falha ao salvar preferências";
+  } finally {
+    savingNotifications.value = false;
+  }
+}
+
+onMounted(loadNotificationSettings);
 
 async function handlePasswordSubmit() {
   passwordError.value = "";
@@ -235,6 +293,74 @@ async function handlePasswordSubmit() {
           class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
         >
           {{ savingPassword ? "Salvando..." : "Salvar" }}
+        </button>
+      </div>
+    </form>
+
+    <form
+      class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
+      @submit.prevent="handleNotificationSubmit"
+    >
+      <div>
+        <h2 class="text-sm font-semibold text-ink-900">Notificações</h2>
+        <p class="mt-0.5 text-xs text-ink-500">Lembretes de contas fixas vencendo ou vencidas</p>
+      </div>
+
+      <div v-if="notificationsLoading" class="text-sm text-ink-400">Carregando...</div>
+      <template v-else>
+        <div class="flex flex-col gap-3 sm:flex-row sm:gap-6">
+          <label class="flex items-center gap-2 text-sm font-medium text-ink-700">
+            <input
+              v-model="notificationSettings.siteEnabled"
+              type="checkbox"
+              class="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
+            />
+            Notificações no site
+          </label>
+          <label class="flex items-center gap-2 text-sm font-medium text-ink-700">
+            <input
+              v-model="notificationSettings.emailEnabled"
+              type="checkbox"
+              class="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
+            />
+            Notificações por e-mail
+          </label>
+        </div>
+
+        <div>
+          <span class="text-sm font-medium text-ink-700">Antecedência dos lembretes</span>
+          <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <label
+              v-for="option in OFFSET_OPTIONS"
+              :key="option.value"
+              class="flex items-center gap-2 rounded-xl border border-ink-200 bg-ink-50/50 px-3 py-2 text-xs font-medium text-ink-700"
+            >
+              <input
+                type="checkbox"
+                :checked="notificationSettings.offsets.includes(option.value)"
+                class="h-3.5 w-3.5 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
+                @change="toggleOffset(option.value)"
+              />
+              {{ option.label }}
+            </label>
+          </div>
+        </div>
+      </template>
+
+      <p v-if="notificationsError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ notificationsError }}
+      </p>
+      <p v-if="notificationsSuccess" class="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        {{ notificationsSuccess }}
+      </p>
+
+      <div>
+        <button
+          type="submit"
+          :disabled="savingNotifications || notificationsLoading"
+          class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+        >
+          {{ savingNotifications ? "Salvando..." : "Salvar" }}
         </button>
       </div>
     </form>
