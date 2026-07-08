@@ -8,21 +8,24 @@
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"bun run api:dev\" \"bun run web:dev\"",
     "web:dev": "bun run --cwd web dev",
-    "build": "bun run --cwd web build",
-    "preview": "bun run --cwd web preview",
+    "web:fmt": "bun run --cwd web oxfmt",
+    "web:fmt:check": "bun run --cwd web oxfmt --check",
+    "web:lint": "bun run --cwd web oxlint",
+    "web:lint:fix": "bun run --cwd web oxlint --fix",
+    "web:build": "bun run --cwd web build",
+    "web:preview": "bun run --cwd web preview",
     "api:dev": "cd api && go run .",
     "api:build": "cd api && go build -o bin/server .",
     "api:test": "cd api && go test ./...",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "api:fmt": "cd api && gofmt -l -w .",
+    "api:fmt:check": "cd api && test -z \"$(gofmt -l .)\"",
+    "api:vet": "cd api && go vet ./...",
+    "api:staticcheck": "cd api && go run honnef.co/go/tools/cmd/staticcheck@latest ./...",
+    "api:check": "bun run api:fmt:check && bun run api:vet && bun run api:staticcheck && bun run api:test"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "concurrently": "^9.1.0",
-    "oxfmt": "^0.58.0",
-    "oxlint": "^1.73.0"
+    "concurrently": "^9.1.0"
   },
   "peerDependencies": {
     "typescript": "^5"

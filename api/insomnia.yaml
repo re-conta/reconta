@@ -7,30 +7,1382 @@ meta:
   modified: 1783525334516
   description: ""
 collection:
-  - url: "{{ _.url }}/health"
-    name: Health
+  - name: Health
     meta:
-      id: req_65b527edc12a403ebcbe625c342ea973
-      created: 1783525461969
-      modified: 1783525544428
-      isPrivate: false
+      id: fld_health
+      created: 1783525600000
+      modified: 1783525600000
       description: ""
-      sortKey: -1783525461969
-    method: GET
-    settings:
-      renderRequestBody: true
-      encodeUrl: true
-      followRedirects: global
-      cookies:
-        send: true
-        store: true
-      rebuildPath: true
+    children:
+      - url: "{{ _.url }}/health"
+        name: Health check
+        meta:
+          id: req_65b527edc12a403ebcbe625c342ea973
+          created: 1783525461969
+          modified: 1783525544428
+          isPrivate: false
+          description: ""
+          sortKey: -1783525461969
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Autenticação
+    meta:
+      id: fld_auth
+      created: 1783525600100
+      modified: 1783525600100
+      description: ""
+    children:
+      - url: "{{ _.url }}/auth/login"
+        name: Login
+        meta:
+          id: req_auth_login
+          created: 1783525600101
+          modified: 1783525600101
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "user@example.com",
+              "password": "senha123"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/auth/logout"
+        name: Logout
+        meta:
+          id: req_auth_logout
+          created: 1783525600102
+          modified: 1783525600102
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/auth/me"
+        name: Usuário autenticado
+        meta:
+          id: req_auth_me
+          created: 1783525600103
+          modified: 1783525600103
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Login com Google (OAuth2)
+    meta:
+      id: fld_google
+      created: 1783525600200
+      modified: 1783525600200
+      description: ""
+    children:
+      - url: "{{ _.url }}/auth/google/login"
+        name: Iniciar login com Google
+        meta:
+          id: req_google_login
+          created: 1783525600201
+          modified: 1783525600201
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/auth/google/callback"
+        name: Callback do Google
+        meta:
+          id: req_google_callback
+          created: 1783525600202
+          modified: 1783525600202
+          description: ""
+        method: GET
+        parameters:
+          - name: state
+            value: ""
+          - name: code
+            value: ""
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Usuários
+    meta:
+      id: fld_users
+      created: 1783525600300
+      modified: 1783525600300
+      description: ""
+    children:
+      - url: "{{ _.url }}/users"
+        name: Criar usuário (cadastro)
+        meta:
+          id: req_users_create
+          created: 1783525600301
+          modified: 1783525600301
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Fulano",
+              "email": "fulano@email.com",
+              "password": "senha123"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/users"
+        name: Listar usuários (admin+)
+        meta:
+          id: req_users_list
+          created: 1783525600302
+          modified: 1783525600302
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/users/1/role"
+        name: Alterar papel do usuário (super_admin)
+        meta:
+          id: req_users_role
+          created: 1783525600303
+          modified: 1783525600303
+          description: ""
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "role": "admin"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/users/me"
+        name: Atualizar perfil (nome/e-mail)
+        meta:
+          id: req_users_me_update
+          created: 1783525600304
+          modified: 1783525600304
+          description: ""
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Fulano",
+              "email": "fulano@email.com"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/users/me/password"
+        name: Atualizar senha
+        meta:
+          id: req_users_me_password
+          created: 1783525600305
+          modified: 1783525600305
+          description: ""
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "currentPassword": "senha123",
+              "newPassword": "novaSenha123"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Contas (accounts)
+    meta:
+      id: fld_accounts
+      created: 1783525600400
+      modified: 1783525600400
+      description: ""
+    children:
+      - url: "{{ _.url }}/accounts"
+        name: Listar contas
+        meta:
+          id: req_accounts_list
+          created: 1783525600401
+          modified: 1783525600401
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/accounts"
+        name: Criar conta
+        meta:
+          id: req_accounts_create
+          created: 1783525600402
+          modified: 1783525600402
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Conta Corrente",
+              "type": "checking",
+              "balance": 1500.5
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/accounts/1"
+        name: Atualizar conta
+        meta:
+          id: req_accounts_update
+          created: 1783525600403
+          modified: 1783525600403
+          description: ""
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Conta Corrente",
+              "type": "checking",
+              "balance": 1500.5
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/accounts/1"
+        name: Remover conta
+        meta:
+          id: req_accounts_delete
+          created: 1783525600404
+          modified: 1783525600404
+          description: ""
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Categorias
+    meta:
+      id: fld_categories
+      created: 1783525600500
+      modified: 1783525600500
+      description: ""
+    children:
+      - url: "{{ _.url }}/categories"
+        name: Listar categorias
+        meta:
+          id: req_categories_list
+          created: 1783525600501
+          modified: 1783525600501
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/categories"
+        name: Criar categoria
+        meta:
+          id: req_categories_create
+          created: 1783525600502
+          modified: 1783525600502
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Mercado",
+              "color": "#6366f1",
+              "icon": "circle",
+              "type": "both",
+              "patterns": "supermercado\nmercado.*"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/categories/1"
+        name: Atualizar categoria
+        meta:
+          id: req_categories_update
+          created: 1783525600503
+          modified: 1783525600503
+          description: ""
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Mercado",
+              "color": "#6366f1",
+              "icon": "circle",
+              "type": "both",
+              "patterns": "supermercado\nmercado.*"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/categories/1"
+        name: Remover categoria
+        meta:
+          id: req_categories_delete
+          created: 1783525600504
+          modified: 1783525600504
+          description: ""
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Tags
+    meta:
+      id: fld_tags
+      created: 1783525600600
+      modified: 1783525600600
+      description: ""
+    children:
+      - url: "{{ _.url }}/tags"
+        name: Listar tags
+        meta:
+          id: req_tags_list
+          created: 1783525600601
+          modified: 1783525600601
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/tags"
+        name: Criar tag
+        meta:
+          id: req_tags_create
+          created: 1783525600602
+          modified: 1783525600602
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Viagem",
+              "color": "#6366f1"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/tags/1"
+        name: Atualizar tag
+        meta:
+          id: req_tags_update
+          created: 1783525600603
+          modified: 1783525600603
+          description: ""
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Viagem",
+              "color": "#6366f1"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/tags/1"
+        name: Remover tag
+        meta:
+          id: req_tags_delete
+          created: 1783525600604
+          modified: 1783525600604
+          description: ""
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Transações
+    meta:
+      id: fld_transactions
+      created: 1783525600700
+      modified: 1783525600700
+      description: ""
+    children:
+      - url: "{{ _.url }}/transactions"
+        name: Listar transações
+        meta:
+          id: req_transactions_list
+          created: 1783525600701
+          modified: 1783525600701
+          description: ""
+        method: GET
+        parameters:
+          - name: type
+            value: ""
+            disabled: true
+          - name: search
+            value: ""
+            disabled: true
+          - name: month
+            value: ""
+            disabled: true
+          - name: year
+            value: ""
+            disabled: true
+          - name: categoryId
+            value: ""
+            disabled: true
+          - name: tagId
+            value: ""
+            disabled: true
+          - name: page
+            value: "1"
+            disabled: true
+          - name: limit
+            value: "20"
+            disabled: true
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/periods"
+        name: Listar períodos com transações
+        meta:
+          id: req_transactions_periods
+          created: 1783525600702
+          modified: 1783525600702
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions"
+        name: Criar transação
+        meta:
+          id: req_transactions_create
+          created: 1783525600703
+          modified: 1783525600703
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "date": "2026-01-15",
+              "description": "Supermercado XPTO",
+              "amount": 250.3,
+              "type": "expense",
+              "categoryId": 1,
+              "accountId": 1,
+              "notes": "",
+              "tagIds": []
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/1"
+        name: Buscar transação por ID
+        meta:
+          id: req_transactions_get
+          created: 1783525600704
+          modified: 1783525600704
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/1"
+        name: Atualizar transação
+        meta:
+          id: req_transactions_update
+          created: 1783525600705
+          modified: 1783525600705
+          description: ""
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "date": "2026-01-15",
+              "description": "Supermercado XPTO",
+              "amount": 250.3,
+              "type": "expense",
+              "categoryId": 1,
+              "accountId": 1,
+              "notes": "",
+              "tagIds": []
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/1"
+        name: Remover transação
+        meta:
+          id: req_transactions_delete
+          created: 1783525600706
+          modified: 1783525600706
+          description: ""
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions"
+        name: Atualização em massa
+        meta:
+          id: req_transactions_bulk_update
+          created: 1783525600707
+          modified: 1783525600707
+          description: ""
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "ids": [1, 2, 3],
+              "fields": {
+                "type": "expense",
+                "categoryId": null,
+                "accountId": "_none",
+                "date": "2026-01-15"
+              }
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions"
+        name: Remoção em massa por escopo
+        meta:
+          id: req_transactions_bulk_delete
+          created: 1783525600708
+          modified: 1783525600708
+          description: ""
+        method: DELETE
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "scope": "month",
+              "month": 1,
+              "year": 2026
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/auto-categorize"
+        name: Auto-categorizar transações
+        meta:
+          id: req_transactions_auto_categorize
+          created: 1783525600709
+          modified: 1783525600709
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/opening-balance"
+        name: Consultar saldo de abertura
+        meta:
+          id: req_transactions_opening_balance_get
+          created: 1783525600710
+          modified: 1783525600710
+          description: ""
+        method: GET
+        parameters:
+          - name: month
+            value: "1"
+          - name: year
+            value: "2026"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/opening-balance"
+        name: Definir saldo de abertura
+        meta:
+          id: req_transactions_opening_balance_set
+          created: 1783525600711
+          modified: 1783525600711
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "month": 1,
+              "year": 2026,
+              "amount": 1000
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Importação de extratos (PDF)
+    meta:
+      id: fld_import
+      created: 1783525600800
+      modified: 1783525600800
+      description: ""
+    children:
+      - url: "{{ _.url }}/transactions/import/banks"
+        name: Listar bancos suportados
+        meta:
+          id: req_import_banks
+          created: 1783525600801
+          modified: 1783525600801
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/import/preview"
+        name: Pré-visualizar importação (upload PDF)
+        meta:
+          id: req_import_preview
+          created: 1783525600802
+          modified: 1783525600802
+          description: ""
+        method: POST
+        body:
+          mimeType: multipart/form-data
+          params:
+            - name: file
+              type: file
+              fileName: ""
+            - name: bank
+              value: ""
+              disabled: true
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/transactions/import/confirm"
+        name: Confirmar importação
+        meta:
+          id: req_import_confirm
+          created: 1783525600803
+          modified: 1783525600803
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "bank": "generic",
+              "accountId": 1,
+              "transactions": [
+                {
+                  "date": "2026-01-15",
+                  "description": "Compra XPTO",
+                  "amount": 100.0,
+                  "type": "expense"
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Relatórios e backup
+    meta:
+      id: fld_reports
+      created: 1783525600900
+      modified: 1783525600900
+      description: ""
+    children:
+      - url: "{{ _.url }}/reports/export"
+        name: Exportar relatório
+        meta:
+          id: req_reports_export
+          created: 1783525600901
+          modified: 1783525600901
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "format": "xlsx",
+              "scope": "month",
+              "month": 1,
+              "year": 2026,
+              "dateFrom": "2026-01-01",
+              "dateTo": "2026-01-31",
+              "charts": []
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/reports/import"
+        name: Importar backup (upload JSON)
+        meta:
+          id: req_reports_import
+          created: 1783525600902
+          modified: 1783525600902
+          description: ""
+        method: POST
+        body:
+          mimeType: multipart/form-data
+          params:
+            - name: file
+              type: file
+              fileName: ""
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Contas fixas
+    meta:
+      id: fld_fixed_bills
+      created: 1783525601000
+      modified: 1783525601000
+      description: ""
+    children:
+      - url: "{{ _.url }}/fixed-bills"
+        name: Listar contas fixas
+        meta:
+          id: req_fixed_bills_list
+          created: 1783525601001
+          modified: 1783525601001
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills"
+        name: Criar conta fixa
+        meta:
+          id: req_fixed_bills_create
+          created: 1783525601002
+          modified: 1783525601002
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Energia elétrica",
+              "amount": 150.5,
+              "categoryId": 1,
+              "accountId": 1,
+              "periodicity": "monthly",
+              "dueDate": "2026-02-10",
+              "notes": ""
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1"
+        name: Atualizar conta fixa
+        meta:
+          id: req_fixed_bills_update
+          created: 1783525601003
+          modified: 1783525601003
+          description: ""
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Energia elétrica",
+              "amount": 150.5,
+              "categoryId": 1,
+              "accountId": 1,
+              "periodicity": "monthly",
+              "dueDate": "2026-02-10",
+              "notes": ""
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1"
+        name: Remover conta fixa
+        meta:
+          id: req_fixed_bills_delete
+          created: 1783525601004
+          modified: 1783525601004
+          description: ""
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1/freeze"
+        name: Congelar conta fixa
+        meta:
+          id: req_fixed_bills_freeze
+          created: 1783525601005
+          modified: 1783525601005
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1/reactivate"
+        name: Reativar conta fixa
+        meta:
+          id: req_fixed_bills_reactivate
+          created: 1783525601006
+          modified: 1783525601006
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1/close"
+        name: Encerrar conta fixa
+        meta:
+          id: req_fixed_bills_close
+          created: 1783525601007
+          modified: 1783525601007
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1/pay"
+        name: Registrar pagamento
+        meta:
+          id: req_fixed_bills_pay
+          created: 1783525601008
+          modified: 1783525601008
+          description: ""
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "bank": "",
+              "paymentMethod": "",
+              "paidAt": "2026-02-10",
+              "amountPaid": 150.5,
+              "accountId": 1,
+              "notes": ""
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/fixed-bills/1/payments"
+        name: Histórico de pagamentos
+        meta:
+          id: req_fixed_bills_payments
+          created: 1783525601009
+          modified: 1783525601009
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: Notificações
+    meta:
+      id: fld_notifications
+      created: 1783525601100
+      modified: 1783525601100
+      description: ""
+    children:
+      - url: "{{ _.url }}/notifications"
+        name: Listar notificações
+        meta:
+          id: req_notifications_list
+          created: 1783525601101
+          modified: 1783525601101
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/notifications/unread-count"
+        name: Contagem de não lidas
+        meta:
+          id: req_notifications_unread_count
+          created: 1783525601102
+          modified: 1783525601102
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/notifications/stream"
+        name: Stream de notificações (SSE)
+        meta:
+          id: req_notifications_stream
+          created: 1783525601103
+          modified: 1783525601103
+          description: ""
+        method: GET
+        headers:
+          - name: Accept
+            value: text/event-stream
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/notifications/1/read"
+        name: Marcar notificação como lida
+        meta:
+          id: req_notifications_read
+          created: 1783525601104
+          modified: 1783525601104
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/notifications/read-all"
+        name: Marcar todas como lidas
+        meta:
+          id: req_notifications_read_all
+          created: 1783525601105
+          modified: 1783525601105
+          description: ""
+        method: POST
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/notification-settings"
+        name: Consultar preferências de notificação
+        meta:
+          id: req_notification_settings_get
+          created: 1783525601106
+          modified: 1783525601106
+          description: ""
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/notification-settings"
+        name: Atualizar preferências de notificação
+        meta:
+          id: req_notification_settings_update
+          created: 1783525601107
+          modified: 1783525601107
+          description: ""
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "siteEnabled": true,
+              "emailEnabled": true,
+              "offsets": [2880, 1440, 120, 60]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: "{{ _.url }}/internal/notifications/scan"
+        name: Varredura interna de notificações (systemd)
+        meta:
+          id: req_notifications_internal_scan
+          created: 1783525601108
+          modified: 1783525601108
+          description: ""
+        method: POST
+        headers:
+          - name: X-Internal-Token
+            value: "{{ _.internalToken }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
 cookieJar:
   name: Default Jar
   meta:
     id: jar_4b45e3bf5eecadd42cbaa022bd1f264d79b73c7c
     created: 1783525315821
     modified: 1783525315821
+
 environments:
   name: Base Environment
   meta:
@@ -40,3 +1392,4 @@ environments:
     isPrivate: false
   data:
     url: http://localhost:3020/api
+    internalToken: ""

@@ -27,8 +27,4 @@ export const navLinks = [
     name: "Contas",
     path: "/contas",
   },
-  {
-    name: "Importar",
-    path: "/importar",
-  },
 ];

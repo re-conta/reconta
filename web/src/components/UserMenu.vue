@@ -2,8 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth";
+import { useSiteModals } from "../composables/useSiteModals";
 
 const { currentUser, logout } = useAuth();
+const { open: openSiteModal } = useSiteModals();
 const router = useRouter();
 
 const open = ref(false);
@@ -32,6 +34,11 @@ function handleAvatarError() {
 
 function toggle() {
   open.value = !open.value;
+}
+
+function handleHelp() {
+  close();
+  openSiteModal("help");
 }
 
 function close() {
@@ -169,7 +176,55 @@ async function handleLogout() {
             </svg>
             Configurações
           </RouterLink>
+          <RouterLink
+            to="/exportar"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-ink-700 transition hover:bg-ink-50"
+            role="menuitem"
+            @click="close"
+          >
+            <svg class="h-4 w-4 text-ink-400" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M10 3a.75.75 0 0 1 .75.75v7.19l2.72-2.72a.75.75 0 1 1 1.06 1.06l-4 4a.75.75 0 0 1-1.06 0l-4-4a.75.75 0 0 1 1.06-1.06l2.72 2.72V3.75A.75.75 0 0 1 10 3ZM4 15.25A.75.75 0 0 1 4.75 14.5h10.5a.75.75 0 0 1 0 1.5H4.75a.75.75 0 0 1-.75-.75Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Exportar
+          </RouterLink>
+          <RouterLink
+            to="/importar"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-ink-700 transition hover:bg-ink-50"
+            role="menuitem"
+            @click="close"
+          >
+            <svg class="h-4 w-4 text-ink-400" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M10 17a.75.75 0 0 1-.75-.75V9.06l-2.72 2.72a.75.75 0 1 1-1.06-1.06l4-4a.75.75 0 0 1 1.06 0l4 4a.75.75 0 1 1-1.06 1.06L10.75 9.06v7.19A.75.75 0 0 1 10 17ZM4 4.75A.75.75 0 0 1 4.75 4h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 4.75Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Importar
+          </RouterLink>
         </nav>
+
+        <div class="border-t border-ink-100 py-1">
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-4 py-2 text-sm text-ink-700 transition hover:bg-ink-50"
+            role="menuitem"
+            @click="handleHelp"
+          >
+            <svg class="h-4 w-4 text-ink-400" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.94 6.94a.75.75 0 1 1-1.061-1.061 3 3 0 1 1 2.871 5.026v.345a.75.75 0 0 1-1.5 0v-.5c0-.72.57-1.172 1.081-1.287a1.5 1.5 0 1 0-1.868-1.523ZM10 15a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Central de ajuda
+          </button>
+        </div>
 
         <div class="border-t border-ink-100 py-1">
           <button

@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from "vue";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
-import { ApiError } from "../api/reports";
+import { ApiError, downloadBlob, exportReport, importBackup } from "../api/reports";
 import { listPeriods, listTransactions } from "../api/transactions";
-import type { ReportScopeKind } from "../types/report";
+import type { ChartImagePayload, ExportFormat, ReportScopeKind } from "../types/report";
 import type { Period, Transaction } from "../types/transaction";
 
 const now = new Date();
@@ -21,6 +21,14 @@ const years = computed(() => [...new Set(periods.value.map((p) => p.year))].sort
 const previewTransactions = ref<Transaction[]>([]);
 const loadingPreview = ref(false);
 const previewError = ref("");
+
+const exportingFormat = ref<ExportFormat | null>(null);
+const exportError = ref("");
+
+const importing = ref(false);
+const importMessage = ref("");
+const importError = ref("");
+const fileInput = ref<HTMLInputElement | null>(null);
 
 const cashFlowRef = ref<InstanceType<typeof CashFlowChart>>();
 const categoryChartRef = ref<InstanceType<typeof CategoryExpenseChart>>();
@@ -66,18 +74,66 @@ async function loadPreview() {
   }
 }
 
-const totals = computed(() => {
-  let income = 0;
-  let expense = 0;
-  for (const tx of previewTransactions.value) {
-    if (tx.type === "income") income += tx.amount;
-    else expense += tx.amount;
-  }
-  return { income, expense, balance: income - expense, count: previewTransactions.value.length };
-});
+function toBase64(dataUrl: string | undefined): string | null {
+  if (!dataUrl) return null;
+  const parts = dataUrl.split(",");
+  return parts.length > 1 ? parts[1] : null;
+}
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+async function collectCharts(): Promise<ChartImagePayload[]> {
+  const charts: ChartImagePayload[] = [];
+  if (scopeKind.value === "month") {
+    const img = toBase64(cashFlowRef.value?.toImage());
+    if (img) charts.push({ title: "Fluxo diário", pngBase64: img });
+  }
+  const catImg = toBase64(categoryChartRef.value?.toImage());
+  if (catImg) charts.push({ title: "Despesas por categoria", pngBase64: catImg });
+  return charts;
+}
+
+async function handleExport(format: ExportFormat) {
+  exportError.value = "";
+  exportingFormat.value = format;
+  try {
+    const charts = format === "json" ? [] : await collectCharts();
+    const { blob, filename } = await exportReport(
+      format,
+      {
+        scope: scopeKind.value,
+        month: month.value,
+        year: year.value,
+        dateFrom: dateFrom.value,
+        dateTo: dateTo.value,
+      },
+      charts,
+    );
+    downloadBlob(blob, filename);
+  } catch (err) {
+    exportError.value = err instanceof ApiError ? err.message : "Falha ao gerar o relatório";
+  } finally {
+    exportingFormat.value = null;
+  }
+}
+
+async function handleImport() {
+  const file = fileInput.value?.files?.[0];
+  if (!file) {
+    importError.value = "Selecione um arquivo JSON de backup";
+    return;
+  }
+  importError.value = "";
+  importMessage.value = "";
+  importing.value = true;
+  try {
+    const result = await importBackup(file);
+    importMessage.value = `${result.imported} importado(s), ${result.skipped} ignorado(s) por duplicidade (de ${result.total}).`;
+    if (fileInput.value) fileInput.value.value = "";
+    await loadPreview();
+  } catch (err) {
+    importError.value = err instanceof ApiError ? err.message : "Falha ao importar backup";
+  } finally {
+    importing.value = false;
+  }
 }
 
 onMounted(async () => {
@@ -93,9 +149,10 @@ onMounted(async () => {
 <template>
   <div class="mx-auto flex max-w-5xl flex-col gap-6 px-2 md:px-4 py-4 md:py-8">
     <div>
-      <h1 class="font-display text-2xl font-bold text-ink-900">Relatórios</h1>
+      <h1 class="font-display text-2xl font-bold text-ink-900">Exportar</h1>
       <p class="mt-0.5 text-sm text-ink-500">
-        Acompanhe receitas, despesas e saldo do período escolhido.
+        Exporte um relatório de gastos do período escolhido em ODS, XLSX, PDF ou JSON, ou restaure
+        um backup em JSON exportado anteriormente.
       </p>
     </div>
 
@@ -183,31 +240,6 @@ onMounted(async () => {
       {{ previewError }}
     </p>
 
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
-        <p class="text-xs text-ink-500">Receitas</p>
-        <p class="font-display text-lg font-bold text-brand-700">
-          {{ formatCurrency(totals.income) }}
-        </p>
-      </div>
-      <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
-        <p class="text-xs text-ink-500">Despesas</p>
-        <p class="font-display text-lg font-bold text-coral-700">
-          {{ formatCurrency(totals.expense) }}
-        </p>
-      </div>
-      <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
-        <p class="text-xs text-ink-500">Saldo</p>
-        <p class="font-display text-lg font-bold text-ink-900">
-          {{ formatCurrency(totals.balance) }}
-        </p>
-      </div>
-      <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
-        <p class="text-xs text-ink-500">Lançamentos</p>
-        <p class="font-display text-lg font-bold text-ink-900">{{ totals.count }}</p>
-      </div>
-    </div>
-
     <div v-if="!loadingPreview" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <CashFlowChart
         v-if="scopeKind === 'month'"
@@ -217,6 +249,58 @@ onMounted(async () => {
         :transactions="previewTransactions"
       />
       <CategoryExpenseChart ref="categoryChartRef" :transactions="previewTransactions" />
+    </div>
+
+    <div class="rounded-3xl border border-ink-200/70 bg-white p-5 shadow-sm">
+      <h2 class="font-display text-sm font-bold text-ink-900">Exportar relatório</h2>
+      <p class="mt-0.5 text-xs text-ink-500">
+        Baixe os lançamentos e gráficos do período no formato desejado.
+      </p>
+      <p v-if="exportError" class="mt-3 rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ exportError }}
+      </p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button
+          v-for="format in ['xlsx', 'ods', 'pdf', 'json'] as ExportFormat[]"
+          :key="format"
+          type="button"
+          :disabled="exportingFormat !== null"
+          class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+          @click="handleExport(format)"
+        >
+          {{ exportingFormat === format ? "Gerando..." : format.toUpperCase() }}
+        </button>
+      </div>
+    </div>
+
+    <div class="rounded-3xl border border-ink-200/70 bg-white p-5 shadow-sm">
+      <h2 class="font-display text-sm font-bold text-ink-900">Importar backup</h2>
+      <p class="mt-0.5 text-xs text-ink-500">
+        Restaure lançamentos a partir de um arquivo JSON exportado anteriormente. Lançamentos
+        duplicados (mesma data, descrição e valor) são ignorados automaticamente.
+      </p>
+      <p v-if="importError" class="mt-3 rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ importError }}
+      </p>
+      <p v-if="importMessage" class="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">
+        {{ importMessage }}
+      </p>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json"
+          class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm"
+        />
+        <button
+          type="button"
+          :disabled="importing"
+          class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+          @click="handleImport"
+        >
+          {{ importing ? "Importando..." : "Importar" }}
+        </button>
+      </div>
     </div>
   </div>
 </template>

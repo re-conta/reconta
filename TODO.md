@@ -1,5 +1,3 @@
-No package.json inclua metodos de analizar a api da aplicação com o gofmt, go vet, go staticcheck e etc...
-
 Transforme a pasta files/ em ansible/ crie um playbook simples mais completo usando o ansible com:
 
 - Suporte as units systemd do go

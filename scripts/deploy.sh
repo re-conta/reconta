@@ -16,14 +16,14 @@ cd "$TMPDIR" || exit 1
 
 # Mantém .env e o banco de dados (incluindo arquivos WAL/SHM do SQLite) intactos
 git clean -fxd -e web/.env -e api/.env -e api/data
-#cp web/.env web/.env.production
-cp api/.env api/.env.production
+[ -e web/.env ] && cp web/.env web/.env.production
+[ -e api/.env ] && cp api/.env api/.env.production
 
 echo "📥 Instalando dependências..."
 bun install
 
-echo "🏗️ Buildando frontend..."
-if ! bun run build; then
+echo "🏗️ Buildando frontend (Vue.js)..."
+if ! bun run web:build; then
   echo "❌ Falha no build do frontend. Abortando deploy."
   exit 1
 fi

@@ -3,6 +3,7 @@ import { createWebHistory, createRouter } from "vue-router";
 import AccountsView from "./views/accounts.vue";
 import CategoriesView from "./views/categories.vue";
 import FixedBillsView from "./views/contas-fixas.vue";
+import ExportView from "./views/export.vue";
 import HomeView from "./views/home.vue";
 import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
@@ -61,6 +62,12 @@ const routes = [
     path: "/relatorios",
     name: "Reports",
     component: ReportsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/exportar",
+    name: "Export",
+    component: ExportView,
     meta: { requiresAuth: true },
   },
   {
