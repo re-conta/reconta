@@ -26,13 +26,17 @@ const GRID_COLOR = "#e6ded5";
 const TEXT_COLOR = "#7c6d5c";
 
 function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
 }
 
 const dailyTotals = computed(() => {
   const daysInMonth = new Date(props.year, props.month, 0).getDate();
-  const income = new Array(daysInMonth).fill(0);
-  const expense = new Array(daysInMonth).fill(0);
+  const income = Array.from({ length: daysInMonth }, () => 0);
+  const expense = Array.from({ length: daysInMonth }, () => 0);
   for (const tx of props.transactions) {
     const day = Number(tx.date.slice(8, 10));
     if (day < 1 || day > daysInMonth) continue;

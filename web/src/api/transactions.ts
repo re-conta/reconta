@@ -26,17 +26,21 @@ export function listTransactions(filters: TransactionFilters = {}): Promise<Tran
     }
   }
   const query = params.toString();
-  return fetch(`/api/transactions${query ? `?${query}` : ""}`, { credentials: "include" }).then((res) =>
-    parseResponse<TransactionListResult>(res),
+  return fetch(`/api/transactions${query ? `?${query}` : ""}`, { credentials: "include" }).then(
+    (res) => parseResponse<TransactionListResult>(res),
   );
 }
 
 export function listPeriods(): Promise<Period[]> {
-  return fetch("/api/transactions/periods", { credentials: "include" }).then((res) => parseResponse<Period[]>(res));
+  return fetch("/api/transactions/periods", { credentials: "include" }).then((res) =>
+    parseResponse<Period[]>(res),
+  );
 }
 
 export function getTransaction(id: number): Promise<Transaction> {
-  return fetch(`/api/transactions/${id}`, { credentials: "include" }).then((res) => parseResponse<Transaction>(res));
+  return fetch(`/api/transactions/${id}`, { credentials: "include" }).then((res) =>
+    parseResponse<Transaction>(res),
+  );
 }
 
 export function createTransaction(input: TransactionInput): Promise<Transaction> {
@@ -58,12 +62,15 @@ export function updateTransaction(id: number, input: TransactionInput): Promise<
 }
 
 export function deleteTransaction(id: number): Promise<void> {
-  return fetch(`/api/transactions/${id}`, { method: "DELETE", credentials: "include" }).then((res) =>
-    parseResponse<void>(res),
+  return fetch(`/api/transactions/${id}`, { method: "DELETE", credentials: "include" }).then(
+    (res) => parseResponse<void>(res),
   );
 }
 
-export function bulkUpdateTransactions(ids: number[], fields: BulkUpdateFields): Promise<{ updated: number }> {
+export function bulkUpdateTransactions(
+  ids: number[],
+  fields: BulkUpdateFields,
+): Promise<{ updated: number }> {
   return fetch("/api/transactions", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -88,18 +95,23 @@ export function bulkDeleteTransactions(
 }
 
 export function autoCategorize(): Promise<{ updated: number; checked: number }> {
-  return fetch("/api/transactions/auto-categorize", { method: "POST", credentials: "include" }).then((res) =>
-    parseResponse<{ updated: number; checked: number }>(res),
-  );
+  return fetch("/api/transactions/auto-categorize", {
+    method: "POST",
+    credentials: "include",
+  }).then((res) => parseResponse<{ updated: number; checked: number }>(res));
 }
 
 export function getOpeningBalance(month: number, year: number): Promise<{ amount: number }> {
-  return fetch(`/api/transactions/opening-balance?month=${month}&year=${year}`, { credentials: "include" }).then(
-    (res) => parseResponse<{ amount: number }>(res),
-  );
+  return fetch(`/api/transactions/opening-balance?month=${month}&year=${year}`, {
+    credentials: "include",
+  }).then((res) => parseResponse<{ amount: number }>(res));
 }
 
-export function setOpeningBalance(month: number, year: number, amount: number): Promise<{ amount: number }> {
+export function setOpeningBalance(
+  month: number,
+  year: number,
+  amount: number,
+): Promise<{ amount: number }> {
   return fetch("/api/transactions/opening-balance", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

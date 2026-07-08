@@ -20,7 +20,10 @@ const emit = defineEmits<{
 const weekdayLabels = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 const monthLabel = computed(() =>
-  new Date(props.year, props.month - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+  new Date(props.year, props.month - 1, 1).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  }),
 );
 
 interface DayCell {
@@ -121,15 +124,14 @@ function toggleDay(cell: DayCell) {
                 ? 'text-ink-300'
                 : '',
             cell && selectedDate === cell.date ? 'bg-brand-500 !text-white hover:bg-brand-500' : '',
-            cell && cell.isToday && selectedDate !== cell.date ? 'ring-1 ring-inset ring-brand-300' : '',
+            cell && cell.isToday && selectedDate !== cell.date
+              ? 'ring-1 ring-inset ring-brand-300'
+              : '',
           ]"
           @click="cell && toggleDay(cell)"
         >
           <span v-if="cell">{{ cell.day }}</span>
-          <span
-            v-if="cell && cell.hasTransactions"
-            class="mt-0.5 flex gap-0.5"
-          >
+          <span v-if="cell && cell.hasTransactions" class="mt-0.5 flex gap-0.5">
             <span
               v-if="cell.income > 0"
               class="h-0.5 w-0.5 rounded-full"
@@ -146,8 +148,12 @@ function toggleDay(cell: DayCell) {
     </div>
 
     <div class="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-ink-500">
-      <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span> Receita</span>
-      <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-coral-500"></span> Despesa</span>
+      <span class="flex items-center gap-1"
+        ><span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span> Receita</span
+      >
+      <span class="flex items-center gap-1"
+        ><span class="h-1.5 w-1.5 rounded-full bg-coral-500"></span> Despesa</span
+      >
       <button
         v-if="selectedDate"
         type="button"

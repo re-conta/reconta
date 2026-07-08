@@ -59,11 +59,26 @@ func (h *Handler) requireRole(next func(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+// requireAuth envolve um handler exigindo apenas que exista um usuário
+// autenticado, sem restrição de role.
+func (h *Handler) requireAuth(next func(w http.ResponseWriter, r *http.Request, u *User)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u, err := h.currentUser(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "não autenticado")
+			return
+		}
+		next(w, r, u)
+	}
+}
+
 // RegisterRoutes registra as rotas de usuário no mux informado.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/users", h.create)
 	mux.HandleFunc("GET /api/users", h.requireRole(h.list, RoleAdmin, RoleSuperAdmin))
 	mux.HandleFunc("PATCH /api/users/{id}/role", h.requireRole(h.updateRole, RoleSuperAdmin))
+	mux.HandleFunc("PATCH /api/users/me", h.requireAuth(h.updateProfile))
+	mux.HandleFunc("PATCH /api/users/me/password", h.requireAuth(h.updatePassword))
 }
 
 type createUserRequest struct {
@@ -162,6 +177,91 @@ func (h *Handler) updateRole(w http.ResponseWriter, r *http.Request, _ *User) {
 		return
 	}
 	writeJSON(w, http.StatusOK, u)
+}
+
+type updateProfileRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, u *User) {
+	var req updateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	if req.Name == "" {
+		writeError(w, http.StatusUnprocessableEntity, "nome é obrigatório")
+		return
+	}
+	if !isValidEmail(req.Email) {
+		writeError(w, http.StatusUnprocessableEntity, "e-mail inválido")
+		return
+	}
+
+	updated, err := h.repo.UpdateProfile(r.Context(), u.ID, req.Name, req.Email)
+	if err != nil {
+		if errors.Is(err, ErrEmailTaken) {
+			writeError(w, http.StatusConflict, "e-mail já cadastrado")
+			return
+		}
+		log.Printf("erro ao atualizar perfil do usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+type updatePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+func (h *Handler) updatePassword(w http.ResponseWriter, r *http.Request, u *User) {
+	var req updatePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	if len(req.NewPassword) < 8 {
+		writeError(w, http.StatusUnprocessableEntity, "senha deve ter no mínimo 8 caracteres")
+		return
+	}
+
+	currentHash, err := h.repo.GetPasswordHashByID(r.Context(), u.ID)
+	if err != nil {
+		log.Printf("erro ao buscar senha do usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	// Usuários cadastrados apenas via Google não têm senha ainda: a primeira
+	// definição de senha não exige a senha atual.
+	if currentHash != "" {
+		if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(req.CurrentPassword)); err != nil {
+			writeError(w, http.StatusUnprocessableEntity, "senha atual inválida")
+			return
+		}
+	}
+
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("erro ao gerar hash de senha: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	if err := h.repo.UpdatePassword(r.Context(), u.ID, string(newHash)); err != nil {
+		log.Printf("erro ao atualizar senha do usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func isValidEmail(email string) bool {

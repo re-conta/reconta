@@ -1,0 +1,226 @@
+<script setup lang="ts">
+import { reactive, ref, watch } from "vue";
+import { ApiError, updatePassword, updateProfile } from "../api/users";
+import { useAuth } from "../composables/useAuth";
+
+const { currentUser, setCurrentUser } = useAuth();
+
+const profileForm = reactive({ name: "", email: "" });
+const profileError = ref("");
+const profileSuccess = ref("");
+const savingProfile = ref(false);
+
+const passwordForm = reactive({ currentPassword: "", newPassword: "", confirmPassword: "" });
+const passwordError = ref("");
+const passwordSuccess = ref("");
+const savingPassword = ref(false);
+
+watch(
+  currentUser,
+  (user) => {
+    if (!user) return;
+    profileForm.name = user.name;
+    profileForm.email = user.email;
+  },
+  { immediate: true },
+);
+
+const roleLabels: Record<string, string> = {
+  user: "Usuário",
+  admin: "Administrador",
+  super_admin: "Super admin",
+};
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+async function handleProfileSubmit() {
+  profileError.value = "";
+  profileSuccess.value = "";
+  savingProfile.value = true;
+  try {
+    const updated = await updateProfile({ ...profileForm });
+    setCurrentUser(updated);
+    profileSuccess.value = "Dados atualizados com sucesso.";
+  } catch (err) {
+    profileError.value = err instanceof ApiError ? err.message : "Falha ao salvar os dados";
+  } finally {
+    savingProfile.value = false;
+  }
+}
+
+async function handlePasswordSubmit() {
+  passwordError.value = "";
+  passwordSuccess.value = "";
+
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    passwordError.value = "As senhas não coincidem";
+    return;
+  }
+
+  savingPassword.value = true;
+  try {
+    await updatePassword({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+    passwordForm.currentPassword = "";
+    passwordForm.newPassword = "";
+    passwordForm.confirmPassword = "";
+    if (currentUser.value) setCurrentUser({ ...currentUser.value, hasPassword: true });
+    passwordSuccess.value = "Senha atualizada com sucesso.";
+  } catch (err) {
+    passwordError.value = err instanceof ApiError ? err.message : "Falha ao atualizar a senha";
+  } finally {
+    savingPassword.value = false;
+  }
+}
+</script>
+
+<template>
+  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8">
+    <div>
+      <h1 class="font-display text-2xl font-bold text-ink-900">Configurações</h1>
+      <p class="mt-0.5 text-sm text-ink-500">Gerencie seus dados de conta</p>
+    </div>
+
+    <div
+      v-if="currentUser"
+      class="flex items-center gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
+    >
+      <span
+        class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-400 to-coral-500 text-lg font-semibold text-white shadow-sm"
+      >
+        {{
+          currentUser.name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]!.toUpperCase())
+            .join("")
+        }}
+      </span>
+      <div class="min-w-0">
+        <p class="truncate text-sm font-semibold text-ink-900">{{ currentUser.name }}</p>
+        <p class="truncate text-xs text-ink-500">{{ currentUser.email }}</p>
+        <p class="mt-1 text-xs text-ink-400">
+          {{ roleLabels[currentUser.role] ?? currentUser.role }} &middot; desde
+          {{ formatDate(currentUser.createdAt) }}
+        </p>
+      </div>
+    </div>
+
+    <form
+      class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
+      @submit.prevent="handleProfileSubmit"
+    >
+      <h2 class="text-sm font-semibold text-ink-900">Dados pessoais</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-ink-700">Nome</span>
+          <input
+            v-model="profileForm.name"
+            type="text"
+            required
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-ink-700">E-mail</span>
+          <input
+            v-model="profileForm.email"
+            type="email"
+            required
+            autocomplete="username"
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          />
+        </label>
+      </div>
+
+      <p v-if="profileError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ profileError }}
+      </p>
+      <p v-if="profileSuccess" class="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        {{ profileSuccess }}
+      </p>
+
+      <div>
+        <button
+          type="submit"
+          :disabled="savingProfile"
+          class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+        >
+          {{ savingProfile ? "Salvando..." : "Salvar" }}
+        </button>
+      </div>
+    </form>
+
+    <form
+      class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
+      @submit.prevent="handlePasswordSubmit"
+    >
+      <h2 class="text-sm font-semibold text-ink-900">
+        {{ currentUser?.hasPassword ? "Alterar senha" : "Definir senha" }}
+      </h2>
+      <p v-if="!currentUser?.hasPassword" class="text-sm text-ink-500">
+        Sua conta usa login via Google. Defina uma senha para também poder entrar com e-mail e
+        senha.
+      </p>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label v-if="currentUser?.hasPassword" class="flex flex-col gap-1.5 sm:col-span-2">
+          <span class="text-sm font-medium text-ink-700">Senha atual</span>
+          <input
+            v-model="passwordForm.currentPassword"
+            type="password"
+            required
+            autocomplete="current-password"
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-ink-700">Nova senha</span>
+          <input
+            v-model="passwordForm.newPassword"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-ink-700">Confirmar nova senha</span>
+          <input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          />
+        </label>
+      </div>
+
+      <p v-if="passwordError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ passwordError }}
+      </p>
+      <p v-if="passwordSuccess" class="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        {{ passwordSuccess }}
+      </p>
+
+      <div>
+        <button
+          type="submit"
+          :disabled="savingPassword"
+          class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+        >
+          {{ savingPassword ? "Salvando..." : "Salvar" }}
+        </button>
+      </div>
+    </form>
+  </div>
+</template>

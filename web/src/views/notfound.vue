@@ -1,5 +1,7 @@
 <template>
-  <div class="mx-auto flex min-h-[calc(100vh-140px)] max-w-md flex-col items-center justify-center gap-6 px-6 text-center">
+  <div
+    class="mx-auto flex min-h-[calc(100vh-140px)] max-w-md flex-col items-center justify-center gap-6 px-6 text-center"
+  >
     <img src="/images/not-found.svg" alt="" class="w-56 drop-shadow-lg" />
     <div>
       <h1 class="font-display text-2xl font-bold text-ink-900">Página não encontrada</h1>

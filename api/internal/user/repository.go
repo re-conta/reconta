@@ -78,6 +78,51 @@ func (r *Repository) UpdateRole(ctx context.Context, id int64, role string) (*Us
 	return r.GetByID(ctx, id)
 }
 
+// UpdateProfile altera nome e e-mail do usuário.
+func (r *Repository) UpdateProfile(ctx context.Context, id int64, name, email string) (*User, error) {
+	res, err := r.db.ExecContext(ctx, `UPDATE users SET name = ?, email = ? WHERE id = ?`, name, email, id)
+	if err != nil {
+		if isUniqueConstraintErr(err) {
+			return nil, ErrEmailTaken
+		}
+		return nil, fmt.Errorf("atualizando perfil do usuário: %w", err)
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return nil, ErrNotFound
+	}
+	return r.GetByID(ctx, id)
+}
+
+// UpdatePassword troca a senha do usuário após validar a senha atual (bcrypt
+// é comparado pelo chamador, que passa aqui apenas o novo hash). Usuários
+// vinculados apenas ao Google (sem senha) definem a senha pela primeira vez
+// através do mesmo fluxo, sem exigir senha atual — isso é decidido no handler.
+func (r *Repository) UpdatePassword(ctx context.Context, id int64, newPasswordHash string) error {
+	res, err := r.db.ExecContext(ctx, `UPDATE users SET password_hash = ? WHERE id = ?`, newPasswordHash, id)
+	if err != nil {
+		return fmt.Errorf("atualizando senha do usuário: %w", err)
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// GetPasswordHashByID retorna o hash de senha do usuário, usado para validar
+// a senha atual antes de trocá-la. Retorna string vazia se o usuário não tem
+// senha definida (cadastro apenas via Google).
+func (r *Repository) GetPasswordHashByID(ctx context.Context, id int64) (string, error) {
+	var hash string
+	err := r.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id = ?`, id).Scan(&hash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("lendo senha do usuário: %w", err)
+	}
+	return hash, nil
+}
+
 func (r *Repository) Create(ctx context.Context, name, email, passwordHash string) (*User, error) {
 	res, err := r.db.ExecContext(ctx,
 		`INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
@@ -100,7 +145,7 @@ func (r *Repository) Create(ctx context.Context, name, email, passwordHash strin
 
 func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, created_at FROM users WHERE id = ?`, id,
+		`SELECT id, name, email, role, password_hash <> '', created_at FROM users WHERE id = ?`, id,
 	)
 	return scanUser(row)
 }
@@ -121,6 +166,7 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 		return nil, "", fmt.Errorf("lendo usuário: %w", err)
 	}
 	u.CreatedAt = parseTimestamp(createdAt)
+	u.HasPassword = passwordHash != ""
 
 	return &u, passwordHash, nil
 }
@@ -128,7 +174,7 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 // GetByGoogleID busca um usuário previamente vinculado a uma conta Google.
 func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, created_at FROM users WHERE google_id = ?`, googleID,
+		`SELECT id, name, email, role, password_hash <> '', created_at FROM users WHERE google_id = ?`, googleID,
 	)
 	return scanUser(row)
 }
@@ -137,7 +183,7 @@ func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User,
 // a um cadastro já existente por e-mail/senha.
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, created_at FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, password_hash <> '', created_at FROM users WHERE email = ?`, email,
 	)
 	return scanUser(row)
 }
@@ -174,7 +220,7 @@ func (r *Repository) LinkGoogleID(ctx context.Context, id int64, googleID string
 
 func (r *Repository) List(ctx context.Context) ([]User, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, email, role, created_at FROM users ORDER BY id DESC`,
+		`SELECT id, name, email, role, password_hash <> '', created_at FROM users ORDER BY id DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listando usuários: %w", err)
@@ -199,7 +245,7 @@ type scanner interface {
 func scanUser(s scanner) (*User, error) {
 	var u User
 	var createdAt string
-	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &createdAt); err != nil {
+	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.HasPassword, &createdAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}

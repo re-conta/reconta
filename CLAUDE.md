@@ -31,15 +31,15 @@ reconta/
 
 ## Stack
 
-| Camada     | Tecnologia                        |
-|------------|-----------------------------------|
-| Frontend   | Vue.js 3 + Vite + TypeScript      |
-| Backend    | Go (`api/`)                       |
-| Runtime JS | Bun                               |
-| Servidor   | VPS Linux (usuário `nginx`)       |
-| Proxy      | Nginx → `localhost:3020`          |
-| Processo   | systemd (`reconta.service`)       |
-| Deploy     | GitHub Actions → SCP + SSH        |
+| Camada     | Tecnologia                            |
+| ---------- | ------------------------------------- |
+| Frontend   | Vue.js 3 + Vite + TypeScript          |
+| Backend    | Go (`api/`)                           |
+| Runtime JS | Bun                                   |
+| Servidor   | VPS Linux (usuário `nginx`)           |
+| Proxy      | Nginx → `localhost:3020`              |
+| Processo   | systemd (`reconta.service`)           |
+| Deploy     | GitHub Actions → SCP + SSH            |
 | Domínio    | reconta.app (HTTPS via Let's Encrypt) |
 
 ---
@@ -55,9 +55,11 @@ Na VPS, o Bun está instalado em `/home/nginx/.bun/bin/` e **não é adicionado 
 ```
 
 O `scripts/deploy.sh` contorna isso para comandos de alto nível com:
+
 ```bash
 PATH=$PATH:/home/nginx/.bun/bin
 ```
+
 Mas isso **não propaga** para os scripts internos do `package.json` — por isso o caminho absoluto é necessário lá dentro.
 
 Em ambiente local (dev), `bunx` funciona normalmente pois Bun está no PATH do desenvolvedor.
@@ -87,6 +89,7 @@ Module: `github.com/lucasbrum/reconta/api`
 Go: 1.26+
 
 Estrutura esperada:
+
 ```
 api/
 ├── main.go     # ponto de entrada

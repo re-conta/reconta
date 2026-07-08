@@ -47,7 +47,10 @@ async function handleAnalyze() {
   resultMessage.value = "";
   analyzing.value = true;
   try {
-    const preview = await previewStatementImport(selectedFile.value, selectedBank.value || undefined);
+    const preview = await previewStatementImport(
+      selectedFile.value,
+      selectedBank.value || undefined,
+    );
     bankKey.value = preview.bank;
     bankLabel.value = preview.bankLabel;
     rows.value = preview.transactions.map((t) => ({ ...t, include: !t.duplicate }));
@@ -106,19 +109,25 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10 sm:py-14">
+  <div class="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-8">
     <div>
       <h1 class="font-display text-2xl font-bold text-ink-900">Importar extrato</h1>
       <p class="mt-0.5 text-sm text-ink-500">
-        Envie o PDF do extrato do banco para reconhecer os lançamentos automaticamente. Suporta Banco do Brasil,
-        Sicredi, Nubank, Mercado Pago, Itaú e outros formatos genéricos.
+        Envie o PDF do extrato do banco para reconhecer os lançamentos automaticamente. Suporta
+        Banco do Brasil, Sicredi, Nubank, Mercado Pago, Itaú e outros formatos genéricos.
       </p>
     </div>
 
-    <p v-if="errorMessage" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">{{ errorMessage }}</p>
-    <p v-if="resultMessage" class="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">{{ resultMessage }}</p>
+    <p v-if="errorMessage" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+      {{ errorMessage }}
+    </p>
+    <p v-if="resultMessage" class="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">
+      {{ resultMessage }}
+    </p>
 
-    <div class="flex flex-wrap items-end gap-3 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
+    <div
+      class="flex flex-wrap items-end gap-3 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm"
+    >
       <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
         Arquivo PDF
         <input
@@ -130,7 +139,10 @@ onMounted(async () => {
       </label>
       <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
         Banco
-        <select v-model="selectedBank" class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm">
+        <select
+          v-model="selectedBank"
+          class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm"
+        >
           <option v-for="b in banks" :key="b.key" :value="b.key">{{ b.label }}</option>
         </select>
       </label>
@@ -145,14 +157,20 @@ onMounted(async () => {
     </div>
 
     <template v-if="rows.length > 0">
-      <div class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm"
+      >
         <p class="text-sm text-ink-600">
-          Banco identificado: <span class="font-semibold text-ink-900">{{ bankLabel }}</span>
-          &middot; {{ rows.length }} lançamento(s) encontrado(s)
+          Banco identificado:
+          <span class="font-semibold text-ink-900">{{ bankLabel }}</span> &middot;
+          {{ rows.length }} lançamento(s) encontrado(s)
         </p>
         <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
           Conta de destino
-          <select v-model="accountId" class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm">
+          <select
+            v-model="accountId"
+            class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm"
+          >
             <option value="">Sem conta</option>
             <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
           </select>
@@ -161,8 +179,12 @@ onMounted(async () => {
 
       <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
         <div class="flex items-center gap-3 border-b border-ink-100 px-5 py-3 text-xs text-ink-500">
-          <button type="button" class="font-semibold text-brand-700" @click="toggleAll(true)">Marcar todos</button>
-          <button type="button" class="font-semibold text-ink-500" @click="toggleAll(false)">Desmarcar todos</button>
+          <button type="button" class="font-semibold text-brand-700" @click="toggleAll(true)">
+            Marcar todos
+          </button>
+          <button type="button" class="font-semibold text-ink-500" @click="toggleAll(false)">
+            Desmarcar todos
+          </button>
         </div>
         <ul class="divide-y divide-ink-100">
           <li
@@ -177,7 +199,10 @@ onMounted(async () => {
               <p class="truncate text-xs text-ink-500">
                 {{ row.date }}
                 <span v-if="row.pixBeneficiary"> &middot; PIX: {{ row.pixBeneficiary }}</span>
-                <span v-if="row.duplicate" class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                <span
+                  v-if="row.duplicate"
+                  class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                >
                   possível duplicata
                 </span>
               </p>
@@ -186,11 +211,19 @@ onMounted(async () => {
               <option value="income">Receita</option>
               <option value="expense">Despesa</option>
             </select>
-            <select v-model="row.categoryId" class="rounded-lg border border-ink-200 px-2 py-1 text-xs">
+            <select
+              v-model="row.categoryId"
+              class="rounded-lg border border-ink-200 px-2 py-1 text-xs"
+            >
               <option :value="null">Sem categoria</option>
               <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
-            <input v-model.number="row.amount" type="number" step="0.01" class="w-24 rounded-lg border border-ink-200 px-2 py-1 text-right text-xs" />
+            <input
+              v-model.number="row.amount"
+              type="number"
+              step="0.01"
+              class="w-24 rounded-lg border border-ink-200 px-2 py-1 text-right text-xs"
+            />
           </li>
         </ul>
       </div>
@@ -202,7 +235,11 @@ onMounted(async () => {
           class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
           @click="handleImport"
         >
-          {{ importing ? "Importando..." : `Importar ${rows.filter((r) => r.include).length} selecionado(s)` }}
+          {{
+            importing
+              ? "Importando..."
+              : `Importar ${rows.filter((r) => r.include).length} selecionado(s)`
+          }}
         </button>
       </div>
     </template>

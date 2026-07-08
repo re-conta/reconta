@@ -55,6 +55,7 @@ reconta/
 Na VPS (usuário `nginx`), o Bun está em `/home/nginx/.bun/bin/` e **não fica no PATH** por padrão. Scripts do `package.json` que chamam `bunx` ou `bun` sem caminho absoluto **falham silenciosamente** na VPS.
 
 Sempre use caminho absoluto em scripts do `package.json` que rodam na VPS:
+
 ```json
 "/home/nginx/.bun/bin/bunx --bun vite build"
 ```

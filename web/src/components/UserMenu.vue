@@ -126,11 +126,11 @@ async function handleLogout() {
             </svg>
             Usuários
           </RouterLink>
-          <a
-            href="#"
+          <RouterLink
+            to="/configuracoes"
             class="flex items-center gap-2 px-4 py-2 text-sm text-ink-700 transition hover:bg-ink-50"
             role="menuitem"
-            @click.prevent="close"
+            @click="close"
           >
             <svg class="h-4 w-4 text-ink-400" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -140,7 +140,7 @@ async function handleLogout() {
               />
             </svg>
             Configurações
-          </a>
+          </RouterLink>
         </nav>
 
         <div class="border-t border-ink-100 py-1">

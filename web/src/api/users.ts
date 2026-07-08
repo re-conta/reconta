@@ -1,4 +1,10 @@
-import type { CreateUserInput, User, UserRole } from "../types/user";
+import type {
+  CreateUserInput,
+  UpdatePasswordInput,
+  UpdateProfileInput,
+  User,
+  UserRole,
+} from "../types/user";
 
 export class ApiError extends Error {}
 
@@ -30,4 +36,26 @@ export function updateUserRole(id: number, role: UserRole): Promise<User> {
     credentials: "include",
     body: JSON.stringify({ role }),
   }).then((res) => parseResponse<User>(res));
+}
+
+export function updateProfile(input: UpdateProfileInput): Promise<User> {
+  return fetch("/api/users/me", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  }).then((res) => parseResponse<User>(res));
+}
+
+export async function updatePassword(input: UpdatePasswordInput): Promise<void> {
+  const response = await fetch("/api/users/me/password", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.error ?? "Erro inesperado ao comunicar com o servidor");
+  }
 }

@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  hasPassword: boolean;
   createdAt: string;
 }
 
@@ -12,4 +13,14 @@ export interface CreateUserInput {
   name: string;
   email: string;
   password: string;
+}
+
+export interface UpdateProfileInput {
+  name: string;
+  email: string;
+}
+
+export interface UpdatePasswordInput {
+  currentPassword: string;
+  newPassword: string;
 }

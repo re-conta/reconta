@@ -32,6 +32,10 @@ async function logout() {
   currentUser.value = null;
 }
 
+function setCurrentUser(user: User) {
+  currentUser.value = user;
+}
+
 export function useAuth() {
-  return { currentUser, initialized, loading, init, login, logout };
+  return { currentUser, initialized, loading, init, login, logout, setCurrentUser };
 }

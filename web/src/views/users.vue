@@ -53,7 +53,9 @@ const gradients = [
 ];
 
 function gradientFor(id: string | number) {
-  const idx = String(id).split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const idx = String(id)
+    .split("")
+    .reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
   return gradients[idx % gradients.length];
 }
 
@@ -91,10 +93,14 @@ onMounted(loadUsers);
 
     <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
       <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"></span>
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
         Carregando...
       </div>
-      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">{{ errorMessage }}</p>
+      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">
+        {{ errorMessage }}
+      </p>
       <div v-else-if="users.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
         <p class="text-sm font-medium text-ink-600">Nenhum usuário cadastrado ainda</p>
         <p class="text-sm text-ink-400">Cadastre o primeiro usuário para começar.</p>
@@ -106,7 +112,7 @@ onMounted(loadUsers);
           class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60"
         >
           <span
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-semibold text-white shadow-sm"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-sm font-semibold text-white shadow-sm"
             :class="gradientFor(user.id)"
           >
             {{ initialsFor(user.name) }}

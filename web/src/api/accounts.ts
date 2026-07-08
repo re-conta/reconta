@@ -12,7 +12,9 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export function listAccounts(): Promise<Account[]> {
-  return fetch("/api/accounts", { credentials: "include" }).then((res) => parseResponse<Account[]>(res));
+  return fetch("/api/accounts", { credentials: "include" }).then((res) =>
+    parseResponse<Account[]>(res),
+  );
 }
 
 export function createAccount(input: AccountInput): Promise<Account> {

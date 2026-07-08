@@ -12,7 +12,9 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export function listCategories(): Promise<Category[]> {
-  return fetch("/api/categories", { credentials: "include" }).then((res) => parseResponse<Category[]>(res));
+  return fetch("/api/categories", { credentials: "include" }).then((res) =>
+    parseResponse<Category[]>(res),
+  );
 }
 
 export function createCategory(input: CategoryInput): Promise<Category> {

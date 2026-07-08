@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
-import { ApiError, createAccount, deleteAccount, listAccounts, updateAccount } from "../api/accounts";
+import {
+  ApiError,
+  createAccount,
+  deleteAccount,
+  listAccounts,
+  updateAccount,
+} from "../api/accounts";
 import type { Account, AccountInput } from "../types/account";
 
 const accounts = ref<Account[]>([]);
@@ -88,7 +94,7 @@ onMounted(loadAccounts);
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10 sm:py-14">
+  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Contas</h1>
@@ -157,11 +163,18 @@ onMounted(loadAccounts);
 
     <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
       <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"></span>
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
         Carregando...
       </div>
-      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">{{ errorMessage }}</p>
-      <div v-else-if="accounts.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
+      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">
+        {{ errorMessage }}
+      </p>
+      <div
+        v-else-if="accounts.length === 0"
+        class="flex flex-col items-center gap-1 p-12 text-center"
+      >
         <p class="text-sm font-medium text-ink-600">Nenhuma conta cadastrada ainda</p>
         <p class="text-sm text-ink-400">Crie a primeira conta para começar.</p>
       </div>
@@ -174,12 +187,17 @@ onMounted(loadAccounts);
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-ink-900">{{ account.name }}</p>
             <p class="truncate text-xs text-ink-500">
-              {{ accountTypes.find((t) => t.value === account.type)?.label ?? account.type }} &middot;
+              {{ accountTypes.find((t) => t.value === account.type)?.label ?? account.type }}
+              &middot;
               {{ formatCurrency(account.balance) }}
             </p>
           </div>
           <div class="flex shrink-0 gap-2">
-            <button type="button" class="text-xs font-semibold text-brand-700 hover:text-brand-800" @click="startEdit(account)">
+            <button
+              type="button"
+              class="text-xs font-semibold text-brand-700 hover:text-brand-800"
+              @click="startEdit(account)"
+            >
               Editar
             </button>
             <button

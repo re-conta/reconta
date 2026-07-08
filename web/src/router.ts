@@ -6,6 +6,7 @@ import HomeView from "./views/home.vue";
 import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
 import RegisterView from "./views/register.vue";
+import SettingsView from "./views/settings.vue";
 import TagsView from "./views/tags.vue";
 import TransactionsView from "./views/transactions.vue";
 import UsersView from "./views/users.vue";
@@ -16,7 +17,12 @@ const routes = [
   { path: "/", name: "Home", component: HomeView },
   { path: "/login", name: "Login", component: LoginView },
   { path: "/register", name: "Register", component: RegisterView },
-  { path: "/users", name: "Users", component: UsersView, meta: { requiresAuth: true, requiresAdmin: true } },
+  {
+    path: "/users",
+    name: "Users",
+    component: UsersView,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
   {
     path: "/contas-bancarias",
     name: "Accounts",
@@ -30,6 +36,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   { path: "/tags", name: "Tags", component: TagsView, meta: { requiresAuth: true } },
+  {
+    path: "/configuracoes",
+    name: "Settings",
+    component: SettingsView,
+    meta: { requiresAuth: true },
+  },
   {
     path: "/transacoes",
     name: "Transactions",
@@ -60,7 +72,11 @@ router.beforeEach(async (to) => {
     return { name: "Login", query: { redirect: to.fullPath } };
   }
 
-  if (to.meta.requiresAdmin && currentUser.value.role !== "admin" && currentUser.value.role !== "super_admin") {
+  if (
+    to.meta.requiresAdmin &&
+    currentUser.value.role !== "admin" &&
+    currentUser.value.role !== "super_admin"
+  ) {
     return { name: "Home" };
   }
 

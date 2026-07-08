@@ -41,6 +41,50 @@ bun run api:dev
 O frontend roda em `http://localhost:5173` por padrão.  
 A API Go roda em `http://localhost:3020` por padrão.
 
+### Rodando em `https://reconta.local` (domínio local)
+
+Para desenvolver com um domínio e HTTPS parecidos com produção, use o Makefile na raiz do projeto.
+
+Pré-requisito único: `openssl` (já vem instalado na maioria das distros/macOS).
+
+```sh
+make dev
+```
+
+Esse comando:
+
+1. **Gera um certificado TLS autoassinado** para `reconta.local` em `certs/` (via `make certs`), caso ainda não exista. O certificado é local e ignorado pelo Git.
+2. **Verifica** se `reconta.local` resolve para `127.0.0.1` em `/etc/hosts` (via `make hosts-check`) e, se não resolver, imprime o comando para adicionar:
+   ```sh
+   sudo sh -c 'echo "127.0.0.1 reconta.local" >> /etc/hosts'
+   ```
+3. Sobe a API Go e o Vite (via `bun run dev`). O Vite detecta o certificado em `certs/` automaticamente e passa a servir em HTTPS.
+
+Depois disso, acesse **https://reconta.local:5173**. Como o certificado é autoassinado, o navegador vai exibir um aviso de segurança na primeira visita — é esperado, basta prosseguir/confiar manualmente (não há CA local instalada).
+
+Alvos individuais do Makefile, se quiser rodar as etapas separadamente:
+
+```sh
+make certs        # gera o certificado, se não existir
+make hosts-check  # confere a entrada em /etc/hosts
+```
+
+### Simulando produção com Podman (`make up`)
+
+Além do dev server do Vite, o Makefile também sobe API + Nginx/Web em containers Podman, num único pod, reaproveitando o mesmo certificado de `certs/`. Serve **apenas na porta 443** (sem HTTP nem porta alternativa):
+
+```sh
+make up      # builda as imagens e sobe o pod em https://reconta.local
+make logs    # segue os logs de API e Web
+make down    # para e remove o pod (mantém o volume com o banco)
+```
+
+Como a porta 443 é privilegiada, em algumas distros o Podman rootless pode recusar o bind. Se acontecer, ajuste:
+
+```sh
+sudo sysctl net.ipv4.ip_unprivileged_port_start=443
+```
+
 ## Build
 
 ```sh
@@ -56,6 +100,7 @@ bun run api:build   # gera api/bin/server
 O deploy é automático: push para `main` dispara o GitHub Actions que envia os arquivos para a VPS via SCP e executa `scripts/deploy.sh` remotamente.
 
 O script de deploy:
+
 1. Preserva `.env` e o banco SQLite
 2. Instala dependências e gera o build de produção
 3. Para o serviço, substitui os arquivos e reinicia
@@ -129,68 +174,68 @@ Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **
 
 ### Health check
 
-| Método | Rota | Auth |
-|--------|------|------|
-| GET | `/api/health` | Não |
+| Método | Rota          | Auth |
+| ------ | ------------- | ---- |
+| GET    | `/api/health` | Não  |
 
 ### Usuários
 
-| Método | Rota | Auth |
-|--------|------|------|
-| POST | `/api/users` | Não |
-| GET | `/api/users` | Não |
+| Método | Rota         | Auth |
+| ------ | ------------ | ---- |
+| POST   | `/api/users` | Não  |
+| GET    | `/api/users` | Não  |
 
 ### Autenticação
 
-| Método | Rota | Auth |
-|--------|------|------|
-| POST | `/api/auth/login` | Não |
-| POST | `/api/auth/logout` | Não |
-| GET | `/api/auth/me` | Não |
-| GET | `/api/auth/google/login` | Não |
-| GET | `/api/auth/google/callback` | Não |
+| Método | Rota                        | Auth |
+| ------ | --------------------------- | ---- |
+| POST   | `/api/auth/login`           | Não  |
+| POST   | `/api/auth/logout`          | Não  |
+| GET    | `/api/auth/me`              | Não  |
+| GET    | `/api/auth/google/login`    | Não  |
+| GET    | `/api/auth/google/callback` | Não  |
 
 ### Contas (`accounts`)
 
-| Método | Rota | Auth |
-|--------|------|------|
-| GET | `/api/accounts` | Sim |
-| POST | `/api/accounts` | Sim |
-| PUT | `/api/accounts/{id}` | Sim |
-| DELETE | `/api/accounts/{id}` | Sim |
+| Método | Rota                 | Auth |
+| ------ | -------------------- | ---- |
+| GET    | `/api/accounts`      | Sim  |
+| POST   | `/api/accounts`      | Sim  |
+| PUT    | `/api/accounts/{id}` | Sim  |
+| DELETE | `/api/accounts/{id}` | Sim  |
 
 ### Categorias (`categories`)
 
-| Método | Rota | Auth |
-|--------|------|------|
-| GET | `/api/categories` | Sim |
-| POST | `/api/categories` | Sim |
-| PUT | `/api/categories/{id}` | Sim |
-| DELETE | `/api/categories/{id}` | Sim |
+| Método | Rota                   | Auth |
+| ------ | ---------------------- | ---- |
+| GET    | `/api/categories`      | Sim  |
+| POST   | `/api/categories`      | Sim  |
+| PUT    | `/api/categories/{id}` | Sim  |
+| DELETE | `/api/categories/{id}` | Sim  |
 
 ### Tags
 
-| Método | Rota | Auth |
-|--------|------|------|
-| GET | `/api/tags` | Sim |
-| POST | `/api/tags` | Sim |
-| PUT | `/api/tags/{id}` | Sim |
-| DELETE | `/api/tags/{id}` | Sim |
+| Método | Rota             | Auth |
+| ------ | ---------------- | ---- |
+| GET    | `/api/tags`      | Sim  |
+| POST   | `/api/tags`      | Sim  |
+| PUT    | `/api/tags/{id}` | Sim  |
+| DELETE | `/api/tags/{id}` | Sim  |
 
 ### Transações (`transactions`)
 
-| Método | Rota | Auth |
-|--------|------|------|
-| GET | `/api/transactions` | Sim |
-| POST | `/api/transactions` | Sim |
-| PATCH | `/api/transactions` | Sim |
-| DELETE | `/api/transactions` | Sim |
-| POST | `/api/transactions/auto-categorize` | Sim |
-| GET | `/api/transactions/opening-balance` | Sim |
-| POST | `/api/transactions/opening-balance` | Sim |
-| GET | `/api/transactions/{id}` | Sim |
-| PUT | `/api/transactions/{id}` | Sim |
-| DELETE | `/api/transactions/{id}` | Sim |
+| Método | Rota                                | Auth |
+| ------ | ----------------------------------- | ---- |
+| GET    | `/api/transactions`                 | Sim  |
+| POST   | `/api/transactions`                 | Sim  |
+| PATCH  | `/api/transactions`                 | Sim  |
+| DELETE | `/api/transactions`                 | Sim  |
+| POST   | `/api/transactions/auto-categorize` | Sim  |
+| GET    | `/api/transactions/opening-balance` | Sim  |
+| POST   | `/api/transactions/opening-balance` | Sim  |
+| GET    | `/api/transactions/{id}`            | Sim  |
+| PUT    | `/api/transactions/{id}`            | Sim  |
+| DELETE | `/api/transactions/{id}`            | Sim  |
 
 ## Testes
 

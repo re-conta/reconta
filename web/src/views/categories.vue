@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
-import { ApiError, createCategory, deleteCategory, listCategories, updateCategory } from "../api/categories";
+import {
+  ApiError,
+  createCategory,
+  deleteCategory,
+  listCategories,
+  updateCategory,
+} from "../api/categories";
 import type { Category, CategoryInput } from "../types/category";
 
 const categories = ref<Category[]>([]);
@@ -11,7 +17,13 @@ const submitting = ref(false);
 const editingId = ref<number | null>(null);
 const showForm = ref(false);
 const showPatternsHelp = ref(false);
-const form = reactive<CategoryInput>({ name: "", color: "#6366f1", icon: "circle", type: "both", patterns: "" });
+const form = reactive<CategoryInput>({
+  name: "",
+  color: "#6366f1",
+  icon: "circle",
+  type: "both",
+  patterns: "",
+});
 
 const categoryTypes = [
   { value: "expense", label: "Despesa" },
@@ -88,7 +100,7 @@ onMounted(loadCategories);
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10 sm:py-14">
+  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Categorias</h1>
@@ -124,12 +136,18 @@ onMounted(loadCategories);
             v-model="form.type"
             class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
           >
-            <option v-for="t in categoryTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
+            <option v-for="t in categoryTypes" :key="t.value" :value="t.value">
+              {{ t.label }}
+            </option>
           </select>
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Cor</span>
-          <input v-model="form.color" type="color" class="h-[42px] w-16 cursor-pointer rounded-xl border border-ink-200" />
+          <input
+            v-model="form.color"
+            type="color"
+            class="h-10.5 w-16 cursor-pointer rounded-xl border border-ink-200"
+          />
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Ícone (nome lucide)</span>
@@ -144,7 +162,11 @@ onMounted(loadCategories);
       <label class="flex flex-col gap-1.5">
         <span class="flex items-center justify-between text-sm font-medium text-ink-700">
           Padrões de auto-categorização (opcional)
-          <button type="button" class="text-xs font-semibold text-brand-700 hover:text-brand-800" @click="showPatternsHelp = !showPatternsHelp">
+          <button
+            type="button"
+            class="text-xs font-semibold text-brand-700 hover:text-brand-800"
+            @click="showPatternsHelp = !showPatternsHelp"
+          >
             {{ showPatternsHelp ? "ocultar ajuda" : "como funciona?" }}
           </button>
         </span>
@@ -155,9 +177,10 @@ onMounted(loadCategories);
           class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 font-mono text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
         ></textarea>
         <p v-if="showPatternsHelp" class="rounded-xl bg-ink-50 px-3 py-2 text-xs text-ink-500">
-          Uma expressão regular por linha (sem diferenciar maiúsculas/minúsculas). Ao rodar "Auto-categorizar" na tela de
-          Transações, cada lançamento sem categoria é comparado à descrição + beneficiário PIX. Ex.: <code>ifood</code>
-          casa "iFood *Restaurante"; <code>^uber</code> casa apenas descrições que começam com "uber".
+          Uma expressão regular por linha (sem diferenciar maiúsculas/minúsculas). Ao rodar
+          "Auto-categorizar" na tela de Transações, cada lançamento sem categoria é comparado à
+          descrição + beneficiário PIX. Ex.: <code>ifood</code> casa "iFood *Restaurante";
+          <code>^uber</code> casa apenas descrições que começam com "uber".
         </p>
       </label>
       <div class="flex gap-3">
@@ -180,11 +203,18 @@ onMounted(loadCategories);
 
     <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
       <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"></span>
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
         Carregando...
       </div>
-      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">{{ errorMessage }}</p>
-      <div v-else-if="categories.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
+      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">
+        {{ errorMessage }}
+      </p>
+      <div
+        v-else-if="categories.length === 0"
+        class="flex flex-col items-center gap-1 p-12 text-center"
+      >
         <p class="text-sm font-medium text-ink-600">Nenhuma categoria cadastrada ainda</p>
         <p class="text-sm text-ink-400">Crie a primeira categoria para começar.</p>
       </div>
@@ -195,7 +225,10 @@ onMounted(loadCategories);
           class="flex items-center justify-between gap-3 px-5 py-4 transition hover:bg-ink-50/60"
         >
           <div class="flex min-w-0 items-center gap-2.5">
-            <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: category.color }"></span>
+            <span
+              class="h-3 w-3 shrink-0 rounded-full"
+              :style="{ backgroundColor: category.color }"
+            ></span>
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-ink-900">{{ category.name }}</p>
               <p class="truncate text-xs text-ink-500">
@@ -205,7 +238,11 @@ onMounted(loadCategories);
             </div>
           </div>
           <div class="flex shrink-0 gap-2">
-            <button type="button" class="text-xs font-semibold text-brand-700 hover:text-brand-800" @click="startEdit(category)">
+            <button
+              type="button"
+              class="text-xs font-semibold text-brand-700 hover:text-brand-800"
+              @click="startEdit(category)"
+            >
               Editar
             </button>
             <button

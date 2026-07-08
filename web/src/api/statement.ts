@@ -12,7 +12,9 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export function listBanks(): Promise<Bank[]> {
-  return fetch("/api/transactions/import/banks", { credentials: "include" }).then((res) => parseResponse<Bank[]>(res));
+  return fetch("/api/transactions/import/banks", { credentials: "include" }).then((res) =>
+    parseResponse<Bank[]>(res),
+  );
 }
 
 export function previewStatementImport(file: File, bank?: string): Promise<ImportPreview> {

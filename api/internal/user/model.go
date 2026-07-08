@@ -10,11 +10,12 @@ const (
 
 // User representa um usuário cadastrado.
 type User struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Email       string    `json:"email"`
+	Role        string    `json:"role"`
+	HasPassword bool      `json:"hasPassword"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // IsAdmin indica se o usuário tem acesso de administração (admin ou super_admin).

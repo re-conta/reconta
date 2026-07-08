@@ -75,7 +75,7 @@ onMounted(loadTags);
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10 sm:py-14">
+  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Tags</h1>
@@ -107,7 +107,11 @@ onMounted(loadTags);
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Cor</span>
-          <input v-model="form.color" type="color" class="h-[42px] w-16 cursor-pointer rounded-xl border border-ink-200" />
+          <input
+            v-model="form.color"
+            type="color"
+            class="h-10.5 w-16 cursor-pointer rounded-xl border border-ink-200"
+          />
         </label>
       </div>
       <div class="flex gap-3">
@@ -130,22 +134,37 @@ onMounted(loadTags);
 
     <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
       <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"></span>
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
         Carregando...
       </div>
-      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">{{ errorMessage }}</p>
+      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">
+        {{ errorMessage }}
+      </p>
       <div v-else-if="tags.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
         <p class="text-sm font-medium text-ink-600">Nenhuma tag cadastrada ainda</p>
         <p class="text-sm text-ink-400">Crie a primeira tag para começar.</p>
       </div>
       <ul v-else class="divide-y divide-ink-100">
-        <li v-for="tag in tags" :key="tag.id" class="flex items-center justify-between gap-3 px-5 py-4 transition hover:bg-ink-50/60">
+        <li
+          v-for="tag in tags"
+          :key="tag.id"
+          class="flex items-center justify-between gap-3 px-5 py-4 transition hover:bg-ink-50/60"
+        >
           <div class="flex items-center gap-2.5">
-            <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: tag.color }"></span>
+            <span
+              class="h-3 w-3 shrink-0 rounded-full"
+              :style="{ backgroundColor: tag.color }"
+            ></span>
             <p class="truncate text-sm font-semibold text-ink-900">{{ tag.name }}</p>
           </div>
           <div class="flex shrink-0 gap-2">
-            <button type="button" class="text-xs font-semibold text-brand-700 hover:text-brand-800" @click="startEdit(tag)">
+            <button
+              type="button"
+              class="text-xs font-semibold text-brand-700 hover:text-brand-800"
+              @click="startEdit(tag)"
+            >
               Editar
             </button>
             <button

@@ -83,7 +83,9 @@ async function handleSubmit() {
 
         <p class="mt-6 text-center text-sm text-ink-500">
           Já tem conta?
-          <RouterLink to="/login" class="font-semibold text-brand-700 hover:text-brand-800"> Entrar </RouterLink>
+          <RouterLink to="/login" class="font-semibold text-brand-700 hover:text-brand-800">
+            Entrar
+          </RouterLink>
         </p>
       </div>
     </div>

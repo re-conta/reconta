@@ -36,7 +36,11 @@ const slices = computed<Slice[]>(() => {
   for (const tx of props.transactions) {
     if (tx.type !== "expense") continue;
     const key = tx.categoryName ?? "Sem categoria";
-    const entry = byCategory.get(key) ?? { name: key, color: tx.categoryColor ?? "#94a3b8", total: 0 };
+    const entry = byCategory.get(key) ?? {
+      name: key,
+      color: tx.categoryColor ?? "#94a3b8",
+      total: 0,
+    };
     entry.total += tx.amount;
     byCategory.set(key, entry);
   }

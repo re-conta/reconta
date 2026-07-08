@@ -1,10 +1,10 @@
 {
   "name": "reconta",
-  "type": "module",
   "private": true,
   "workspaces": [
     "web"
   ],
+  "type": "module",
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"bun run api:dev\" \"bun run web:dev\"",
     "web:dev": "bun run --cwd web dev",
@@ -12,11 +12,17 @@
     "preview": "bun run --cwd web preview",
     "api:dev": "cd api && go run .",
     "api:build": "cd api && go build -o bin/server .",
-    "api:test": "cd api && go test ./..."
+    "api:test": "cd api && go test ./...",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0"
   },
   "peerDependencies": {
     "typescript": "^5"
