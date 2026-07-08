@@ -363,7 +363,7 @@ onMounted(async () => {
 
     <div class="flex flex-col gap-6 md:flex-row md:items-start">
     <!-- Calendário -->
-    <div class="order-first md:sticky md:top-6 md:order-2 md:w-64 md:shrink-0 xl:w-72">
+    <div class="order-first md:sticky md:top-20 md:order-2 md:w-64 md:shrink-0 xl:w-72">
       <TransactionCalendar
         :month="filters.month"
         :year="filters.year"
