@@ -23,12 +23,12 @@ type Handler struct {
 	hub           *Hub
 	bills         *fixedbill.Repository
 	users         *user.Repository
-	mailer        *email.Mailer
+	mailQueue     *email.Queue
 	internalToken string
 }
 
-func NewHandler(repo *Repository, authHandler *auth.Handler, hub *Hub, bills *fixedbill.Repository, users *user.Repository, mailer *email.Mailer, internalToken string) *Handler {
-	return &Handler{repo: repo, auth: authHandler, hub: hub, bills: bills, users: users, mailer: mailer, internalToken: internalToken}
+func NewHandler(repo *Repository, authHandler *auth.Handler, hub *Hub, bills *fixedbill.Repository, users *user.Repository, mailQueue *email.Queue, internalToken string) *Handler {
+	return &Handler{repo: repo, auth: authHandler, hub: hub, bills: bills, users: users, mailQueue: mailQueue, internalToken: internalToken}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -275,9 +275,7 @@ func (h *Handler) sendEmail(ctx context.Context, userID int64, subject, body str
 		log.Printf("erro ao buscar usuário %d para envio de e-mail: %v", userID, err)
 		return
 	}
-	if err := h.mailer.Send(u.Email, subject, body); err != nil {
-		log.Printf("erro ao enviar e-mail de notificação para %s: %v", u.Email, err)
-	}
+	h.mailQueue.Enqueue(u.Email, subject, body)
 }
 
 func formatDuration(minutes int) string {

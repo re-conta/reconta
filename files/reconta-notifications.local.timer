@@ -1,0 +1,10 @@
+[Unit]
+Description=Dispara a varredura de notificações de contas fixas a cada minuto (teste local/podman)
+
+[Timer]
+OnActiveSec=10
+OnUnitActiveSec=1min
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

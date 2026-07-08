@@ -74,8 +74,12 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 sm:items-center sm:p-4">
-    <div class="flex max-h-full w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl">
+  <div
+    class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 sm:items-center sm:p-4"
+  >
+    <div
+      class="flex max-h-full w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl"
+    >
       <div class="mb-4 flex items-center justify-between">
         <h2 class="font-display text-lg font-bold text-ink-900">
           {{ bill ? "Editar conta fixa" : "Nova conta fixa" }}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { AlertTriangle, CalendarClock, CheckCheck } from "lucide-vue-next";
+import { AlertTriangle, CalendarClock, CheckCheck, Settings } from "lucide-vue-next";
 import {
   ApiError,
   listNotifications,
@@ -62,7 +62,12 @@ async function handleMarkAllRead() {
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function dayLabel(value: string) {
@@ -72,7 +77,9 @@ function dayLabel(value: string) {
   yesterday.setDate(today.getDate() - 1);
 
   const sameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 
   if (sameDay(date, today)) return "Hoje";
   if (sameDay(date, yesterday)) return "Ontem";
@@ -99,22 +106,37 @@ onMounted(loadNotifications);
         <h1 class="font-display text-2xl font-bold text-ink-900">Notificações</h1>
         <p class="mt-0.5 text-sm text-ink-500">Lembretes de contas fixas vencendo ou vencidas</p>
       </div>
-      <button
-        v-if="unreadCount > 0"
-        type="button"
-        class="flex shrink-0 items-center gap-1.5 rounded-full border border-ink-200 px-3.5 py-2 text-xs font-semibold text-ink-700 transition hover:bg-ink-100"
-        @click="handleMarkAllRead"
-      >
-        <CheckCheck class="h-4 w-4" />
-        Marcar tudo como lido
-      </button>
+      <div class="flex shrink-0 items-center gap-2">
+        <button
+          v-if="unreadCount > 0"
+          type="button"
+          class="flex items-center gap-1.5 rounded-full border border-ink-200 px-3.5 py-2 text-xs font-semibold text-ink-700 transition hover:bg-ink-100"
+          @click="handleMarkAllRead"
+        >
+          <CheckCheck class="h-4 w-4" />
+          Marcar tudo como lido
+        </button>
+        <RouterLink
+          to="/configuracoes#notificacoes"
+          class="flex items-center gap-1.5 rounded-full border border-ink-200 px-3.5 py-2 text-xs font-semibold text-ink-700 transition hover:bg-ink-100"
+          aria-label="Configurar notificações"
+        >
+          <Settings class="h-4 w-4" />
+          Configurar
+        </RouterLink>
+      </div>
     </div>
 
     <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
-      <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"></span>
+      <span
+        class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+      ></span>
       Carregando...
     </div>
-    <p v-else-if="errorMessage" class="rounded-3xl border border-ink-200/70 bg-white p-8 text-center text-sm text-coral-600">
+    <p
+      v-else-if="errorMessage"
+      class="rounded-3xl border border-ink-200/70 bg-white p-8 text-center text-sm text-coral-600"
+    >
       {{ errorMessage }}
     </p>
     <div
@@ -137,8 +159,12 @@ onMounted(loadNotifications);
             @click="handleMarkRead(notification)"
           >
             <span
-              class="absolute -left-[1.95rem] top-4 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white"
-              :class="notification.kind === 'bill_overdue' ? 'bg-coral-100 text-coral-600' : 'bg-brand-100 text-brand-600'"
+              class="absolute left-[-1.95rem] top-4 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white"
+              :class="
+                notification.kind === 'bill_overdue'
+                  ? 'bg-coral-100 text-coral-600'
+                  : 'bg-brand-100 text-brand-600'
+              "
             >
               <AlertTriangle v-if="notification.kind === 'bill_overdue'" class="h-3.5 w-3.5" />
               <CalendarClock v-else class="h-3.5 w-3.5" />
@@ -148,9 +174,14 @@ onMounted(loadNotifications);
               <div class="min-w-0">
                 <p class="text-sm font-semibold text-ink-900">{{ notification.title }}</p>
                 <p class="mt-0.5 text-sm text-ink-600">{{ notification.message }}</p>
-                <p class="mt-1.5 text-xs text-ink-400">{{ formatDateTime(notification.createdAt) }}</p>
+                <p class="mt-1.5 text-xs text-ink-400">
+                  {{ formatDateTime(notification.createdAt) }}
+                </p>
               </div>
-              <span v-if="!notification.readAt" class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"></span>
+              <span
+                v-if="!notification.readAt"
+                class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"
+              ></span>
             </div>
           </li>
         </ol>

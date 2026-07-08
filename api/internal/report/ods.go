@@ -138,14 +138,14 @@ func buildODSContent(scope Scope, txs []transaction.Transaction, totals transact
 	for _, img := range images {
 		writeODSRow(&b)
 		writeODSRow(&b, cellStr(img.title))
-		b.WriteString(`    <table:table-row>
+		fmt.Fprintf(&b, `    <table:table-row>
      <table:table-cell>
-      <draw:frame draw:name="` + html.EscapeString(img.title) + `" svg:width="12cm" svg:height="7cm">
-       <draw:image xlink:href="` + img.path + `" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/>
+      <draw:frame draw:name="%s" svg:width="12cm" svg:height="7cm">
+       <draw:image xlink:href="%s" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/>
       </draw:frame>
      </table:table-cell>
     </table:table-row>
-`)
+`, html.EscapeString(img.title), img.path)
 	}
 
 	b.WriteString(`   </table:table>
@@ -171,9 +171,9 @@ func writeODSRow(b *bytes.Buffer, cells ...odsCell) {
 	b.WriteString("    <table:table-row>\n")
 	for _, c := range cells {
 		if c.valueType == "float" {
-			b.WriteString(fmt.Sprintf(`     <table:table-cell office:value-type="float" office:value="%s"><text:p>%s</text:p></table:table-cell>`+"\n", c.text, html.EscapeString(c.text)))
+			fmt.Fprintf(b, "     <table:table-cell office:value-type=\"float\" office:value=\"%s\"><text:p>%s</text:p></table:table-cell>\n", c.text, html.EscapeString(c.text))
 		} else {
-			b.WriteString(`     <table:table-cell office:value-type="string"><text:p>` + html.EscapeString(c.text) + `</text:p></table:table-cell>` + "\n")
+			fmt.Fprintf(b, "     <table:table-cell office:value-type=\"string\"><text:p>%s</text:p></table:table-cell>\n", html.EscapeString(c.text))
 		}
 	}
 	b.WriteString("    </table:table-row>\n")

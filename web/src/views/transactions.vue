@@ -744,7 +744,9 @@ onUnmounted(() => {
                         </select>
                       </label>
                       <label class="flex flex-col gap-1.5">
-                        <span class="flex items-center justify-between text-sm font-medium text-ink-700">
+                        <span
+                          class="flex items-center justify-between text-sm font-medium text-ink-700"
+                        >
                           Categoria
                           <button
                             type="button"
@@ -798,7 +800,12 @@ onUnmounted(() => {
                               : 'border-ink-200 text-ink-600 hover:bg-ink-50'
                           "
                         >
-                          <input type="checkbox" class="hidden" :value="t.id" v-model="form.tagIds" />
+                          <input
+                            type="checkbox"
+                            class="hidden"
+                            :value="t.id"
+                            v-model="form.tagIds"
+                          />
                           {{ t.name }}
                         </label>
 
@@ -843,9 +850,7 @@ onUnmounted(() => {
                     </div>
                   </div>
 
-                  <div
-                    class="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4"
-                  >
+                  <div class="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
                     <button
                       type="button"
                       class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
@@ -1092,9 +1097,7 @@ onUnmounted(() => {
                           v-if="tx.importedFrom"
                           class="rounded-full bg-ink-100 px-1.5 py-0.5 text-xs text-ink-500"
                           :title="
-                            tx.pixBeneficiary
-                              ? `Beneficiário PIX: ${tx.pixBeneficiary}`
-                              : undefined
+                            tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined
                           "
                         >
                           importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
@@ -1149,7 +1152,9 @@ onUnmounted(() => {
                 />
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-sm font-semibold text-ink-900">{{ tx.description }}</p>
-                  <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+                  <div
+                    class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500"
+                  >
                     <span>{{ tx.date }}</span>
                     <span v-if="accountName(tx.accountId)"
                       >&middot; {{ accountName(tx.accountId) }}</span

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { watch } from "vue";
+import NotificationBell from "../components/NotificationBell.vue";
 import UserMenu from "../components/UserMenu.vue";
+import Navbar from "../components/Navbar.vue";
 import { useAuth } from "../composables/useAuth";
 import { useNotifications } from "../composables/useNotifications";
 
@@ -34,7 +36,8 @@ watch(
             appName
           }}</span>
         </RouterLink>
-        <div class="flex items-center gap-4 sm:hidden">
+        <div class="flex items-center gap-3 sm:hidden">
+          <NotificationBell v-if="currentUser" />
           <UserMenu v-if="currentUser" />
           <RouterLink
             v-else
@@ -46,69 +49,9 @@ watch(
         </div>
       </div>
       <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-8">
-        <nav
-          class="no-scrollbar flex w-full flex-row flex-nowrap items-center gap-5 overflow-x-auto text-sm font-medium text-ink-500 sm:w-auto sm:gap-6 sm:overflow-visible"
-        >
-          <RouterLink
-            to="/"
-            class="shrink-0 whitespace-nowrap transition hover:text-ink-900"
-            active-class="text-ink-900"
-          >
-            Início
-          </RouterLink>
-          <template v-if="currentUser">
-            <RouterLink
-              to="/transacoes"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Transações
-            </RouterLink>
-            <RouterLink
-              to="/importar-extrato"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Importar extrato
-            </RouterLink>
-            <RouterLink
-              to="/contas-bancarias"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Contas
-            </RouterLink>
-            <RouterLink
-              to="/categorias"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Categorias
-            </RouterLink>
-            <RouterLink
-              to="/contas-fixas"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Contas Fixas
-            </RouterLink>
-            <RouterLink
-              to="/tags"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Tags
-            </RouterLink>
-            <RouterLink
-              to="/relatorios"
-              class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"
-              active-class="text-ink-900"
-            >
-              Relatórios
-            </RouterLink>
-          </template>
-        </nav>
-        <div class="hidden sm:block">
+        <Navbar />
+        <div class="hidden items-center gap-3 sm:flex">
+          <NotificationBell v-if="currentUser" />
           <UserMenu v-if="currentUser" />
           <RouterLink
             v-else

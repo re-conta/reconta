@@ -52,7 +52,7 @@ watchEffect(async () => {
         </RouterLink>
         <RouterLink
           v-else-if="!hasTransactions"
-          to="/importar-extrato"
+          to="/importar"
           class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
         >
           Comece
@@ -67,7 +67,9 @@ watchEffect(async () => {
       </div>
     </div>
 
-    <div class="relative order-first w-4/5 max-w-xs shrink-0 sm:max-w-sm lg:order-last lg:w-full lg:max-w-md">
+    <div
+      class="relative order-first w-4/5 max-w-xs shrink-0 sm:max-w-sm lg:order-last lg:w-full lg:max-w-md"
+    >
       <div
         class="absolute -inset-6 -z-10 rounded-full bg-linear-to-br from-brand-200 via-coral-100 to-transparent blur-2xl"
       ></div>

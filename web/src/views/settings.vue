@@ -298,6 +298,7 @@ async function handlePasswordSubmit() {
     </form>
 
     <form
+      id="notificacoes"
       class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
       @submit.prevent="handleNotificationSubmit"
     >
@@ -350,7 +351,10 @@ async function handlePasswordSubmit() {
       <p v-if="notificationsError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
         {{ notificationsError }}
       </p>
-      <p v-if="notificationsSuccess" class="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      <p
+        v-if="notificationsSuccess"
+        class="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+      >
         {{ notificationsSuccess }}
       </p>
 

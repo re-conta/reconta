@@ -60,9 +60,15 @@ func (m *Mailer) Send(to, subject, body string) error {
 
 func buildMessage(from, to, subject, body string) string {
 	var b strings.Builder
-	b.WriteString("From: " + from + "\r\n")
-	b.WriteString("To: " + to + "\r\n")
-	b.WriteString("Subject: " + subject + "\r\n")
+	b.WriteString("From: ")
+	b.WriteString(from)
+	b.WriteString("\r\n")
+	b.WriteString("To: ")
+	b.WriteString(to)
+	b.WriteString("\r\n")
+	b.WriteString("Subject: ")
+	b.WriteString(subject)
+	b.WriteString("\r\n")
 	b.WriteString("MIME-Version: 1.0\r\n")
 	b.WriteString("Content-Type: text/plain; charset=\"utf-8\"\r\n")
 	b.WriteString("\r\n")

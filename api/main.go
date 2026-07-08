@@ -90,12 +90,12 @@ func main() {
 
 	notificationHub := notification.NewHub()
 	notificationRepo := notification.NewRepository(conn)
-	mailer := email.NewFromEnv()
+	mailQueue := email.NewQueue(email.NewFromEnv())
 	internalToken := getEnv("INTERNAL_API_TOKEN", "")
 	if internalToken == "" {
 		log.Print("INTERNAL_API_TOKEN não definido: rota de varredura de notificações desabilitada")
 	}
-	notification.NewHandler(notificationRepo, authHandler, notificationHub, fixedBillRepo, userRepo, mailer, internalToken).RegisterRoutes(mux)
+	notification.NewHandler(notificationRepo, authHandler, notificationHub, fixedBillRepo, userRepo, mailQueue, internalToken).RegisterRoutes(mux)
 
 	addr := ":" + port
 	log.Printf("servidor rodando em %s (db: %s)", addr, dbPath)
@@ -155,5 +155,8 @@ func loadDotEnv(path string) {
 			continue
 		}
 		os.Setenv(key, strings.TrimSpace(value))
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("erro ao ler %s: %v", path, err)
 	}
 }

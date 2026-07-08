@@ -27,7 +27,7 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
-    path: "/contas-bancarias",
+    path: "/contas",
     name: "Accounts",
     component: AccountsView,
     meta: { requiresAuth: true },
@@ -52,7 +52,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/importar-extrato",
+    path: "/importar",
     name: "Import",
     component: ImportView,
     meta: { requiresAuth: true },
@@ -64,7 +64,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/contas-fixas",
+    path: "/recorrentes",
     name: "FixedBills",
     component: FixedBillsView,
     meta: { requiresAuth: true },

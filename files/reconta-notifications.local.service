@@ -1,0 +1,7 @@
+[Unit]
+Description=ReConta (local/podman) - Varredura de notificações de contas fixas
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/code/reconta/api/.env
+ExecStart=/bin/sh -c '/usr/bin/curl -fsSk -X POST -H "X-Internal-Token: $INTERNAL_API_TOKEN" https://reconta.local/api/internal/notifications/scan'

@@ -1,4 +1,4 @@
-.PHONY: build up down restart logs status clean certs dev hosts-check
+.PHONY: build up down restart logs status clean certs dev hosts-check notify notify-install notify-uninstall
 
 POD          := reconta
 WEB_PORT     := 443
@@ -80,3 +80,21 @@ hosts-check: ## Verifica se reconta.local resolve para 127.0.0.1 em /etc/hosts
 dev: certs hosts-check ## Gera certificado local (se preciso) e sobe API + Vite em modo desenvolvimento
 	@echo "✅ Disponível em https://$(DOMAIN):5173 (aceite o certificado autoassinado no navegador)"
 	VITE_HTTPS=$(VITE_HTTPS) bun run dev
+
+notify: ## Dispara manualmente a varredura de notificações no pod local (equivalente ao reconta-notifications.service)
+	@set -a; . ./api/.env; set +a; \
+	curl -fsSk -X POST -H "X-Internal-Token: $$INTERNAL_API_TOKEN" https://$(DOMAIN)/api/internal/notifications/scan -w "\nHTTP %{http_code}\n"
+
+notify-install: ## Instala o timer systemd --user que dispara a varredura a cada minuto contra o pod local
+	mkdir -p $(HOME)/.config/systemd/user
+	cp files/reconta-notifications.local.service $(HOME)/.config/systemd/user/
+	cp files/reconta-notifications.local.timer $(HOME)/.config/systemd/user/
+	systemctl --user daemon-reload
+	systemctl --user enable --now reconta-notifications.local.timer
+	@echo "✅ Timer instalado. Ver logs com: journalctl --user -u reconta-notifications.local.service -f"
+
+notify-uninstall: ## Remove o timer systemd --user de notificações local
+	systemctl --user disable --now reconta-notifications.local.timer || true
+	rm -f $(HOME)/.config/systemd/user/reconta-notifications.local.service
+	rm -f $(HOME)/.config/systemd/user/reconta-notifications.local.timer
+	systemctl --user daemon-reload

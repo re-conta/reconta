@@ -59,8 +59,12 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 sm:items-center sm:p-4">
-    <div class="flex max-h-full w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl">
+  <div
+    class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 sm:items-center sm:p-4"
+  >
+    <div
+      class="flex max-h-full w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl"
+    >
       <div class="mb-4 flex items-center justify-between">
         <div>
           <h2 class="font-display text-lg font-bold text-ink-900">Marcar como paga</h2>
@@ -133,7 +137,9 @@ async function handleSubmit() {
                 class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
               >
                 <option value="">Não informado</option>
-                <option v-for="m in paymentMethods" :key="m.value" :value="m.value">{{ m.label }}</option>
+                <option v-for="m in paymentMethods" :key="m.value" :value="m.value">
+                  {{ m.label }}
+                </option>
               </select>
             </label>
           </div>

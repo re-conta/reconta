@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import { Bell, PauseCircle, Pencil, PlayCircle, StopCircle, Trash2 } from "lucide-vue-next";
+import { PauseCircle, Pencil, PlayCircle, StopCircle, Trash2 } from "lucide-vue-next";
 import { listAccounts } from "../api/accounts";
 import { listCategories } from "../api/categories";
 import {
@@ -12,16 +11,12 @@ import {
   listFixedBills,
   reactivateFixedBill,
 } from "../api/fixedBills";
-import { useNotifications } from "../composables/useNotifications";
 import type { Account } from "../types/account";
 import type { Category } from "../types/category";
 import type { FixedBill, PayFixedBillResult } from "../types/fixedBill";
 import { PERIODICITY_LABELS, STATUS_LABELS } from "../types/fixedBill";
 import FixedBillForm from "../components/FixedBillForm.vue";
 import PayBillModal from "../components/PayBillModal.vue";
-
-const router = useRouter();
-const { unreadCount } = useNotifications();
 
 const bills = ref<FixedBill[]>([]);
 const categories = ref<Category[]>([]);
@@ -82,7 +77,8 @@ function onPaid(result: PayFixedBillResult) {
 }
 
 async function handleDelete(bill: FixedBill) {
-  if (!confirm(`Excluir a conta fixa "${bill.name}"? O histórico de pagamentos será perdido.`)) return;
+  if (!confirm(`Excluir a conta fixa "${bill.name}"? O histórico de pagamentos será perdido.`))
+    return;
   try {
     await deleteFixedBill(bill.id);
     bills.value = bills.value.filter((b) => b.id !== bill.id);
@@ -145,20 +141,6 @@ onMounted(loadAll);
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="relative rounded-full border border-ink-200 bg-white p-2.5 text-ink-700 shadow-sm transition hover:bg-ink-50"
-          aria-label="Ver notificações"
-          @click="router.push('/notificacoes')"
-        >
-          <Bell class="h-5 w-5" />
-          <span
-            v-if="unreadCount > 0"
-            class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-coral-500 px-1 text-[11px] font-bold text-white"
-          >
-            {{ unreadCount > 99 ? "99+" : unreadCount }}
-          </span>
-        </button>
-        <button
-          type="button"
           class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
           @click="startCreate"
         >
@@ -169,13 +151,19 @@ onMounted(loadAll);
 
     <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
       <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
-        <span class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"></span>
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
         Carregando...
       </div>
-      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">{{ errorMessage }}</p>
+      <p v-else-if="errorMessage" class="p-8 text-center text-sm text-coral-600">
+        {{ errorMessage }}
+      </p>
       <div v-else-if="bills.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
         <p class="text-sm font-medium text-ink-600">Nenhuma conta fixa cadastrada ainda</p>
-        <p class="text-sm text-ink-400">Cadastre luz, internet, aluguel e outras despesas recorrentes.</p>
+        <p class="text-sm text-ink-400">
+          Cadastre luz, internet, aluguel e outras despesas recorrentes.
+        </p>
       </div>
       <ul v-else class="divide-y divide-ink-100">
         <li
@@ -186,16 +174,23 @@ onMounted(loadAll);
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
               <p class="truncate text-sm font-semibold text-ink-900">{{ bill.name }}</p>
-              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" :class="statusBadgeClass(bill.status)">
+              <span
+                class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                :class="statusBadgeClass(bill.status)"
+              >
                 {{ STATUS_LABELS[bill.status] }}
               </span>
-              <span v-if="isOverdue(bill)" class="rounded-full bg-coral-100 px-2 py-0.5 text-[11px] font-semibold text-coral-700">
+              <span
+                v-if="isOverdue(bill)"
+                class="rounded-full bg-coral-100 px-2 py-0.5 text-[11px] font-semibold text-coral-700"
+              >
                 Vencida
               </span>
             </div>
             <p class="mt-0.5 truncate text-xs text-ink-500">
-              {{ formatCurrency(bill.amount) }} &middot; {{ PERIODICITY_LABELS[bill.periodicity] }} &middot;
-              vence em {{ formatDate(bill.dueDate) }}
+              {{ formatCurrency(bill.amount) }} &middot;
+              {{ PERIODICITY_LABELS[bill.periodicity] }} &middot; vence em
+              {{ formatDate(bill.dueDate) }}
               <template v-if="bill.categoryName"> &middot; {{ bill.categoryName }}</template>
             </p>
           </div>
