@@ -27,10 +27,9 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100vh-140px)] items-center justify-center px-6 py-12">
+  <div class="flex min-h-[calc(100vh-140px)] items-center justify-center px-6 py-4 md:py-12">
     <div class="w-full max-w-sm">
       <div class="mb-8 flex flex-col items-center text-center">
-        <img src="/images/favicon.svg" alt="" class="h-12 w-12" />
         <h1 class="mt-4 font-display text-2xl font-bold text-ink-900">Bem-vindo de volta</h1>
         <p class="mt-1 text-sm text-ink-500">Acesse sua conta</p>
       </div>
