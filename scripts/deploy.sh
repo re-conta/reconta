@@ -40,6 +40,8 @@ sudo /usr/bin/systemctl stop "$SERVICE"
 
 [ -e "$WORKDIR" ] && rm -rf "$WORKDIR"
 cp -af "$TMPDIR" "$WORKDIR"
+
 sudo /usr/bin/systemctl start "$SERVICE"
 sudo /usr/bin/systemctl restart nginx.service
+
 echo "🚀 Serviço reiniciado!"
