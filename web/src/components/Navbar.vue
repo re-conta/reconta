@@ -25,7 +25,7 @@ watch(
   >
     <template v-for="link in links">
       <RouterLink
-        v-if="!('authRequired' in link) || link?.authRequired || currentUser"
+        v-if="!link.authRequired || currentUser"
         :key="link.path"
         :to="link.path"
         class="transition hover:text-ink-900 shrink-0 whitespace-nowrap"

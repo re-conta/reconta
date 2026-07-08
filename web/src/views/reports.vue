@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
+import MonthlyCashFlowChart from "../components/charts/MonthlyCashFlowChart.vue";
 import { ApiError } from "../api/reports";
 import { listPeriods, listTransactions } from "../api/transactions";
 import type { ReportScopeKind } from "../types/report";
@@ -17,6 +18,9 @@ const dateTo = ref(now.toISOString().slice(0, 10));
 
 const periods = ref<Period[]>([]);
 const years = computed(() => [...new Set(periods.value.map((p) => p.year))].sort((a, b) => b - a));
+const monthsWithData = computed(
+  () => new Set(periods.value.filter((p) => p.year === year.value).map((p) => p.month)),
+);
 
 const previewTransactions = ref<Transaction[]>([]);
 const loadingPreview = ref(false);
@@ -121,7 +125,14 @@ onMounted(async () => {
             class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm"
             @change="loadPreview"
           >
-            <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, "0") }}</option>
+            <option v-if="!monthsWithData.has(month)" :value="month">
+              {{ String(month).padStart(2, "0") }}
+            </option>
+            <template v-for="m in 12" :key="m">
+              <option v-if="monthsWithData.has(m)" :value="m">
+                {{ String(m).padStart(2, "0") }}
+              </option>
+            </template>
           </select>
         </label>
         <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
@@ -212,6 +223,7 @@ onMounted(async () => {
         :year="year"
         :transactions="previewTransactions"
       />
+      <MonthlyCashFlowChart v-else-if="scopeKind === 'year'" :transactions="previewTransactions" />
       <CategoryExpenseChart :transactions="previewTransactions" />
     </div>
   </div>
