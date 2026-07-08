@@ -10,6 +10,7 @@ import {
   LinearScale,
   Tooltip,
 } from "chart.js";
+import type { Chart as ChartJSInstance } from "chart.js";
 import type { Transaction } from "../../types/transaction";
 
 ChartJS.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -130,7 +131,7 @@ const hasData = computed(() => props.transactions.length > 0);
 
 const barRef = ref<InstanceType<typeof Bar>>();
 defineExpose({
-  toImage: () => barRef.value?.chart?.toBase64Image(),
+  toImage: () => (barRef.value?.chart as ChartJSInstance | undefined)?.toBase64Image(),
 });
 </script>
 
