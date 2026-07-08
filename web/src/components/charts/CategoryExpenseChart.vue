@@ -81,7 +81,7 @@ const chartOptions = computed(() => ({
       displayColors: true,
       boxPadding: 4,
       callbacks: {
-        label: (ctx: { parsed: { x: number } }) => formatCurrency(ctx.parsed.x),
+        label: (ctx: { parsed: { x: number | null } }) => formatCurrency(ctx.parsed.x ?? 0),
       },
     },
   },

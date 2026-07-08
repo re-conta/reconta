@@ -12,8 +12,8 @@ help: ## Mostra esta ajuda
 	  awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 build: ## Builda as imagens da API (Go) e do Web (Vue via nginx)
-	podman build -t $(API_IMAGE) -f deploy/podman/Containerfile.api .
-	podman build -t $(WEB_IMAGE) -f deploy/podman/Containerfile.web .
+	podman build -t $(API_IMAGE) -f podman/Containerfile.api .
+	podman build -t $(WEB_IMAGE) -f podman/Containerfile.web .
 
 up: build ## Sobe API + Nginx/Web no mesmo pod, simulando o ambiente de produção
 	podman pod exists $(POD) && podman pod rm -f $(POD) || true
