@@ -51,7 +51,10 @@ watch(
           </RouterLink>
         </div>
       </div>
-      <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-8">
+      <div
+        class="flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-8"
+        :class="currentUser ? 'flex' : 'hidden sm:flex'"
+      >
         <Navbar />
         <div class="hidden items-center gap-3 sm:flex">
           <NotificationBell v-if="currentUser" />
@@ -72,7 +75,7 @@ watch(
     </main>
 
     <footer
-      class="flex flex-col items-center gap-3 border-t border-ink-200/70 px-4 py-6 text-center text-sm text-ink-400 sm:px-8"
+      class="flex flex-col items-center gap-3 border-t border-ink-200/70 p-2 md:p-4 text-center text-sm text-ink-400"
     >
       <nav class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs font-medium">
         <button type="button" class="transition hover:text-ink-700" @click="openSiteModal('help')">
