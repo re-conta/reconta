@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth";
 
 const { currentUser, logout } = useAuth();
+const router = useRouter();
 
 const open = ref(false);
 const rootEl = ref<HTMLElement | null>(null);
@@ -20,6 +22,13 @@ const initials = computed(() => {
 const isAdmin = computed(
   () => currentUser.value?.role === "admin" || currentUser.value?.role === "super_admin",
 );
+
+const avatarError = ref(false);
+const avatarUrl = computed(() => (avatarError.value ? "" : currentUser.value?.avatarUrl || ""));
+
+function handleAvatarError() {
+  avatarError.value = true;
+}
 
 function toggle() {
   open.value = !open.value;
@@ -52,6 +61,7 @@ onBeforeUnmount(() => {
 async function handleLogout() {
   close();
   await logout();
+  router.push({ name: "Home" });
 }
 </script>
 
@@ -64,7 +74,16 @@ async function handleLogout() {
       aria-haspopup="true"
       @click="toggle"
     >
+      <img
+        v-if="avatarUrl"
+        :src="avatarUrl"
+        alt=""
+        referrerpolicy="no-referrer"
+        class="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm"
+        @error="handleAvatarError"
+      />
       <span
+        v-else
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-400 to-coral-500 text-sm font-semibold text-white shadow-sm"
       >
         {{ initials }}
@@ -100,7 +119,16 @@ async function handleLogout() {
         role="menu"
       >
         <div class="flex items-center gap-3 border-b border-ink-100 px-4 py-3">
+          <img
+            v-if="avatarUrl"
+            :src="avatarUrl"
+            alt=""
+            referrerpolicy="no-referrer"
+            class="h-10 w-10 shrink-0 rounded-full object-cover"
+            @error="handleAvatarError"
+          />
           <span
+            v-else
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-400 to-coral-500 text-sm font-semibold text-white"
           >
             {{ initials }}

@@ -14,6 +14,7 @@ type User struct {
 	Name        string    `json:"name"`
 	Email       string    `json:"email"`
 	Role        string    `json:"role"`
+	AvatarURL   string    `json:"avatarUrl"`
 	HasPassword bool      `json:"hasPassword"`
 	CreatedAt   time.Time `json:"createdAt"`
 }

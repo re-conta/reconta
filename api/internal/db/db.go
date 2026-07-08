@@ -143,6 +143,16 @@ func addMissingColumns(conn *sql.DB) error {
 			return fmt.Errorf("adicionando coluna role: %w", err)
 		}
 	}
+
+	hasAvatarURL, err := columnExists(conn, "users", "avatar_url")
+	if err != nil {
+		return fmt.Errorf("verificando coluna avatar_url: %w", err)
+	}
+	if !hasAvatarURL {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT`); err != nil {
+			return fmt.Errorf("adicionando coluna avatar_url: %w", err)
+		}
+	}
 	return nil
 }
 

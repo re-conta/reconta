@@ -123,7 +123,7 @@ function toggleDay(cell: DayCell) {
               : cell
                 ? 'text-ink-300'
                 : '',
-            cell && selectedDate === cell.date ? 'bg-brand-500 !text-white hover:bg-brand-500' : '',
+            cell && selectedDate === cell.date ? 'bg-brand-500 text-white! hover:bg-brand-500' : '',
             cell && cell.isToday && selectedDate !== cell.date
               ? 'ring-1 ring-inset ring-brand-300'
               : '',

@@ -145,7 +145,7 @@ func (r *Repository) Create(ctx context.Context, name, email, passwordHash strin
 
 func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, password_hash <> '', created_at FROM users WHERE id = ?`, id,
+		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users WHERE id = ?`, id,
 	)
 	return scanUser(row)
 }
@@ -154,17 +154,19 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 // usado exclusivamente pelo fluxo de autenticação.
 func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email string) (*User, string, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, created_at, password_hash FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, avatar_url, created_at, password_hash FROM users WHERE email = ?`, email,
 	)
 
 	var u User
+	var avatarURL sql.NullString
 	var createdAt, passwordHash string
-	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &createdAt, &passwordHash); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &avatarURL, &createdAt, &passwordHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, "", ErrNotFound
 		}
 		return nil, "", fmt.Errorf("lendo usuário: %w", err)
 	}
+	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
 	u.HasPassword = passwordHash != ""
 
@@ -174,7 +176,7 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 // GetByGoogleID busca um usuário previamente vinculado a uma conta Google.
 func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, password_hash <> '', created_at FROM users WHERE google_id = ?`, googleID,
+		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users WHERE google_id = ?`, googleID,
 	)
 	return scanUser(row)
 }
@@ -183,16 +185,16 @@ func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User,
 // a um cadastro já existente por e-mail/senha.
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, password_hash <> '', created_at FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users WHERE email = ?`, email,
 	)
 	return scanUser(row)
 }
 
 // CreateWithGoogle cria um usuário autenticado apenas via Google, sem senha.
-func (r *Repository) CreateWithGoogle(ctx context.Context, name, email, googleID string) (*User, error) {
+func (r *Repository) CreateWithGoogle(ctx context.Context, name, email, googleID, avatarURL string) (*User, error) {
 	res, err := r.db.ExecContext(ctx,
-		`INSERT INTO users (name, email, password_hash, google_id, role) VALUES (?, ?, '', ?, ?)`,
-		name, email, googleID, roleForEmail(email),
+		`INSERT INTO users (name, email, password_hash, google_id, role, avatar_url) VALUES (?, ?, '', ?, ?, ?)`,
+		name, email, googleID, roleForEmail(email), nullableString(avatarURL),
 	)
 	if err != nil {
 		if isUniqueConstraintErr(err) {
@@ -218,9 +220,19 @@ func (r *Repository) LinkGoogleID(ctx context.Context, id int64, googleID string
 	return nil
 }
 
+// UpdateAvatarURL atualiza a foto de perfil do usuário (ex.: avatar da conta
+// Google), mantendo-a sincronizada a cada login.
+func (r *Repository) UpdateAvatarURL(ctx context.Context, id int64, avatarURL string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE users SET avatar_url = ? WHERE id = ?`, nullableString(avatarURL), id)
+	if err != nil {
+		return fmt.Errorf("atualizando avatar do usuário: %w", err)
+	}
+	return nil
+}
+
 func (r *Repository) List(ctx context.Context) ([]User, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, email, role, password_hash <> '', created_at FROM users ORDER BY id DESC`,
+		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users ORDER BY id DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listando usuários: %w", err)
@@ -244,15 +256,24 @@ type scanner interface {
 
 func scanUser(s scanner) (*User, error) {
 	var u User
+	var avatarURL sql.NullString
 	var createdAt string
-	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.HasPassword, &createdAt); err != nil {
+	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &avatarURL, &u.HasPassword, &createdAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("lendo usuário: %w", err)
 	}
+	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
 	return &u, nil
+}
+
+func nullableString(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func scanUserRows(rows *sql.Rows) (*User, error) {

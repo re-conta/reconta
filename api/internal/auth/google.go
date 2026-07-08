@@ -127,6 +127,7 @@ type googleUserInfo struct {
 	Sub           string `json:"sub"`
 	Email         string `json:"email"`
 	Name          string `json:"name"`
+	Picture       string `json:"picture"`
 	EmailVerified bool   `json:"email_verified"`
 }
 
@@ -158,6 +159,10 @@ func (g *GoogleHandler) fetchUserInfo(ctx context.Context, token *oauth2.Token) 
 
 func (g *GoogleHandler) findOrCreateUser(ctx context.Context, info *googleUserInfo) (*user.User, error) {
 	if u, err := g.users.GetByGoogleID(ctx, info.Sub); err == nil {
+		if err := g.users.UpdateAvatarURL(ctx, u.ID, info.Picture); err != nil {
+			return nil, err
+		}
+		u.AvatarURL = info.Picture
 		return u, nil
 	} else if !errors.Is(err, user.ErrNotFound) {
 		return nil, err
@@ -167,6 +172,10 @@ func (g *GoogleHandler) findOrCreateUser(ctx context.Context, info *googleUserIn
 		if err := g.users.LinkGoogleID(ctx, u.ID, info.Sub); err != nil {
 			return nil, err
 		}
+		if err := g.users.UpdateAvatarURL(ctx, u.ID, info.Picture); err != nil {
+			return nil, err
+		}
+		u.AvatarURL = info.Picture
 		return u, nil
 	} else if !errors.Is(err, user.ErrNotFound) {
 		return nil, err
@@ -176,7 +185,7 @@ func (g *GoogleHandler) findOrCreateUser(ctx context.Context, info *googleUserIn
 	if name == "" {
 		name = info.Email
 	}
-	u, err := g.users.CreateWithGoogle(ctx, name, info.Email, info.Sub)
+	u, err := g.users.CreateWithGoogle(ctx, name, info.Email, info.Sub, info.Picture)
 	if err != nil {
 		return nil, err
 	}

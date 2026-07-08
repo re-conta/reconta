@@ -68,6 +68,12 @@ function initialsFor(name: string) {
     .join("");
 }
 
+const avatarErrors = ref(new Set<number>());
+
+function handleAvatarError(userId: number) {
+  avatarErrors.value.add(userId);
+}
+
 const userCountLabel = computed(() => {
   const count = users.value.length;
   return count === 1 ? "1 usuário" : `${count} usuários`;
@@ -111,7 +117,16 @@ onMounted(loadUsers);
           :key="user.id"
           class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60"
         >
+          <img
+            v-if="user.avatarUrl && !avatarErrors.has(user.id)"
+            :src="user.avatarUrl"
+            alt=""
+            referrerpolicy="no-referrer"
+            class="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm"
+            @error="handleAvatarError(user.id)"
+          />
           <span
+            v-else
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-sm font-semibold text-white shadow-sm"
             :class="gradientFor(user.id)"
           >

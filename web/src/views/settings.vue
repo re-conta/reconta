@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { ApiError, updatePassword, updateProfile } from "../api/users";
 import { useAuth } from "../composables/useAuth";
 
@@ -14,6 +14,13 @@ const passwordForm = reactive({ currentPassword: "", newPassword: "", confirmPas
 const passwordError = ref("");
 const passwordSuccess = ref("");
 const savingPassword = ref(false);
+
+const avatarError = ref(false);
+const avatarUrl = computed(() => (avatarError.value ? "" : currentUser.value?.avatarUrl || ""));
+
+function handleAvatarError() {
+  avatarError.value = true;
+}
 
 watch(
   currentUser,
@@ -91,7 +98,16 @@ async function handlePasswordSubmit() {
       v-if="currentUser"
       class="flex items-center gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
     >
+      <img
+        v-if="avatarUrl"
+        :src="avatarUrl"
+        alt=""
+        referrerpolicy="no-referrer"
+        class="h-14 w-14 shrink-0 rounded-full object-cover shadow-sm"
+        @error="handleAvatarError"
+      />
       <span
+        v-else
         class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-400 to-coral-500 text-lg font-semibold text-white shadow-sm"
       >
         {{

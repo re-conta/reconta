@@ -7,6 +7,7 @@ WEB_IMAGE    := reconta-web:local
 DATA_VOLUME  := reconta-api-data
 ENV_FILE     := $(if $(wildcard api/.env),api/.env,api/.env.example)
 
+VITE_HTTPS   := 0
 DOMAIN       := reconta.local
 CERT_DIR     := certs
 CERT_FILE    := $(CERT_DIR)/$(DOMAIN).pem
@@ -78,4 +79,4 @@ hosts-check: ## Verifica se reconta.local resolve para 127.0.0.1 em /etc/hosts
 
 dev: certs hosts-check ## Gera certificado local (se preciso) e sobe API + Vite em modo desenvolvimento
 	@echo "✅ Disponível em https://$(DOMAIN):5173 (aceite o certificado autoassinado no navegador)"
-	VITE_HTTPS=1 bun run dev
+	VITE_HTTPS=$(VITE_HTTPS) bun run dev
