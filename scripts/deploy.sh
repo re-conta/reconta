@@ -44,4 +44,10 @@ cp -af "$TMPDIR" "$WORKDIR"
 sudo /usr/bin/systemctl start "$SERVICE"
 sudo /usr/bin/systemctl restart nginx.service
 
+echo "⏰ Instalando timer de notificações de contas fixas..."
+sudo cp -f "$WORKDIR/files/reconta-notifications.service" /etc/systemd/system/reconta-notifications.service
+sudo cp -f "$WORKDIR/files/reconta-notifications.timer" /etc/systemd/system/reconta-notifications.timer
+sudo /usr/bin/systemctl daemon-reload
+sudo /usr/bin/systemctl enable --now reconta-notifications.timer
+
 echo "🚀 Serviço reiniciado!"

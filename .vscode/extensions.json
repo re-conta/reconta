@@ -1,3 +1,3 @@
 {
-  "recommendations": ["Vue.volar", "oxc.oxc-vscode", "bradlc.vscode-tailwindcss"]
+  "recommendations": ["Vue.volar", "golang.go", "oxc.oxc-vscode", "ms-vscode.makefile-tools", "bradlc.vscode-tailwindcss"]
 }
