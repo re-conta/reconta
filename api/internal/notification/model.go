@@ -21,6 +21,7 @@ type Notification struct {
 	Message       string     `json:"message"`
 	DueDate       string     `json:"dueDate"`
 	ReadAt        *time.Time `json:"readAt"`
+	EmailSentAt   *time.Time `json:"emailSentAt,omitempty"`
 	CreatedAt     time.Time  `json:"createdAt"`
 }
 

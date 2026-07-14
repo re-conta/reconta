@@ -151,6 +151,7 @@ func migrate(conn *sql.DB) error {
 		due_date       TEXT NOT NULL,
 		offset_minutes INTEGER NOT NULL,
 		read_at        TEXT,
+		email_sent_at  TEXT,
 		created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 		UNIQUE (fixed_bill_id, due_date, offset_minutes)
 	);
@@ -221,6 +222,16 @@ func addMissingColumns(conn *sql.DB) error {
 	if !hasFixedBillPaymentID {
 		if _, err := conn.Exec(`ALTER TABLE transactions ADD COLUMN fixed_bill_payment_id INTEGER REFERENCES fixed_bill_payments(id) ON DELETE SET NULL`); err != nil {
 			return fmt.Errorf("adicionando coluna fixed_bill_payment_id: %w", err)
+		}
+	}
+
+	hasEmailSentAt, err := columnExists(conn, "notifications", "email_sent_at")
+	if err != nil {
+		return fmt.Errorf("verificando coluna email_sent_at: %w", err)
+	}
+	if !hasEmailSentAt {
+		if _, err := conn.Exec(`ALTER TABLE notifications ADD COLUMN email_sent_at TEXT`); err != nil {
+			return fmt.Errorf("adicionando coluna email_sent_at: %w", err)
 		}
 	}
 	return nil

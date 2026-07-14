@@ -252,21 +252,25 @@ func (h *Handler) notify(ctx context.Context, bill fixedbill.FixedBill, settings
 		log.Printf("erro ao criar notificação para conta fixa %d: %v", bill.ID, err)
 		return false
 	}
-	if !wasCreated {
-		return false
-	}
 
-	if settings.SiteEnabled {
+	if wasCreated && settings.SiteEnabled {
 		if payload, err := json.Marshal(notif); err == nil {
 			h.hub.Publish(bill.UserID, payload)
 		}
 	}
 
-	if settings.EmailEnabled {
+	// O e-mail é tentado sempre que ainda não foi enviado para esta
+	// notificação, mesmo em varreduras seguintes à criação — isso cobre o
+	// caso de o usuário ativar "receber por e-mail" depois que a notificação
+	// já apareceu no site.
+	if settings.EmailEnabled && notif.EmailSentAt == nil {
 		h.sendEmail(ctx, bill.UserID, title, message)
+		if err := h.repo.MarkEmailSent(ctx, notif.ID); err != nil {
+			log.Printf("erro ao marcar e-mail como enviado para notificação %d: %v", notif.ID, err)
+		}
 	}
 
-	return true
+	return wasCreated
 }
 
 func (h *Handler) sendEmail(ctx context.Context, userID int64, subject, body string) {

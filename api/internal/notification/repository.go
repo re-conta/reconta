@@ -38,7 +38,11 @@ func (r *Repository) Create(ctx context.Context, userID int64, fixedBillID int64
 		return nil, false, fmt.Errorf("verificando notificação inserida: %w", err)
 	}
 	if n == 0 {
-		return nil, false, nil
+		existing, err := r.getByBillDueOffset(ctx, fixedBillID, dueDate, offsetMinutes)
+		if err != nil {
+			return nil, false, err
+		}
+		return existing, false, nil
 	}
 
 	id, err := res.LastInsertId()
@@ -53,9 +57,32 @@ func (r *Repository) Create(ctx context.Context, userID int64, fixedBillID int64
 }
 
 const selectNotification = `
-	SELECT n.id, n.fixed_bill_id, fb.name, n.kind, n.title, n.message, n.due_date, n.read_at, n.created_at
+	SELECT n.id, n.fixed_bill_id, fb.name, n.kind, n.title, n.message, n.due_date, n.read_at, n.email_sent_at, n.created_at
 	FROM notifications n
 	LEFT JOIN fixed_bills fb ON fb.id = n.fixed_bill_id`
+
+// getByBillDueOffset busca a notificação já existente para a chave de
+// deduplicação (fixed_bill_id, due_date, offset_minutes), usada quando Create
+// não insere por já haver uma igual.
+func (r *Repository) getByBillDueOffset(ctx context.Context, fixedBillID int64, dueDate string, offsetMinutes int) (*Notification, error) {
+	row := r.db.QueryRowContext(ctx,
+		selectNotification+` WHERE n.fixed_bill_id = ? AND n.due_date = ? AND n.offset_minutes = ?`,
+		fixedBillID, dueDate, offsetMinutes,
+	)
+	return scanNotification(row)
+}
+
+// MarkEmailSent registra que o e-mail de lembrete desta notificação foi
+// enfileirado para envio, evitando reenvios a cada varredura.
+func (r *Repository) MarkEmailSent(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE notifications SET email_sent_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`, id,
+	)
+	if err != nil {
+		return fmt.Errorf("marcando e-mail como enviado: %w", err)
+	}
+	return nil
+}
 
 func (r *Repository) GetByID(ctx context.Context, userID, id int64) (*Notification, error) {
 	row := r.db.QueryRowContext(ctx, selectNotification+` WHERE n.id = ? AND n.user_id = ?`, id, userID)
@@ -205,10 +232,11 @@ func scanNotification(s scanner) (*Notification, error) {
 	var fixedBillID sql.NullInt64
 	var fixedBillName sql.NullString
 	var readAt sql.NullString
+	var emailSentAt sql.NullString
 	var createdAt string
 
 	if err := s.Scan(
-		&n.ID, &fixedBillID, &fixedBillName, &n.Kind, &n.Title, &n.Message, &n.DueDate, &readAt, &createdAt,
+		&n.ID, &fixedBillID, &fixedBillName, &n.Kind, &n.Title, &n.Message, &n.DueDate, &readAt, &emailSentAt, &createdAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -225,6 +253,10 @@ func scanNotification(s scanner) (*Notification, error) {
 	if readAt.Valid {
 		t := parseTimestamp(readAt.String)
 		n.ReadAt = &t
+	}
+	if emailSentAt.Valid {
+		t := parseTimestamp(emailSentAt.String)
+		n.EmailSentAt = &t
 	}
 	n.CreatedAt = parseTimestamp(createdAt)
 	return &n, nil
