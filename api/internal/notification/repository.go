@@ -154,22 +154,34 @@ func (r *Repository) MarkAllRead(ctx context.Context, userID int64) error {
 
 // GetOrCreateSettings retorna as preferências de notificação do usuário,
 // criando um registro com valores padrão na primeira vez que é acessado.
+// A leitura vem primeiro para não pagar uma escrita (fsync) a cada chamada —
+// esse método roda em todo GET de notificações.
 func (r *Repository) GetOrCreateSettings(ctx context.Context, userID int64) (*Settings, error) {
-	defaultOffsets, _ := json.Marshal(DefaultOffsets)
-	if _, err := r.db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO notification_settings (user_id, offsets) VALUES (?, ?)`,
-		userID, string(defaultOffsets),
-	); err != nil {
-		return nil, fmt.Errorf("criando preferências de notificação padrão: %w", err)
+	settings, err := r.getSettings(ctx, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		defaultOffsets, _ := json.Marshal(DefaultOffsets)
+		if _, err := r.db.ExecContext(ctx,
+			`INSERT OR IGNORE INTO notification_settings (user_id, offsets) VALUES (?, ?)`,
+			userID, string(defaultOffsets),
+		); err != nil {
+			return nil, fmt.Errorf("criando preferências de notificação padrão: %w", err)
+		}
+		settings, err = r.getSettings(ctx, userID)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("lendo preferências de notificação: %w", err)
+	}
+	return settings, nil
+}
 
+func (r *Repository) getSettings(ctx context.Context, userID int64) (*Settings, error) {
 	var siteEnabled, emailEnabled bool
 	var offsetsJSON string
 	err := r.db.QueryRowContext(ctx,
 		`SELECT site_enabled, email_enabled, offsets FROM notification_settings WHERE user_id = ?`, userID,
 	).Scan(&siteEnabled, &emailEnabled, &offsetsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("lendo preferências de notificação: %w", err)
+		return nil, err
 	}
 
 	var offsets []int

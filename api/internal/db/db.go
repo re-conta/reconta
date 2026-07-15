@@ -17,12 +17,14 @@ func Open(path string) (*sql.DB, error) {
 		}
 	}
 
-	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path)
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(1)", path)
 	conn, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("abrindo banco de dados: %w", err)
 	}
-	conn.SetMaxOpenConns(1) // SQLite: evita SQLITE_BUSY em escritas concorrentes
+	// Com WAL, leituras concorrem entre si e com um escritor; escritas
+	// simultâneas esperam via busy_timeout em vez de falhar com SQLITE_BUSY.
+	conn.SetMaxOpenConns(8)
 
 	if err := migrate(conn); err != nil {
 		conn.Close()

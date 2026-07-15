@@ -3,6 +3,7 @@ package fixedbill
 import (
 	"context"
 	"database/sql"
+	"path/filepath"
 	"testing"
 
 	"github.com/re-conta/reconta/api/internal/db"
@@ -10,7 +11,9 @@ import (
 
 func newTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	conn, err := db.Open("file::memory:")
+	// Arquivo temporário por teste: "file::memory:" vira um arquivo literal
+	// com esse nome no DSN e persistia dados entre execuções.
+	conn, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
 		t.Fatalf("abrindo banco de teste: %v", err)
 	}
