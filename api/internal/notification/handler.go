@@ -239,7 +239,7 @@ func (h *Handler) scan(w http.ResponseWriter, r *http.Request) {
 					created++
 				}
 			}
-		} else {
+		} else if settings.OverdueEnabled {
 			daysOverdue := int(math.Ceil(float64(-minutesUntilDue) / 1440))
 			title := fmt.Sprintf("Conta vencida: %s", bill.Name)
 			message := fmt.Sprintf("%s venceu em %s e ainda não foi paga.", bill.Name, bill.DueDate)

@@ -8,7 +8,7 @@ import {
 import { ApiError, updatePassword, updateProfile } from "../api/users";
 import PasswordInput from "../components/PasswordInput.vue";
 import { useAuth } from "../composables/useAuth";
-import { OFFSET_OPTIONS } from "../types/notification";
+import { OFFSET_UNIT_OPTIONS, formatOffsetLabel } from "../types/notification";
 import type { NotificationSettings } from "../types/notification";
 import { ApiError as BillingApiError, getSubscription } from "../api/billing";
 import CancelSubscriptionModal from "../components/modals/CancelSubscriptionModal.vue";
@@ -79,11 +79,17 @@ const notificationSettings = reactive<NotificationSettings>({
   siteEnabled: true,
   emailEnabled: false,
   offsets: [],
+  overdueEnabled: true,
 });
 const notificationsLoading = ref(true);
 const notificationsError = ref("");
 const notificationsSuccess = ref("");
 const savingNotifications = ref(false);
+
+const newOffsetAmount = ref(1);
+const newOffsetUnit = ref(OFFSET_UNIT_OPTIONS[1]!.value);
+
+const sortedOffsets = computed(() => [...notificationSettings.offsets].sort((a, b) => a - b));
 
 async function loadNotificationSettings() {
   notificationsLoading.value = true;
@@ -92,6 +98,7 @@ async function loadNotificationSettings() {
     notificationSettings.siteEnabled = settings.siteEnabled;
     notificationSettings.emailEnabled = settings.emailEnabled;
     notificationSettings.offsets = settings.offsets;
+    notificationSettings.overdueEnabled = settings.overdueEnabled;
   } catch (err) {
     notificationsError.value =
       err instanceof NotificationApiError ? err.message : "Falha ao carregar preferências";
@@ -100,10 +107,18 @@ async function loadNotificationSettings() {
   }
 }
 
-function toggleOffset(value: number) {
+function addOffset() {
+  const minutes = Math.round(newOffsetAmount.value) * newOffsetUnit.value;
+  if (!Number.isFinite(minutes) || minutes <= 0) return;
+  if (!notificationSettings.offsets.includes(minutes)) {
+    notificationSettings.offsets.push(minutes);
+  }
+  newOffsetAmount.value = 1;
+}
+
+function removeOffset(value: number) {
   const idx = notificationSettings.offsets.indexOf(value);
   if (idx >= 0) notificationSettings.offsets.splice(idx, 1);
-  else notificationSettings.offsets.push(value);
 }
 
 async function handleNotificationSubmit() {
@@ -115,6 +130,7 @@ async function handleNotificationSubmit() {
     notificationSettings.siteEnabled = saved.siteEnabled;
     notificationSettings.emailEnabled = saved.emailEnabled;
     notificationSettings.offsets = saved.offsets;
+    notificationSettings.overdueEnabled = saved.overdueEnabled;
     notificationsSuccess.value = "Preferências de notificação salvas.";
   } catch (err) {
     notificationsError.value =
@@ -448,23 +464,65 @@ async function handlePasswordSubmit() {
         </div>
 
         <div>
-          <span class="text-sm font-medium text-ink-700">Antecedência dos lembretes</span>
-          <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <label
-              v-for="option in OFFSET_OPTIONS"
-              :key="option.value"
-              class="flex items-center gap-2 rounded-xl border border-ink-200 bg-ink-50/50 px-3 py-2 text-xs font-medium text-ink-700"
+          <span class="text-sm font-medium text-ink-700">Lembretes antes do vencimento</span>
+          <p class="mt-0.5 text-xs text-ink-500">
+            Escolha uma antecedência e adicione quantos alertas quiser.
+          </p>
+
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              v-model.number="newOffsetAmount"
+              type="number"
+              min="1"
+              step="1"
+              class="w-20 rounded-xl border border-ink-200 bg-ink-50/50 px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+            />
+            <select
+              v-model.number="newOffsetUnit"
+              class="rounded-xl border border-ink-200 bg-ink-50/50 px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
             >
-              <input
-                type="checkbox"
-                :checked="notificationSettings.offsets.includes(option.value)"
-                class="h-3.5 w-3.5 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
-                @change="toggleOffset(option.value)"
-              />
-              {{ option.label }}
-            </label>
+              <option v-for="unit in OFFSET_UNIT_OPTIONS" :key="unit.value" :value="unit.value">
+                {{ unit.label }}
+              </option>
+            </select>
+            <span class="text-sm text-ink-500">antes</span>
+            <button
+              type="button"
+              class="rounded-full border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700 transition hover:border-brand-400 hover:text-brand-700"
+              @click="addOffset"
+            >
+              Adicionar
+            </button>
           </div>
+
+          <div v-if="sortedOffsets.length" class="mt-3 flex flex-wrap gap-2">
+            <span
+              v-for="offset in sortedOffsets"
+              :key="offset"
+              class="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700"
+            >
+              {{ formatOffsetLabel(offset) }}
+              <button
+                type="button"
+                class="text-brand-500 transition hover:text-coral-600"
+                aria-label="Remover lembrete"
+                @click="removeOffset(offset)"
+              >
+                ×
+              </button>
+            </span>
+          </div>
+          <p v-else class="mt-3 text-xs text-ink-400">Nenhum lembrete de antecedência configurado.</p>
         </div>
+
+        <label class="flex items-center gap-2 text-sm font-medium text-ink-700">
+          <input
+            v-model="notificationSettings.overdueEnabled"
+            type="checkbox"
+            class="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
+          />
+          Avisar diariamente enquanto a conta estiver vencida
+        </label>
       </template>
 
       <p v-if="notificationsError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">

@@ -241,11 +241,11 @@ func (r *Repository) GetOrCreateSettings(ctx context.Context, userID int64) (*Se
 }
 
 func (r *Repository) getSettings(ctx context.Context, userID int64) (*Settings, error) {
-	var siteEnabled, emailEnabled bool
+	var siteEnabled, emailEnabled, overdueEnabled bool
 	var offsetsJSON string
 	err := r.db.QueryRowContext(ctx,
-		`SELECT site_enabled, email_enabled, offsets FROM notification_settings WHERE user_id = ?`, userID,
-	).Scan(&siteEnabled, &emailEnabled, &offsetsJSON)
+		`SELECT site_enabled, email_enabled, offsets, overdue_enabled FROM notification_settings WHERE user_id = ?`, userID,
+	).Scan(&siteEnabled, &emailEnabled, &offsetsJSON, &overdueEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (r *Repository) getSettings(ctx context.Context, userID int64) (*Settings, 
 	if err := json.Unmarshal([]byte(offsetsJSON), &offsets); err != nil {
 		offsets = DefaultOffsets
 	}
-	return &Settings{SiteEnabled: siteEnabled, EmailEnabled: emailEnabled, Offsets: offsets}, nil
+	return &Settings{SiteEnabled: siteEnabled, EmailEnabled: emailEnabled, Offsets: offsets, OverdueEnabled: overdueEnabled}, nil
 }
 
 func (r *Repository) UpdateSettings(ctx context.Context, userID int64, s Settings) (*Settings, error) {
@@ -264,14 +264,15 @@ func (r *Repository) UpdateSettings(ctx context.Context, userID int64, s Setting
 	}
 
 	_, err = r.db.ExecContext(ctx, `
-		INSERT INTO notification_settings (user_id, site_enabled, email_enabled, offsets, updated_at)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO notification_settings (user_id, site_enabled, email_enabled, offsets, overdue_enabled, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE SET
 			site_enabled = excluded.site_enabled,
 			email_enabled = excluded.email_enabled,
 			offsets = excluded.offsets,
+			overdue_enabled = excluded.overdue_enabled,
 			updated_at = excluded.updated_at`,
-		userID, s.SiteEnabled, s.EmailEnabled, string(offsetsJSON), time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+		userID, s.SiteEnabled, s.EmailEnabled, string(offsetsJSON), s.OverdueEnabled, time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("salvando preferências de notificação: %w", err)

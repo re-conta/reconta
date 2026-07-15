@@ -34,9 +34,10 @@ type Notification struct {
 
 // Settings são as preferências de notificação de um usuário.
 type Settings struct {
-	SiteEnabled  bool  `json:"siteEnabled"`
-	EmailEnabled bool  `json:"emailEnabled"`
-	Offsets      []int `json:"offsets"` // minutos de antecedência antes do vencimento
+	SiteEnabled    bool  `json:"siteEnabled"`
+	EmailEnabled   bool  `json:"emailEnabled"`
+	Offsets        []int `json:"offsets"`        // minutos de antecedência antes do vencimento
+	OverdueEnabled bool  `json:"overdueEnabled"` // avisar diariamente enquanto a conta estiver vencida e não paga
 }
 
 // DefaultOffsets usados quando o usuário ainda não configurou preferências.

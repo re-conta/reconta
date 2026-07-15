@@ -75,7 +75,7 @@ async function handleSubmit() {
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 sm:items-center sm:p-4"
+    class="fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center bg-ink-900/40 p-0 sm:items-center sm:p-4"
   >
     <div
       class="flex max-h-full w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl"

@@ -166,9 +166,10 @@ func migrate(conn *sql.DB) error {
 
 	CREATE TABLE IF NOT EXISTS notification_settings (
 		user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-		site_enabled  INTEGER NOT NULL DEFAULT 1,
-		email_enabled INTEGER NOT NULL DEFAULT 0,
-		offsets       TEXT NOT NULL DEFAULT '[1440,120,60]',
+		site_enabled    INTEGER NOT NULL DEFAULT 1,
+		email_enabled   INTEGER NOT NULL DEFAULT 0,
+		offsets         TEXT NOT NULL DEFAULT '[1440,120,60]',
+		overdue_enabled INTEGER NOT NULL DEFAULT 1,
 		updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
@@ -346,6 +347,16 @@ func addMissingColumns(conn *sql.DB) error {
 	if !hasShareID {
 		if _, err := conn.Exec(`ALTER TABLE notifications ADD COLUMN share_id INTEGER REFERENCES shares(id) ON DELETE CASCADE`); err != nil {
 			return fmt.Errorf("adicionando coluna share_id: %w", err)
+		}
+	}
+
+	hasOverdueEnabled, err := columnExists(conn, "notification_settings", "overdue_enabled")
+	if err != nil {
+		return fmt.Errorf("verificando coluna overdue_enabled: %w", err)
+	}
+	if !hasOverdueEnabled {
+		if _, err := conn.Exec(`ALTER TABLE notification_settings ADD COLUMN overdue_enabled INTEGER NOT NULL DEFAULT 1`); err != nil {
+			return fmt.Errorf("adicionando coluna overdue_enabled: %w", err)
 		}
 	}
 

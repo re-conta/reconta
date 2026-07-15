@@ -19,18 +19,8 @@ export const navLinks = [
     authRequired: true,
   },
   {
-    name: "Contas",
-    path: "/contas",
-    authRequired: true,
-  },
-  {
     name: "Compartilhamentos",
     path: "/compartilhamentos",
-    authRequired: true,
-  },
-  {
-    name: "Compartilhado comigo",
-    path: "/compartilhado",
     authRequired: true,
   },
   {

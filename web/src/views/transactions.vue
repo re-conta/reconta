@@ -688,7 +688,7 @@ onUnmounted(() => {
           >
             <div
               v-if="showForm"
-              class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              class="fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
               @click.self="resetForm"
             >
               <Transition
@@ -702,7 +702,7 @@ onUnmounted(() => {
               >
                 <form
                   v-if="showForm"
-                  class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+                  class="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
                   @submit.prevent="handleSubmit"
                 >
                   <div
@@ -913,7 +913,7 @@ onUnmounted(() => {
           >
             <div
               v-if="categoryModalOpen"
-              class="fixed inset-0 z-60 flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              class="fixed inset-x-0 top-0 z-60 flex h-dvh items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
               @click.self="closeCategoryModal"
             >
               <Transition
@@ -927,7 +927,7 @@ onUnmounted(() => {
               >
                 <form
                   v-if="categoryModalOpen"
-                  class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+                  class="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
                   @submit.prevent="submitNewCategory"
                 >
                   <div
@@ -1013,7 +1013,7 @@ onUnmounted(() => {
           >
             <div
               v-if="accountsModalOpen"
-              class="fixed inset-0 z-60 flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              class="fixed inset-x-0 top-0 z-60 flex h-dvh items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
               @click.self="closeAccountsModal"
             >
               <Transition
@@ -1027,7 +1027,7 @@ onUnmounted(() => {
               >
                 <div
                   v-if="accountsModalOpen"
-                  class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+                  class="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
                 >
                   <div
                     class="flex shrink-0 items-center justify-between border-b border-ink-100 px-6 py-4"

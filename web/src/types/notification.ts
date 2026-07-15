@@ -23,16 +23,25 @@ export interface NotificationSettings {
   siteEnabled: boolean;
   emailEnabled: boolean;
   offsets: number[];
+  overdueEnabled: boolean;
 }
 
-// Opções de antecedência oferecidas na tela de configurações (em minutos).
-export const OFFSET_OPTIONS: { value: number; label: string }[] = [
-  { value: 4320, label: "3 dias antes" },
-  { value: 2880, label: "2 dias antes" },
-  { value: 1440, label: "1 dia antes" },
-  { value: 720, label: "12 horas antes" },
-  { value: 360, label: "6 horas antes" },
-  { value: 120, label: "2 horas antes" },
-  { value: 60, label: "1 hora antes" },
-  { value: 0, label: "No vencimento" },
+// Unidades disponíveis para montar um lembrete de antecedência (dropdown na
+// tela de configurações). O valor é o multiplicador em minutos.
+export const OFFSET_UNIT_OPTIONS: { value: number; label: string }[] = [
+  { value: 60, label: "Hora(s)" },
+  { value: 1440, label: "Dia(s)" },
 ];
+
+export function formatOffsetLabel(minutes: number): string {
+  if (minutes === 0) return "No vencimento";
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return `${days} dia${days > 1 ? "s" : ""} antes`;
+  }
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} hora${hours > 1 ? "s" : ""} antes`;
+  }
+  return `${minutes} min antes`;
+}
