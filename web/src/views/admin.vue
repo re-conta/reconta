@@ -8,6 +8,12 @@ import {
   updateRolePermissions,
   updateUserRole,
 } from "../api/users";
+import {
+  ApiError as HealthApiError,
+  getHealthSettings,
+  updateHealthSettings,
+} from "../api/health";
+import type { HealthSettings } from "../types/health";
 import { formatCnpj } from "../utils/cnpj";
 import {
   permissionLabels,
@@ -27,7 +33,7 @@ const canManagePermissions = computed(
   () => isSuperAdmin.value || currentUser.value?.permissions?.includes("manage_permissions"),
 );
 
-const activeTab = ref<"users" | "permissions">("users");
+const activeTab = ref<"users" | "permissions" | "health">("users");
 
 // --- Aba de usuários ---
 
@@ -127,6 +133,65 @@ async function togglePermission(role: UserRole, perm: Permission) {
   }
 }
 
+// --- Aba de saúde financeira ---
+
+const healthSettings = ref<HealthSettings>({
+  enabled: true,
+  thresholdOtima: 20,
+  thresholdBoa: 10,
+  thresholdEstavel: 0,
+  thresholdRuim: -10,
+});
+const healthError = ref("");
+const healthSuccess = ref("");
+const loadingHealth = ref(true);
+const savingHealth = ref(false);
+
+const healthLevels = [
+  {
+    key: "thresholdOtima",
+    label: "Ótima",
+    stars: 5,
+    hint: "Taxa de poupança igual ou acima deste valor",
+  },
+  { key: "thresholdBoa", label: "Boa", stars: 4, hint: "Igual ou acima deste valor" },
+  {
+    key: "thresholdEstavel",
+    label: "Normal / Estável",
+    stars: 3,
+    hint: "Igual ou acima deste valor",
+  },
+  { key: "thresholdRuim", label: "Ruim", stars: 2, hint: "Igual ou acima deste valor" },
+] as const;
+
+async function loadHealthSettings() {
+  loadingHealth.value = true;
+  healthError.value = "";
+  try {
+    healthSettings.value = await getHealthSettings();
+  } catch (err) {
+    healthError.value =
+      err instanceof HealthApiError ? err.message : "Falha ao carregar configuração";
+  } finally {
+    loadingHealth.value = false;
+  }
+}
+
+async function saveHealthSettings() {
+  savingHealth.value = true;
+  healthError.value = "";
+  healthSuccess.value = "";
+  try {
+    healthSettings.value = await updateHealthSettings(healthSettings.value);
+    healthSuccess.value = "Configuração de saúde financeira atualizada.";
+  } catch (err) {
+    healthError.value =
+      err instanceof HealthApiError ? err.message : "Falha ao salvar configuração";
+  } finally {
+    savingHealth.value = false;
+  }
+}
+
 // --- Visual ---
 
 const roleBadgeClasses: Record<UserRole, string> = {
@@ -174,6 +239,7 @@ const userCountLabel = computed(() => {
 onMounted(() => {
   loadUsers();
   loadPermissions();
+  loadHealthSettings();
 });
 </script>
 
@@ -210,6 +276,16 @@ onMounted(() => {
         @click="activeTab = 'permissions'"
       >
         Permissões
+      </button>
+      <button
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-semibold transition"
+        :class="
+          activeTab === 'health' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900'
+        "
+        @click="activeTab = 'health'"
+      >
+        Saúde Financeira
       </button>
     </div>
 
@@ -286,6 +362,97 @@ onMounted(() => {
           </li>
         </ul>
       </div>
+    </div>
+
+    <!-- Aba: Saúde Financeira -->
+    <div v-else-if="activeTab === 'health'" class="flex flex-col gap-3">
+      <p class="text-sm text-ink-500">
+        O bloco de saúde financeira classifica o mês do usuário pela taxa de poupança &mdash;
+        percentual das receitas que sobra após as despesas. Ajuste abaixo o limite mínimo de cada
+        nível.
+      </p>
+
+      <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+        <div
+          v-if="loadingHealth"
+          class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400"
+        >
+          <span
+            class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+          ></span>
+          Carregando...
+        </div>
+        <div v-else class="flex flex-col divide-y divide-ink-100">
+          <label class="flex cursor-pointer items-center justify-between gap-3 px-5 py-4">
+            <div>
+              <p class="text-sm font-semibold text-ink-900">Exibir bloco de saúde financeira</p>
+              <p class="text-xs text-ink-500">
+                Quando desativado, o bloco some da barra lateral de todos os usuários.
+              </p>
+            </div>
+            <input
+              v-model="healthSettings.enabled"
+              type="checkbox"
+              class="h-4 w-4 cursor-pointer rounded border-ink-300 accent-brand-600 focus:ring-brand-400"
+            />
+          </label>
+
+          <div
+            v-for="lvl in healthLevels"
+            :key="lvl.key"
+            class="flex items-center justify-between gap-3 px-5 py-3.5"
+          >
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-ink-900">
+                {{ lvl.label }}
+                <span class="ml-1 text-xs font-normal text-brand-600">{{
+                  "★".repeat(lvl.stars) + "☆".repeat(5 - lvl.stars)
+                }}</span>
+              </p>
+              <p class="text-xs text-ink-500">{{ lvl.hint }}</p>
+            </div>
+            <div class="flex shrink-0 items-center gap-1.5">
+              <input
+                v-model.number="healthSettings[lvl.key]"
+                type="number"
+                step="1"
+                class="w-20 rounded-lg border border-ink-200 px-2.5 py-1.5 text-right text-sm outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+              />
+              <span class="text-sm text-ink-500">%</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 px-5 py-3.5">
+            <div>
+              <p class="text-sm font-semibold text-ink-900">
+                Péssima
+                <span class="ml-1 text-xs font-normal text-brand-600">★☆☆☆☆</span>
+              </p>
+              <p class="text-xs text-ink-500">
+                Qualquer taxa abaixo do limite de "Ruim" ({{ healthSettings.thresholdRuim }}%).
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 px-5 py-4">
+            <button
+              type="button"
+              :disabled="savingHealth"
+              class="rounded-full bg-ink-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+              @click="saveHealthSettings"
+            >
+              {{ savingHealth ? "Salvando..." : "Salvar" }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p v-if="healthError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ healthError }}
+      </p>
+      <p v-else-if="healthSuccess" class="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">
+        {{ healthSuccess }}
+      </p>
     </div>
 
     <!-- Aba: Permissões -->

@@ -14,6 +14,7 @@ import (
 	"github.com/re-conta/reconta/api/internal/db"
 	"github.com/re-conta/reconta/api/internal/email"
 	"github.com/re-conta/reconta/api/internal/fixedbill"
+	"github.com/re-conta/reconta/api/internal/health"
 	"github.com/re-conta/reconta/api/internal/notification"
 	"github.com/re-conta/reconta/api/internal/report"
 	"github.com/re-conta/reconta/api/internal/seed"
@@ -87,6 +88,8 @@ func main() {
 	transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, authHandler).RegisterRoutes(mux)
 	statement.NewHandler(transactionRepo, categoryRepo, authHandler).RegisterRoutes(mux)
 	report.NewHandler(transactionRepo, categoryRepo, accountRepo, tagRepo, authHandler).RegisterRoutes(mux)
+
+	health.NewHandler(health.NewRepository(conn), authHandler).RegisterRoutes(mux)
 
 	fixedBillRepo := fixedbill.NewRepository(conn)
 	fixedbill.NewHandler(fixedBillRepo, authHandler).RegisterRoutes(mux)

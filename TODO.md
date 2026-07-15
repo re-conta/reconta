@@ -1,3 +1,5 @@
+Para o usuário logado /transacoes deve ser a rota inicial /
+
 Usando o plano gratuito do Groq(https://groq.com) crie um sistema que analisa a conta do usuário com base na "saúde" oferece recomendações de meios de economizar ou de investir o dinheiro que sobra(no caso de saúde >= 3), para dicas de corte de gastos ou dicas de investimentos analize as transações, como por exemplo: 
 
 - + de 1 Streaming recomende cancelar os excedentes deixando um apenas
@@ -6,10 +8,7 @@ Usando o plano gratuito do Groq(https://groq.com) crie um sistema que analisa a 
 
 Na consulta usando o Groq tome muito cuidado para não exceder os limites da API gratuita, ou seja, as interações devem obedecer uma "fila" para executar apenas uma requisição por vez e inserir um delay/debounce/throttle indepente do número de usuários que estejam sendo processados para não exceder os limites horários, diários, semanais e mensais em hipótese alguma.
 
-
 Permita compartilhar suas transações e relatórios com outros usuários cadastrados no site, o usuário poderá selecionar quais periodos e quais contas bancárias deseja compartilhar, deve haver uma opção para habilitar ou desabilitar o compartilhamento de transações futuras, permita tambem que a pessoa que compartilha escolha se o usuário convidado poderá editar as transações ou não. A pessoa que recebe o convite deve receber uma notificação mas tome cuidado, essa notificação não pode ser marcada como lida e não ser que o usuário convidado rejeite, o usuário que convidou deve ter a opção de cancelar o compartilhamento a qualquer momento. Quando o usuário aceita ou rejeita quem compartilhou deve ser notificado. Lembre-se, todas as notificações devem ser em tempo real(sem necessidade de refresh).
-
-
 
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.
 

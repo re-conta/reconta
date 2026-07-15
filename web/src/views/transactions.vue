@@ -6,6 +6,7 @@ import { createCategory, listCategories } from "../api/categories";
 import { createTag, listTags } from "../api/tags";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
+import FinancialHealthCard from "../components/FinancialHealthCard.vue";
 import TransactionCalendar from "../components/TransactionCalendar.vue";
 import {
   ApiError,
@@ -505,6 +506,7 @@ onUnmounted(() => {
       <div
         class="order-first flex flex-col gap-6 md:sticky md:top-20 md:order-2 md:w-80 md:shrink-0 xl:w-96"
       >
+        <FinancialHealthCard :month="filters.month" :year="filters.year" />
         <TransactionCalendar
           :month="filters.month"
           :year="filters.year"

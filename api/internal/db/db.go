@@ -172,6 +172,16 @@ func migrate(conn *sql.DB) error {
 		updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS financial_health_settings (
+		id                INTEGER PRIMARY KEY CHECK (id = 1),
+		enabled           INTEGER NOT NULL DEFAULT 1,
+		threshold_otima   REAL NOT NULL DEFAULT 20,
+		threshold_boa     REAL NOT NULL DEFAULT 10,
+		threshold_estavel REAL NOT NULL DEFAULT 0,
+		threshold_ruim    REAL NOT NULL DEFAULT -10,
+		updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 	CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
 	CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
