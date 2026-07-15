@@ -56,6 +56,25 @@ func (r *Repository) Create(ctx context.Context, userID int64, fixedBillID int64
 	return created, true, nil
 }
 
+// CreateGeneral insere uma notificação sem conta fixa associada (ex.: avisos
+// de assinatura expirando). A deduplicação fica a cargo de quem chama, já que
+// a chave UNIQUE da tabela não se aplica quando fixed_bill_id é NULL.
+func (r *Repository) CreateGeneral(ctx context.Context, userID int64, kind, title, message, dueDate string, offsetMinutes int) (*Notification, error) {
+	res, err := r.db.ExecContext(ctx,
+		`INSERT INTO notifications (user_id, fixed_bill_id, kind, title, message, due_date, offset_minutes)
+		 VALUES (?, NULL, ?, ?, ?, ?, ?)`,
+		userID, kind, title, message, dueDate, offsetMinutes,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("inserindo notificação geral: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("obtendo id da notificação: %w", err)
+	}
+	return r.GetByID(ctx, userID, id)
+}
+
 const selectNotification = `
 	SELECT n.id, n.fixed_bill_id, fb.name, n.kind, n.title, n.message, n.due_date, n.read_at, n.email_sent_at, n.created_at
 	FROM notifications n

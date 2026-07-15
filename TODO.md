@@ -1,5 +1,9 @@
 Para o usuário logado /transacoes deve ser a rota inicial /
 
+Unifique Categorias e Tags na página /categorias
+
+Na página /transacoes o bloco "Fluxo" e "Gastos por categoria" devem ficar abaixo da tabela de transações
+
 Usando o plano gratuito do Groq(https://groq.com) crie um sistema que analisa a conta do usuário com base na "saúde" oferece recomendações de meios de economizar ou de investir o dinheiro que sobra(no caso de saúde >= 3), para dicas de corte de gastos ou dicas de investimentos analize as transações, como por exemplo: 
 
 - + de 1 Streaming recomende cancelar os excedentes deixando um apenas

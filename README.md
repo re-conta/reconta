@@ -168,6 +168,63 @@ O `api/.env` de produção precisa das mesmas três variáveis, mas com `GOOGLE_
 
 Lembre-se: o script de deploy (`scripts/deploy.sh`) preserva o `.env` existente na VPS entre deploys, então essas variáveis só precisam ser configuradas manualmente uma vez no servidor.
 
+## Planos e assinaturas (Mercado Pago)
+
+O site tem três planos, exibidos em `/planos`: **Gratuito**, **Essencial** e **Profissional**. Os dois pagos aceitam assinatura **mensal ou anual**, com pagamento via **PIX, boleto, cartão de débito ou cartão de crédito**, processado pelo [Mercado Pago](https://www.mercadopago.com.br) (Checkout API / Checkout Transparente — o usuário não sai do site).
+
+### Como funciona
+
+- **Página `/planos`**: pública, com toggle mensal/anual. Preços, descrições e benefícios dos planos vêm do banco (tabela `plans`) e são editáveis no painel de admin (aba **Planos**, permissão `manage_plans`). O plano gratuito nunca tem preço.
+- **Checkout**: modal responsivo na própria página. PIX gera QR Code + copia-e-cola (expira em 30 min); boleto gera o link do PDF (vence em 3 dias e exige CPF/CNPJ + endereço); cartões (débito e crédito) são tokenizados no navegador pelo SDK JS do Mercado Pago — os dados do cartão **nunca passam pelo nosso backend** — com detecção automática de bandeira pelos 6 primeiros dígitos.
+- **Confirmação**: via webhook (`POST /api/billing/webhook`, com validação de assinatura `x-signature` quando `MP_WEBHOOK_SECRET` está definido) e também por polling do modal (`GET /api/billing/payments/{id}`), que reconsulta o Mercado Pago — útil em desenvolvimento, onde o webhook não alcança a máquina local.
+- **Renovação**: as assinaturas não renovam sozinhas (PIX e boleto não permitem cobrança automática). Em vez disso, o usuário recebe **lembretes no site (sino/SSE) e por e-mail 7, 3 e 1 dia antes do vencimento**, com link para renovar em `/planos`. Renovar antes do fim do ciclo soma o novo período ao atual — nenhum dia é perdido.
+- **Cobranças/lembretes via systemd**: a varredura roda pela **mesma unit e timer já existentes** (`reconta-notifications.timer` → `reconta-notifications.service`, de hora em hora). A unit ganhou um segundo `ExecStart` que chama `POST /api/internal/billing/scan` (protegido por `INTERNAL_API_TOKEN`), que envia os lembretes e expira assinaturas vencidas (o usuário volta ao plano Gratuito). Após alterar a unit na VPS: `systemctl daemon-reload`.
+- **Cancelamento** (em Configurações → Plano e assinatura), a qualquer momento, em dois modos:
+  - **Usar até o fim do ciclo**: sem reembolso; a assinatura fica marcada para não renovar e expira sozinha na data.
+  - **Cancelar agora com reembolso parcial**: o acesso termina na hora e o backend solicita ao Mercado Pago um reembolso proporcional ao tempo não usado do ciclo (calculado sobre o último pagamento aprovado).
+
+### Tabelas
+
+| Tabela                  | Conteúdo                                                                 |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `plans`                 | Código, nome, preços mensal/anual, benefícios (JSON) e destaque          |
+| `subscriptions`         | Assinatura por usuário: plano, ciclo, status, fim do período, lembretes  |
+| `subscription_payments` | Cada cobrança: id do pagamento no MP, status, QR PIX, link do boleto     |
+
+### Variáveis de ambiente
+
+No `api/.env` (backend):
+
+```sh
+MP_ACCESS_TOKEN=      # Access Token (credencial privada) do Mercado Pago
+MP_WEBHOOK_SECRET=    # Assinatura secreta do webhook (opcional, recomendado em produção)
+```
+
+No `web/.env` / `web/.env.production` (frontend, usado só para tokenizar cartões):
+
+```sh
+VITE_MP_PUBLIC_KEY=   # Public Key do Mercado Pago
+```
+
+Sem `MP_ACCESS_TOKEN`, o site funciona normalmente e apenas o checkout fica desabilitado (HTTP 503).
+
+### Guia: obtendo as chaves no site do Mercado Pago
+
+1. **Crie/acesse sua conta** em [mercadopago.com.br](https://www.mercadopago.com.br) e entre no painel de desenvolvedores: [mercadopago.com.br/developers](https://www.mercadopago.com.br/developers/pt) → **Suas integrações**.
+2. **Crie uma aplicação**: botão **Criar aplicação** → nome `Reconta` → em "Qual tipo de solução?" escolha **Pagamentos on-line** → **CheckoutAPI (Transparente)** → confirme.
+3. **Credenciais de teste** (para desenvolver): dentro da aplicação, menu **Credenciais de teste**. Copie:
+   - **Public Key** → `VITE_MP_PUBLIC_KEY` no `web/.env`
+   - **Access Token** → `MP_ACCESS_TOKEN` no `api/.env`
+   - Com credenciais de teste, use os [cartões de teste](https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/your-integrations/test/cards) do Mercado Pago (ex.: aprovar com titular `APRO`, recusar com `OTHE`).
+4. **Credenciais de produção**: menu **Credenciais de produção**. O Mercado Pago pede um breve formulário (indústria/site) na primeira vez. Copie a **Public Key** para `web/.env.production` e o **Access Token** para o `api/.env` da VPS (o deploy preserva o `.env` entre publicações).
+5. **Configure o webhook**: na aplicação, menu **Webhooks** → **Configurar notificações**:
+   - URL de produção: `https://reconta.app/api/billing/webhook`
+   - Evento: marque **Pagamentos** (`payment`)
+   - Salve e copie a **assinatura secreta** exibida → `MP_WEBHOOK_SECRET` no `api/.env` da VPS.
+6. **Reinicie o serviço** na VPS após editar o `.env`: `sudo systemctl restart reconta`.
+
+> Dica: em desenvolvimento não é preciso webhook — o modal de checkout faz polling e reconsulta o status direto na API do Mercado Pago.
+
 ## Endpoints da API
 
 Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **protegidas** exigem sessão autenticada (cookie `session_token`), validada pelo middleware `auth.Handler.RequireUser()`.
@@ -236,6 +293,20 @@ Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **
 | GET    | `/api/transactions/{id}`            | Sim  |
 | PUT    | `/api/transactions/{id}`            | Sim  |
 | DELETE | `/api/transactions/{id}`            | Sim  |
+
+### Planos e assinaturas (`billing`)
+
+| Método | Rota                                | Auth                        |
+| ------ | ----------------------------------- | --------------------------- |
+| GET    | `/api/plans`                        | Não                         |
+| GET    | `/api/billing/subscription`         | Sim                         |
+| POST   | `/api/billing/subscribe`            | Sim                         |
+| GET    | `/api/billing/payments/{id}`        | Sim                         |
+| POST   | `/api/billing/subscription/cancel`  | Sim                         |
+| POST   | `/api/billing/webhook`              | Assinatura do Mercado Pago  |
+| POST   | `/api/internal/billing/scan`        | Header `X-Internal-Token`   |
+| GET    | `/api/admin/plans`                  | Permissão `manage_plans`    |
+| PUT    | `/api/admin/plans/{id}`             | Permissão `manage_plans`    |
 
 ## Testes
 

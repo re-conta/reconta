@@ -182,7 +182,55 @@ func migrate(conn *sql.DB) error {
 		updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS plans (
+		id            INTEGER PRIMARY KEY AUTOINCREMENT,
+		code          TEXT NOT NULL UNIQUE,
+		name          TEXT NOT NULL,
+		description   TEXT NOT NULL DEFAULT '',
+		price_monthly REAL NOT NULL DEFAULT 0,
+		price_yearly  REAL NOT NULL DEFAULT 0,
+		benefits      TEXT NOT NULL DEFAULT '[]',
+		highlight     INTEGER NOT NULL DEFAULT 0,
+		sort_order    INTEGER NOT NULL DEFAULT 0,
+		updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
+	CREATE TABLE IF NOT EXISTS subscriptions (
+		id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		plan_id              INTEGER NOT NULL REFERENCES plans(id),
+		cycle                TEXT NOT NULL,
+		status               TEXT NOT NULL DEFAULT 'pending',
+		payment_method       TEXT NOT NULL,
+		started_at           TEXT,
+		current_period_end   TEXT,
+		cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+		canceled_at          TEXT,
+		refund_amount        REAL,
+		last_reminder_days   INTEGER,
+		created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
+	CREATE TABLE IF NOT EXISTS subscription_payments (
+		id              INTEGER PRIMARY KEY AUTOINCREMENT,
+		subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+		user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		mp_payment_id   INTEGER,
+		amount          REAL NOT NULL,
+		method          TEXT NOT NULL,
+		status          TEXT NOT NULL DEFAULT 'pending',
+		status_detail   TEXT NOT NULL DEFAULT '',
+		pix_qr          TEXT,
+		pix_qr_base64   TEXT,
+		ticket_url      TEXT,
+		created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
+	CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON subscriptions(user_id, status);
+	CREATE INDEX IF NOT EXISTS idx_subscription_payments_mp ON subscription_payments(mp_payment_id);
 	CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
 	CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
 	CREATE INDEX IF NOT EXISTS idx_transactions_user_id_date ON transactions(user_id, date);
@@ -269,7 +317,10 @@ func addMissingColumns(conn *sql.DB) error {
 		return fmt.Errorf("migrando role legada 'user': %w", err)
 	}
 
-	return seedDefaultRolePermissions(conn)
+	if err := seedDefaultRolePermissions(conn); err != nil {
+		return err
+	}
+	return seedDefaultPlans(conn)
 }
 
 // seedDefaultRolePermissions grava as permissões padrão das roles uma única
@@ -294,6 +345,40 @@ func seedDefaultRolePermissions(conn *sql.DB) error {
 	}
 
 	if _, err := conn.Exec(`PRAGMA user_version = 1`); err != nil {
+		return fmt.Errorf("gravando user_version: %w", err)
+	}
+	return nil
+}
+
+// seedDefaultPlans grava os planos padrão do site (um gratuito e dois pagos)
+// na primeira execução. INSERT OR IGNORE preserva preços e benefícios já
+// editados no painel de admin em execuções seguintes.
+func seedDefaultPlans(conn *sql.DB) error {
+	if _, err := conn.Exec(`
+		INSERT OR IGNORE INTO plans (code, name, description, price_monthly, price_yearly, benefits, highlight, sort_order) VALUES
+			('gratuito', 'Gratuito', 'Para organizar as finanças do dia a dia', 0, 0,
+			 '["Transações e categorias ilimitadas","1 conta bancária","Tags e filtros","Relatórios do mês atual"]', 0, 1),
+			('essencial', 'Essencial', 'Para quem quer o controle completo', 19.90, 199.00,
+			 '["Tudo do plano Gratuito","Contas bancárias ilimitadas","Importação de extratos (PDF/OFX)","Contas fixas com lembretes por e-mail","Relatórios completos e exportação"]', 1, 2),
+			('profissional', 'Profissional', 'Para MEIs, empresas e contadores', 39.90, 399.00,
+			 '["Tudo do plano Essencial","Saúde financeira detalhada","Relatórios em PDF, XLSX e ODS","Gestão de múltiplos CNPJs","Suporte prioritário"]', 0, 3)
+	`); err != nil {
+		return fmt.Errorf("populando planos padrão: %w", err)
+	}
+
+	// A permissão manage_plans foi introduzida junto com o sistema de planos;
+	// user_version 2 concede ao admin uma única vez, sem sobrescrever edições.
+	var version int
+	if err := conn.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		return fmt.Errorf("lendo user_version: %w", err)
+	}
+	if version >= 2 {
+		return nil
+	}
+	if _, err := conn.Exec(`INSERT OR IGNORE INTO role_permissions (role, permission) VALUES ('admin', 'manage_plans')`); err != nil {
+		return fmt.Errorf("concedendo manage_plans ao admin: %w", err)
+	}
+	if _, err := conn.Exec(`PRAGMA user_version = 2`); err != nil {
 		return fmt.Errorf("gravando user_version: %w", err)
 	}
 	return nil

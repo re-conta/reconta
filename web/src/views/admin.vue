@@ -14,6 +14,8 @@ import {
   updateHealthSettings,
 } from "../api/health";
 import type { HealthSettings } from "../types/health";
+import { ApiError as BillingApiError, listPlans, updatePlan } from "../api/billing";
+import type { Plan } from "../types/billing";
 import { formatCnpj } from "../utils/cnpj";
 import {
   permissionLabels,
@@ -33,7 +35,11 @@ const canManagePermissions = computed(
   () => isSuperAdmin.value || currentUser.value?.permissions?.includes("manage_permissions"),
 );
 
-const activeTab = ref<"users" | "permissions" | "health">("users");
+const canManagePlans = computed(
+  () => isSuperAdmin.value || currentUser.value?.permissions?.includes("manage_plans"),
+);
+
+const activeTab = ref<"users" | "permissions" | "health" | "plans">("users");
 
 // --- Aba de usuários ---
 
@@ -192,6 +198,79 @@ async function saveHealthSettings() {
   }
 }
 
+// --- Aba de planos ---
+
+// Formulário de edição por plano: benefícios são editados como texto, um por
+// linha, e convertidos para lista no envio.
+interface PlanForm {
+  name: string;
+  description: string;
+  priceMonthly: number;
+  priceYearly: number;
+  benefitsText: string;
+  highlight: boolean;
+}
+
+const plans = ref<Plan[]>([]);
+const planForms = ref<Record<number, PlanForm>>({});
+const plansError = ref("");
+const plansSuccess = ref("");
+const loadingPlans = ref(true);
+const savingPlanId = ref<number | null>(null);
+
+async function loadPlans() {
+  loadingPlans.value = true;
+  plansError.value = "";
+  try {
+    plans.value = await listPlans();
+    const forms: Record<number, PlanForm> = {};
+    for (const plan of plans.value) {
+      forms[plan.id] = {
+        name: plan.name,
+        description: plan.description,
+        priceMonthly: plan.priceMonthly,
+        priceYearly: plan.priceYearly,
+        benefitsText: plan.benefits.join("\n"),
+        highlight: plan.highlight,
+      };
+    }
+    planForms.value = forms;
+  } catch (err) {
+    plansError.value = err instanceof BillingApiError ? err.message : "Falha ao carregar planos";
+  } finally {
+    loadingPlans.value = false;
+  }
+}
+
+async function savePlan(plan: Plan) {
+  const form = planForms.value[plan.id];
+  if (!form || !canManagePlans.value) return;
+
+  savingPlanId.value = plan.id;
+  plansError.value = "";
+  plansSuccess.value = "";
+  try {
+    const updated = await updatePlan(plan.id, {
+      name: form.name,
+      description: form.description,
+      priceMonthly: Number(form.priceMonthly),
+      priceYearly: Number(form.priceYearly),
+      benefits: form.benefitsText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+      highlight: form.highlight,
+    });
+    const idx = plans.value.findIndex((p) => p.id === plan.id);
+    if (idx !== -1) plans.value[idx] = updated;
+    plansSuccess.value = `Plano ${updated.name} atualizado.`;
+  } catch (err) {
+    plansError.value = err instanceof BillingApiError ? err.message : "Falha ao salvar o plano";
+  } finally {
+    savingPlanId.value = null;
+  }
+}
+
 // --- Visual ---
 
 const roleBadgeClasses: Record<UserRole, string> = {
@@ -240,6 +319,7 @@ onMounted(() => {
   loadUsers();
   loadPermissions();
   loadHealthSettings();
+  if (canManagePlans.value) loadPlans();
 });
 </script>
 
@@ -286,6 +366,15 @@ onMounted(() => {
         @click="activeTab = 'health'"
       >
         Saúde Financeira
+      </button>
+      <button
+        v-if="canManagePlans"
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-semibold transition"
+        :class="activeTab === 'plans' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900'"
+        @click="activeTab = 'plans'"
+      >
+        Planos
       </button>
     </div>
 
@@ -452,6 +541,118 @@ onMounted(() => {
       </p>
       <p v-else-if="healthSuccess" class="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">
         {{ healthSuccess }}
+      </p>
+    </div>
+
+    <!-- Aba: Planos -->
+    <div v-else-if="activeTab === 'plans'" class="flex flex-col gap-3">
+      <p class="text-sm text-ink-500">
+        Configure nome, preços e benefícios dos planos exibidos em /planos. O plano gratuito não
+        tem preço; benefícios são um por linha.
+      </p>
+
+      <div v-if="loadingPlans" class="flex flex-col items-center gap-2 rounded-3xl border border-ink-200/70 bg-white p-12 text-sm text-ink-400 shadow-sm">
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
+        Carregando...
+      </div>
+      <div v-else class="flex flex-col gap-4">
+        <form
+          v-for="plan in plans"
+          :key="plan.id"
+          class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
+          @submit.prevent="savePlan(plan)"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-sm font-semibold text-ink-900">
+              {{ planForms[plan.id]?.name || plan.name }}
+              <span class="ml-1.5 rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-semibold text-ink-500">
+                {{ plan.code }}
+              </span>
+            </h2>
+            <label
+              v-if="plan.code !== 'gratuito'"
+              class="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-600"
+            >
+              <input
+                v-model="planForms[plan.id]!.highlight"
+                type="checkbox"
+                class="h-4 w-4 rounded border-ink-300 accent-brand-600 focus:ring-brand-400"
+              />
+              Destacar como "Mais popular"
+            </label>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-ink-700">Nome</span>
+              <input
+                v-model="planForms[plan.id]!.name"
+                type="text"
+                required
+                class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+              />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium text-ink-700">Descrição</span>
+              <input
+                v-model="planForms[plan.id]!.description"
+                type="text"
+                class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+              />
+            </label>
+            <template v-if="plan.code !== 'gratuito'">
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium text-ink-700">Preço mensal (R$)</span>
+                <input
+                  v-model.number="planForms[plan.id]!.priceMonthly"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                />
+              </label>
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium text-ink-700">Preço anual (R$)</span>
+                <input
+                  v-model.number="planForms[plan.id]!.priceYearly"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                />
+              </label>
+            </template>
+            <label class="flex flex-col gap-1.5 sm:col-span-2">
+              <span class="text-sm font-medium text-ink-700">Benefícios (um por linha)</span>
+              <textarea
+                v-model="planForms[plan.id]!.benefitsText"
+                rows="5"
+                class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+              ></textarea>
+            </label>
+          </div>
+
+          <div class="flex justify-end">
+            <button
+              type="submit"
+              :disabled="savingPlanId === plan.id"
+              class="rounded-full bg-ink-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+            >
+              {{ savingPlanId === plan.id ? "Salvando..." : "Salvar" }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <p v-if="plansError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ plansError }}
+      </p>
+      <p v-else-if="plansSuccess" class="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">
+        {{ plansSuccess }}
       </p>
     </div>
 

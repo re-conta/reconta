@@ -1,6 +1,6 @@
 export type UserRole = "pessoa_fisica" | "pessoa_juridica" | "contador" | "admin" | "super_admin";
 
-export type Permission = "admin_panel" | "manage_users" | "manage_permissions";
+export type Permission = "admin_panel" | "manage_users" | "manage_permissions" | "manage_plans";
 
 export const roleLabels: Record<UserRole, string> = {
   pessoa_fisica: "Pessoa Física",
@@ -14,6 +14,7 @@ export const permissionLabels: Record<Permission, string> = {
   admin_panel: "Acessar painel de admin",
   manage_users: "Gerenciar cargos de usuários",
   manage_permissions: "Editar permissões dos cargos",
+  manage_plans: "Configurar planos e preços",
 };
 
 export interface User {

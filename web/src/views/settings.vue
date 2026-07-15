@@ -10,6 +10,10 @@ import PasswordInput from "../components/PasswordInput.vue";
 import { useAuth } from "../composables/useAuth";
 import { OFFSET_OPTIONS } from "../types/notification";
 import type { NotificationSettings } from "../types/notification";
+import { ApiError as BillingApiError, getSubscription } from "../api/billing";
+import CancelSubscriptionModal from "../components/modals/CancelSubscriptionModal.vue";
+import { formatPrice, paymentMethodLabels } from "../types/billing";
+import type { CancelResult, SubscriptionInfo } from "../types/billing";
 
 const { currentUser, setCurrentUser } = useAuth();
 
@@ -119,7 +123,56 @@ async function handleNotificationSubmit() {
   }
 }
 
-onMounted(loadNotificationSettings);
+// --- Assinatura ---
+
+const subscriptionInfo = ref<SubscriptionInfo | null>(null);
+const subscriptionLoading = ref(true);
+const subscriptionError = ref("");
+const subscriptionNotice = ref("");
+const showCancelModal = ref(false);
+
+const activeSubscription = computed(() => {
+  const sub = subscriptionInfo.value?.subscription;
+  return sub && sub.status === "active" ? sub : null;
+});
+
+async function loadSubscription() {
+  subscriptionLoading.value = true;
+  try {
+    subscriptionInfo.value = await getSubscription();
+  } catch (err) {
+    subscriptionError.value =
+      err instanceof BillingApiError ? err.message : "Falha ao carregar assinatura";
+  } finally {
+    subscriptionLoading.value = false;
+  }
+}
+
+function handleCanceled(result: CancelResult) {
+  showCancelModal.value = false;
+  if (subscriptionInfo.value) {
+    subscriptionInfo.value = {
+      ...subscriptionInfo.value,
+      subscription: result.subscription,
+    };
+  }
+  subscriptionNotice.value =
+    result.subscription.status === "canceled"
+      ? result.refundAmount > 0
+        ? `Assinatura cancelada. Reembolso de ${formatPrice(result.refundAmount)} solicitado ao Mercado Pago.`
+        : "Assinatura cancelada."
+      : "Renovação automática desativada: sua assinatura fica ativa até o fim do ciclo.";
+}
+
+function formatShortDate(value: string | null) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("pt-BR");
+}
+
+onMounted(() => {
+  loadNotificationSettings();
+  loadSubscription();
+});
 
 async function handlePasswordSubmit() {
   passwordError.value = "";
@@ -189,6 +242,68 @@ async function handlePasswordSubmit() {
           {{ formatDate(currentUser.createdAt) }}
         </p>
       </div>
+    </div>
+
+    <div class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-semibold text-ink-900">Plano e assinatura</h2>
+          <p class="mt-0.5 text-xs text-ink-500">Gerencie seu plano, renovação e cancelamento</p>
+        </div>
+        <RouterLink
+          to="/planos"
+          class="shrink-0 rounded-full border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700 transition hover:border-brand-400 hover:text-brand-700"
+        >
+          Ver planos
+        </RouterLink>
+      </div>
+
+      <div v-if="subscriptionLoading" class="text-sm text-ink-400">Carregando...</div>
+      <p v-else-if="subscriptionError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ subscriptionError }}
+      </p>
+      <template v-else>
+        <div
+          class="flex flex-col gap-3 rounded-2xl border border-ink-100 bg-ink-50/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p class="text-sm font-semibold text-ink-900">
+              Plano {{ activeSubscription?.planName ?? "Gratuito" }}
+              <span
+                v-if="activeSubscription"
+                class="ml-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+              >
+                {{ activeSubscription.cancelAtPeriodEnd ? "Não renova" : "Ativo" }}
+              </span>
+            </p>
+            <p v-if="activeSubscription" class="mt-0.5 text-xs text-ink-500">
+              Ciclo {{ activeSubscription.cycle === "yearly" ? "anual" : "mensal" }} ·
+              {{ paymentMethodLabels[activeSubscription.paymentMethod] ?? activeSubscription.paymentMethod }}
+              ·
+              {{ activeSubscription.cancelAtPeriodEnd ? "acesso até" : "renova em" }}
+              {{ formatShortDate(activeSubscription.currentPeriodEnd) }}
+            </p>
+            <p v-else class="mt-0.5 text-xs text-ink-500">
+              Você está no plano gratuito. Assine um plano pago para liberar todos os recursos.
+            </p>
+          </div>
+          <button
+            v-if="activeSubscription && !activeSubscription.cancelAtPeriodEnd"
+            type="button"
+            class="shrink-0 rounded-full border border-coral-200 px-4 py-2 text-sm font-semibold text-coral-700 transition hover:bg-coral-50"
+            @click="showCancelModal = true"
+          >
+            Cancelar assinatura
+          </button>
+        </div>
+
+        <p
+          v-if="subscriptionNotice"
+          class="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+        >
+          {{ subscriptionNotice }}
+        </p>
+      </template>
     </div>
 
     <form
@@ -366,5 +481,12 @@ async function handlePasswordSubmit() {
         </button>
       </div>
     </form>
+
+    <CancelSubscriptionModal
+      v-if="showCancelModal && activeSubscription"
+      :subscription="activeSubscription"
+      @close="showCancelModal = false"
+      @canceled="handleCanceled"
+    />
   </div>
 </template>

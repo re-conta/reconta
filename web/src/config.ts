@@ -33,4 +33,8 @@ export const navLinks = [
     path: "/contas",
     authRequired: true,
   },
+  {
+    name: "Planos",
+    path: "/planos",
+  },
 ];

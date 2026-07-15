@@ -27,9 +27,10 @@ const (
 	PermAdminPanel        = "admin_panel"
 	PermManageUsers       = "manage_users"
 	PermManagePermissions = "manage_permissions"
+	PermManagePlans       = "manage_plans"
 )
 
-var AllPermissions = []string{PermAdminPanel, PermManageUsers, PermManagePermissions}
+var AllPermissions = []string{PermAdminPanel, PermManageUsers, PermManagePermissions, PermManagePlans}
 
 // User representa um usuário cadastrado.
 type User struct {

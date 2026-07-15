@@ -10,6 +10,7 @@ import (
 
 	"github.com/re-conta/reconta/api/internal/account"
 	"github.com/re-conta/reconta/api/internal/auth"
+	"github.com/re-conta/reconta/api/internal/billing"
 	"github.com/re-conta/reconta/api/internal/category"
 	"github.com/re-conta/reconta/api/internal/db"
 	"github.com/re-conta/reconta/api/internal/email"
@@ -101,6 +102,18 @@ func main() {
 		log.Print("INTERNAL_API_TOKEN não definido: rota de varredura de notificações desabilitada")
 	}
 	notification.NewHandler(notificationRepo, authHandler, notificationHub, fixedBillRepo, userRepo, mailQueue, internalToken).RegisterRoutes(mux)
+
+	billingGateway, err := billing.NewGateway(getEnv("MP_ACCESS_TOKEN", ""))
+	if err != nil {
+		log.Fatalf("erro ao configurar Mercado Pago: %v", err)
+	}
+	if billingGateway == nil {
+		log.Print("MP_ACCESS_TOKEN não definido: checkout de planos desabilitado")
+	}
+	billing.NewHandler(
+		billing.NewRepository(conn), authHandler, userRepo, notificationRepo, notificationHub,
+		mailQueue, billingGateway, internalToken, getEnv("MP_WEBHOOK_SECRET", ""), appURL,
+	).RegisterRoutes(mux)
 
 	addr := ":" + port
 	log.Printf("servidor rodando em %s (db: %s)", addr, dbPath)
