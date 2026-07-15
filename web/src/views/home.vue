@@ -2,10 +2,12 @@
 import { ref, watchEffect } from "vue";
 import { useAuth } from "../composables/useAuth";
 import { listTransactions } from "../api/transactions";
+import { useFontsReady } from "../composables/useFontsReady";
 import LazyImage from "../components/LazyImage.vue";
 
 const { currentUser } = useAuth();
 const appName = import.meta.env.VITE_APP_NAME;
+const fontsReady = useFontsReady();
 
 const hasTransactions = ref(false);
 
@@ -31,10 +33,15 @@ watchEffect(async () => {
         Suas finanças, organizadas
       </span>
       <h1
-        class="mt-5 font-display text-2xl md:text-5xl font-bold leading-tight tracking-tight text-ink-900"
+        class="mt-5 font-display text-2xl md:text-5xl font-bold leading-tight tracking-tight transition-colors duration-500"
+        :class="fontsReady ? 'text-ink-900' : 'text-skeleton'"
       >
         {{ appName }} seu dinheiro com
-        <span class="bg-linear-to-r from-brand-500 to-coral-500 bg-clip-text text-transparent"
+        <span
+          class="bg-clip-text text-transparent transition-[background-image] duration-500"
+          :class="
+            fontsReady ? 'bg-linear-to-r from-brand-500 to-coral-500' : 'text-skeleton-gradient'
+          "
           >clareza</span
         >
       </h1>
@@ -77,7 +84,7 @@ watchEffect(async () => {
       <LazyImage
         src="/images/moneybag.svg"
         alt="Ilustração de um cofre de dinheiro"
-        class="w-1/2 md:w-full drop-shadow-xl"
+        class="w-full drop-shadow-xl"
       />
     </div>
   </div>

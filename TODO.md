@@ -1,5 +1,3 @@
-Para o usuário logado /transacoes deve ser a rota inicial /
-
 Unifique Categorias e Tags na página /categorias
 
 Na página /transacoes o bloco "Fluxo" e "Gastos por categoria" devem ficar abaixo da tabela de transações
