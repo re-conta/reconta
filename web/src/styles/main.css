@@ -8,9 +8,26 @@
   src: url("/fonts/Nunito-Variable.woff2") format("woff2-variations");
 }
 
+/*
+ * Fallback com métricas ajustadas para casar com o Nunito (evita layout shift
+ * durante o swap da fonte). Valores derivados das métricas reais dos arquivos
+ * Nunito-Variable.woff2 × Arial via fontTools.
+ */
+@font-face {
+  font-family: "Nunito Fallback";
+  src:
+    local("Arial"),
+    local("Liberation Sans"),
+    local("Helvetica");
+  size-adjust: 95.75%;
+  ascent-override: 105.59%;
+  descent-override: 36.87%;
+  line-gap-override: 0%;
+}
+
 @theme {
-  --font-sans: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Nunito", system-ui, sans-serif;
+  --font-sans: "Nunito", "Nunito Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Nunito", "Nunito Fallback", system-ui, sans-serif;
 
   --color-brand-50: #fffaeb;
   --color-brand-100: #fff3bf;
