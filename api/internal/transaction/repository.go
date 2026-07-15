@@ -116,6 +116,14 @@ func buildWhere(userID int64, f ListFilters) (string, []any) {
 		where = append(where, "t.id IN (SELECT transaction_id FROM transaction_tags WHERE tag_id = ?)")
 		args = append(args, f.TagID)
 	}
+	if len(f.AccountIDs) > 0 {
+		placeholders := make([]string, len(f.AccountIDs))
+		for i, id := range f.AccountIDs {
+			placeholders[i] = "?"
+			args = append(args, id)
+		}
+		where = append(where, fmt.Sprintf("t.account_id IN (%s)", strings.Join(placeholders, ",")))
+	}
 	if f.Search != "" {
 		where = append(where, "t.description LIKE ?")
 		args = append(args, "%"+f.Search+"%")

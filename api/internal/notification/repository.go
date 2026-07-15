@@ -12,6 +12,11 @@ import (
 // ErrNotFound é retornado quando a notificação não existe (ou não pertence ao usuário).
 var ErrNotFound = errors.New("notificação não encontrada")
 
+// ErrRequiresAction é retornado ao tentar marcar como lida uma notificação de
+// convite de compartilhamento ainda pendente — ela só pode ser resolvida
+// aceitando ou rejeitando o convite, nunca marcada como lida diretamente.
+var ErrRequiresAction = errors.New("notificação requer uma ação antes de ser marcada como lida")
+
 type Repository struct {
 	db *sql.DB
 }
@@ -75,8 +80,27 @@ func (r *Repository) CreateGeneral(ctx context.Context, userID int64, kind, titl
 	return r.GetByID(ctx, userID, id)
 }
 
+// CreateForShare insere uma notificação geral associando-a a um compartilhamento
+// (convite, aceite, rejeição ou cancelamento) — usada pelo pacote share.
+func (r *Repository) CreateForShare(ctx context.Context, userID, shareID int64, kind, title, message string) (*Notification, error) {
+	today := time.Now().UTC().Format("2006-01-02")
+	res, err := r.db.ExecContext(ctx,
+		`INSERT INTO notifications (user_id, fixed_bill_id, share_id, kind, title, message, due_date, offset_minutes)
+		 VALUES (?, NULL, ?, ?, ?, ?, ?, 0)`,
+		userID, shareID, kind, title, message, today,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("inserindo notificação de compartilhamento: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("obtendo id da notificação: %w", err)
+	}
+	return r.GetByID(ctx, userID, id)
+}
+
 const selectNotification = `
-	SELECT n.id, n.fixed_bill_id, fb.name, n.kind, n.title, n.message, n.due_date, n.read_at, n.email_sent_at, n.created_at
+	SELECT n.id, n.fixed_bill_id, fb.name, n.share_id, n.kind, n.title, n.message, n.due_date, n.read_at, n.email_sent_at, n.created_at
 	FROM notifications n
 	LEFT JOIN fixed_bills fb ON fb.id = n.fixed_bill_id`
 
@@ -143,6 +167,14 @@ func (r *Repository) UnreadCount(ctx context.Context, userID int64) (int, error)
 }
 
 func (r *Repository) MarkRead(ctx context.Context, userID, id int64) error {
+	notif, err := r.GetByID(ctx, userID, id)
+	if err != nil {
+		return err
+	}
+	if notif.Kind == KindShareInvited && notif.ReadAt == nil {
+		return ErrRequiresAction
+	}
+
 	res, err := r.db.ExecContext(ctx,
 		`UPDATE notifications SET read_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND user_id = ? AND read_at IS NULL`,
 		id, userID,
@@ -160,10 +192,25 @@ func (r *Repository) MarkRead(ctx context.Context, userID, id int64) error {
 	return nil
 }
 
+// MarkReadByShare marca como lida a notificação de um determinado kind
+// associada a um compartilhamento, sem passar pelo guard de MarkRead —
+// chamado pelo pacote share depois que o convite foi aceito, rejeitado ou
+// cancelado, quando a ação que o desbloqueia já aconteceu.
+func (r *Repository) MarkReadByShare(ctx context.Context, shareID int64, kind string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE notifications SET read_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE share_id = ? AND kind = ? AND read_at IS NULL`,
+		shareID, kind,
+	)
+	if err != nil {
+		return fmt.Errorf("marcando notificação de compartilhamento como lida: %w", err)
+	}
+	return nil
+}
+
 func (r *Repository) MarkAllRead(ctx context.Context, userID int64) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE notifications SET read_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE user_id = ? AND read_at IS NULL`,
-		userID,
+		`UPDATE notifications SET read_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE user_id = ? AND read_at IS NULL AND kind != ?`,
+		userID, KindShareInvited,
 	)
 	if err != nil {
 		return fmt.Errorf("marcando todas as notificações como lidas: %w", err)
@@ -262,12 +309,13 @@ func scanNotification(s scanner) (*Notification, error) {
 	var n Notification
 	var fixedBillID sql.NullInt64
 	var fixedBillName sql.NullString
+	var shareID sql.NullInt64
 	var readAt sql.NullString
 	var emailSentAt sql.NullString
 	var createdAt string
 
 	if err := s.Scan(
-		&n.ID, &fixedBillID, &fixedBillName, &n.Kind, &n.Title, &n.Message, &n.DueDate, &readAt, &emailSentAt, &createdAt,
+		&n.ID, &fixedBillID, &fixedBillName, &shareID, &n.Kind, &n.Title, &n.Message, &n.DueDate, &readAt, &emailSentAt, &createdAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -280,6 +328,9 @@ func scanNotification(s scanner) (*Notification, error) {
 	}
 	if fixedBillName.Valid {
 		n.FixedBillName = &fixedBillName.String
+	}
+	if shareID.Valid {
+		n.ShareID = &shareID.Int64
 	}
 	if readAt.Valid {
 		t := parseTimestamp(readAt.String)

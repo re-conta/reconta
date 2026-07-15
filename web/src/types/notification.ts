@@ -1,9 +1,16 @@
-export type NotificationKind = "bill_due_soon" | "bill_overdue";
+export type NotificationKind =
+  | "bill_due_soon"
+  | "bill_overdue"
+  | "share_invited"
+  | "share_accepted"
+  | "share_rejected"
+  | "share_cancelled";
 
 export interface Notification {
   id: number;
   fixedBillId: number | null;
   fixedBillName?: string;
+  shareId: number | null;
   kind: NotificationKind;
   title: string;
   message: string;

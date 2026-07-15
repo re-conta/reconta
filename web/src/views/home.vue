@@ -1,29 +1,18 @@
 <script setup lang="ts">
-import { ref, watchEffect } from "vue";
 import { useAuth } from "../composables/useAuth";
-import { listTransactions } from "../api/transactions";
 import { useFontsReady } from "../composables/useFontsReady";
 import LazyImage from "../components/LazyImage.vue";
+import TransactionsView from "./transactions.vue";
 
 const { currentUser } = useAuth();
 const appName = import.meta.env.VITE_APP_NAME;
 const fontsReady = useFontsReady();
-
-const hasTransactions = ref(false);
-
-watchEffect(async () => {
-  if (!currentUser.value) return;
-  try {
-    const result = await listTransactions({ limit: 1 });
-    hasTransactions.value = result.pagination.total > 0;
-  } catch {
-    hasTransactions.value = false;
-  }
-});
 </script>
 
 <template>
+  <TransactionsView v-if="currentUser" />
   <div
+    v-else
     class="mx-auto flex max-w-6xl flex-col items-center gap-8 px-2 md:px-6 py-6 sm:py-12 md:py-10 lg:py-32 sm:gap-12 lg:flex-row lg:items-center lg:justify-between"
   >
     <div class="max-w-xl text-center md:text-left">
@@ -53,25 +42,10 @@ watchEffect(async () => {
         class="mt-3 md:mt-6 inline-flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
       >
         <RouterLink
-          v-if="!currentUser"
           to="/login"
           class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
         >
           Entre
-        </RouterLink>
-        <RouterLink
-          v-else-if="!hasTransactions"
-          to="/importar"
-          class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
-        >
-          Comece
-        </RouterLink>
-        <RouterLink
-          v-else
-          to="/transacoes"
-          class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/10 transition hover:bg-ink-800"
-        >
-          Transações
         </RouterLink>
       </div>
     </div>

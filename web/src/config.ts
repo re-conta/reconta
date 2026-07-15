@@ -4,11 +4,6 @@ export const navLinks = [
     path: "/",
   },
   {
-    name: "Transações",
-    path: "/transacoes",
-    authRequired: true,
-  },
-  {
     name: "Recorrentes",
     path: "/recorrentes",
     authRequired: true,
@@ -26,6 +21,16 @@ export const navLinks = [
   {
     name: "Contas",
     path: "/contas",
+    authRequired: true,
+  },
+  {
+    name: "Compartilhamentos",
+    path: "/compartilhamentos",
+    authRequired: true,
+  },
+  {
+    name: "Compartilhado comigo",
+    path: "/compartilhado",
     authRequired: true,
   },
   {

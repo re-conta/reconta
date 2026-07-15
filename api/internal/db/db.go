@@ -212,6 +212,25 @@ func migrate(conn *sql.DB) error {
 		updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS shares (
+		id             INTEGER PRIMARY KEY AUTOINCREMENT,
+		owner_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		recipient_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		can_edit       INTEGER NOT NULL DEFAULT 0,
+		include_future INTEGER NOT NULL DEFAULT 0,
+		period_start   TEXT,
+		period_end     TEXT,
+		status         TEXT NOT NULL DEFAULT 'pending',
+		created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		responded_at   TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS share_accounts (
+		share_id   INTEGER NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
+		account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+		PRIMARY KEY (share_id, account_id)
+	);
+
 	CREATE TABLE IF NOT EXISTS subscription_payments (
 		id              INTEGER PRIMARY KEY AUTOINCREMENT,
 		subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
@@ -237,6 +256,9 @@ func migrate(conn *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_fixed_bills_user_id ON fixed_bills(user_id);
 	CREATE INDEX IF NOT EXISTS idx_fixed_bill_payments_fixed_bill_id ON fixed_bill_payments(fixed_bill_id);
 	CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, read_at);
+	CREATE INDEX IF NOT EXISTS idx_shares_owner ON shares(owner_id, status);
+	CREATE INDEX IF NOT EXISTS idx_shares_recipient ON shares(recipient_id, status);
+	CREATE INDEX IF NOT EXISTS idx_share_accounts_account ON share_accounts(account_id);
 	`
 	if _, err := conn.Exec(schema); err != nil {
 		return err
@@ -315,6 +337,16 @@ func addMissingColumns(conn *sql.DB) error {
 	// foram introduzidos (Pessoa Física, Pessoa Jurídica, Contador, ...).
 	if _, err := conn.Exec(`UPDATE users SET role = 'pessoa_fisica' WHERE role = 'user'`); err != nil {
 		return fmt.Errorf("migrando role legada 'user': %w", err)
+	}
+
+	hasShareID, err := columnExists(conn, "notifications", "share_id")
+	if err != nil {
+		return fmt.Errorf("verificando coluna share_id: %w", err)
+	}
+	if !hasShareID {
+		if _, err := conn.Exec(`ALTER TABLE notifications ADD COLUMN share_id INTEGER REFERENCES shares(id) ON DELETE CASCADE`); err != nil {
+			return fmt.Errorf("adicionando coluna share_id: %w", err)
+		}
 	}
 
 	if err := seedDefaultRolePermissions(conn); err != nil {

@@ -12,6 +12,7 @@ import { OFFSET_OPTIONS } from "../types/notification";
 import type { NotificationSettings } from "../types/notification";
 import { ApiError as BillingApiError, getSubscription } from "../api/billing";
 import CancelSubscriptionModal from "../components/modals/CancelSubscriptionModal.vue";
+import AccountsManager from "../components/AccountsManager.vue";
 import { formatPrice, paymentMethodLabels } from "../types/billing";
 import type { CancelResult, SubscriptionInfo } from "../types/billing";
 
@@ -304,6 +305,11 @@ async function handlePasswordSubmit() {
           {{ subscriptionNotice }}
         </p>
       </template>
+    </div>
+
+    <div class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm">
+      <h2 class="text-sm font-semibold text-ink-900">Contas bancárias</h2>
+      <AccountsManager />
     </div>
 
     <form

@@ -56,6 +56,7 @@ type ListFilters struct {
 	Type       string
 	CategoryID int64
 	TagID      int64
+	AccountIDs []int64 // quando não vazio, restringe às contas informadas (usado pelo compartilhamento)
 	Search     string
 	Page       int
 	Limit      int

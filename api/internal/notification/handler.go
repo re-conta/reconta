@@ -96,6 +96,10 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request, userID int64)
 			writeError(w, http.StatusNotFound, "não encontrada")
 			return
 		}
+		if errors.Is(err, ErrRequiresAction) {
+			writeError(w, http.StatusConflict, "responda ao convite de compartilhamento para marcar como lida")
+			return
+		}
 		log.Printf("erro ao marcar notificação como lida: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return

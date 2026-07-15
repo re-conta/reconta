@@ -4,6 +4,7 @@ import { Pencil, Plus, Trash2, X } from "lucide-vue-next";
 import { listAccounts } from "../api/accounts";
 import { createCategory, listCategories } from "../api/categories";
 import { createTag, listTags } from "../api/tags";
+import AccountsManager from "../components/AccountsManager.vue";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import FinancialHealthCard from "../components/FinancialHealthCard.vue";
@@ -139,6 +140,21 @@ function openCategoryModal() {
 
 function closeCategoryModal() {
   categoryModalOpen.value = false;
+}
+
+// Gerenciamento de contas
+const accountsModalOpen = ref(false);
+
+function openAccountsModal() {
+  accountsModalOpen.value = true;
+}
+
+function closeAccountsModal() {
+  accountsModalOpen.value = false;
+}
+
+function handleAccountsChanged(updated: Account[]) {
+  accounts.value = updated;
 }
 
 async function submitNewCategory() {
@@ -448,7 +464,9 @@ watch(
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key !== "Escape") return;
-  if (categoryModalOpen.value) {
+  if (accountsModalOpen.value) {
+    closeAccountsModal();
+  } else if (categoryModalOpen.value) {
     closeCategoryModal();
   } else if (showForm.value) {
     resetForm();
@@ -518,8 +536,6 @@ onUnmounted(() => {
           @next="goToNextPeriod"
           @select-date="(d) => (selectedDate = d)"
         />
-        <CashFlowChart :month="filters.month" :year="filters.year" :transactions="transactions" />
-        <CategoryExpenseChart :transactions="transactions" />
       </div>
 
       <div class="flex min-w-0 flex-1 flex-col gap-6 md:order-1">
@@ -672,7 +688,7 @@ onUnmounted(() => {
           >
             <div
               v-if="showForm"
-              class="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/50 p-4 backdrop-blur-sm"
+              class="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
               @click.self="resetForm"
             >
               <Transition
@@ -686,7 +702,7 @@ onUnmounted(() => {
               >
                 <form
                   v-if="showForm"
-                  class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+                  class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
                   @submit.prevent="handleSubmit"
                 >
                   <div
@@ -769,7 +785,18 @@ onUnmounted(() => {
                         </select>
                       </label>
                       <label class="flex flex-col gap-1.5">
-                        <span class="text-sm font-medium text-ink-700">Conta</span>
+                        <span
+                          class="flex items-center justify-between text-sm font-medium text-ink-700"
+                        >
+                          Conta
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-700 transition hover:text-brand-800"
+                            @click="openAccountsModal"
+                          >
+                            <Plus class="h-3 w-3" /> Gerenciar
+                          </button>
+                        </span>
                         <select
                           v-model="form.accountId"
                           class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
@@ -886,7 +913,7 @@ onUnmounted(() => {
           >
             <div
               v-if="categoryModalOpen"
-              class="fixed inset-0 z-60 flex items-center justify-center bg-ink-900/50 p-4 backdrop-blur-sm"
+              class="fixed inset-0 z-60 flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
               @click.self="closeCategoryModal"
             >
               <Transition
@@ -900,7 +927,7 @@ onUnmounted(() => {
               >
                 <form
                   v-if="categoryModalOpen"
-                  class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+                  class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
                   @submit.prevent="submitNewCategory"
                 >
                   <div
@@ -969,6 +996,57 @@ onUnmounted(() => {
                     </button>
                   </div>
                 </form>
+              </Transition>
+            </div>
+          </Transition>
+        </Teleport>
+
+        <!-- Modal: gerenciar contas (empilhado sobre o de transação) -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="accountsModalOpen"
+              class="fixed inset-0 z-60 flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              @click.self="closeAccountsModal"
+            >
+              <Transition
+                appear
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 scale-95 opacity-0"
+                enter-to-class="translate-y-0 scale-100 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="translate-y-0 scale-100 opacity-100"
+                leave-to-class="translate-y-2 scale-95 opacity-0"
+              >
+                <div
+                  v-if="accountsModalOpen"
+                  class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+                >
+                  <div
+                    class="flex shrink-0 items-center justify-between border-b border-ink-100 px-6 py-4"
+                  >
+                    <h2 class="font-display text-lg font-bold text-ink-900">Contas</h2>
+                    <button
+                      type="button"
+                      class="rounded-full p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                      title="Fechar"
+                      @click="closeAccountsModal"
+                    >
+                      <X class="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div class="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+                    <AccountsManager @changed="handleAccountsChanged" />
+                  </div>
+                </div>
               </Transition>
             </div>
           </Transition>
@@ -1252,6 +1330,11 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="flex flex-col gap-6">
+      <CashFlowChart :month="filters.month" :year="filters.year" :transactions="transactions" />
+      <CategoryExpenseChart :transactions="transactions" />
     </div>
   </div>
 </template>

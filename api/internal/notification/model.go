@@ -9,6 +9,12 @@ import "time"
 const (
 	KindDueSoon = "bill_due_soon"
 	KindOverdue = "bill_overdue"
+
+	// Kinds relacionados ao compartilhamento de transações entre usuários.
+	KindShareInvited   = "share_invited"
+	KindShareAccepted  = "share_accepted"
+	KindShareRejected  = "share_rejected"
+	KindShareCancelled = "share_cancelled"
 )
 
 // Notification representa um lembrete gerado para o usuário.
@@ -16,6 +22,7 @@ type Notification struct {
 	ID            int64      `json:"id"`
 	FixedBillID   *int64     `json:"fixedBillId"`
 	FixedBillName *string    `json:"fixedBillName,omitempty"`
+	ShareID       *int64     `json:"shareId"`
 	Kind          string     `json:"kind"`
 	Title         string     `json:"title"`
 	Message       string     `json:"message"`

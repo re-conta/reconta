@@ -19,6 +19,7 @@ import (
 	"github.com/re-conta/reconta/api/internal/notification"
 	"github.com/re-conta/reconta/api/internal/report"
 	"github.com/re-conta/reconta/api/internal/seed"
+	"github.com/re-conta/reconta/api/internal/share"
 	"github.com/re-conta/reconta/api/internal/statement"
 	"github.com/re-conta/reconta/api/internal/tag"
 	"github.com/re-conta/reconta/api/internal/transaction"
@@ -102,6 +103,9 @@ func main() {
 		log.Print("INTERNAL_API_TOKEN não definido: rota de varredura de notificações desabilitada")
 	}
 	notification.NewHandler(notificationRepo, authHandler, notificationHub, fixedBillRepo, userRepo, mailQueue, internalToken).RegisterRoutes(mux)
+
+	shareRepo := share.NewRepository(conn)
+	share.NewHandler(shareRepo, transactionRepo, accountRepo, categoryRepo, tagRepo, userRepo, notificationRepo, notificationHub, authHandler).RegisterRoutes(mux)
 
 	billingGateway, err := billing.NewGateway(getEnv("MP_ACCESS_TOKEN", ""))
 	if err != nil {

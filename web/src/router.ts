@@ -2,6 +2,8 @@ import { createWebHistory, createRouter } from "vue-router";
 
 import AccountsView from "./views/accounts.vue";
 import CategoriesView from "./views/categories.vue";
+import SharedWithMeView from "./views/compartilhado.vue";
+import SharesView from "./views/compartilhamentos.vue";
 import FixedBillsView from "./views/contas-fixas.vue";
 import ExportView from "./views/export.vue";
 import ForgotPasswordView from "./views/forgot-password.vue";
@@ -47,6 +49,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   { path: "/tags", redirect: "/categorias" },
+  {
+    path: "/compartilhamentos",
+    name: "Shares",
+    component: SharesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/compartilhado",
+    name: "SharedWithMe",
+    component: SharedWithMeView,
+    meta: { requiresAuth: true },
+  },
   {
     path: "/configuracoes",
     name: "Settings",

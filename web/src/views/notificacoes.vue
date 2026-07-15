@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { AlertTriangle, CalendarClock, CheckCheck, Settings } from "lucide-vue-next";
+import { AlertTriangle, CalendarClock, CheckCheck, Settings, Share2 } from "lucide-vue-next";
 import {
   ApiError,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../api/notifications";
+import { acceptShare, rejectShare } from "../api/shares";
 import { useNotifications } from "../composables/useNotifications";
 import type { Notification } from "../types/notification";
 
@@ -15,6 +16,7 @@ const { unreadCount, refreshUnreadCount, latest } = useNotifications();
 const notifications = ref<Notification[]>([]);
 const loading = ref(true);
 const errorMessage = ref("");
+const respondingId = ref<number | null>(null);
 
 async function loadNotifications() {
   loading.value = true;
@@ -36,13 +38,41 @@ watch(latest, (notification) => {
 });
 
 async function handleMarkRead(notification: Notification) {
-  if (notification.readAt) return;
+  if (notification.readAt || notification.kind === "share_invited") return;
   try {
     await markNotificationRead(notification.id);
     notification.readAt = new Date().toISOString();
     await refreshUnreadCount();
   } catch {
     // ignora falha silenciosamente, o usuário pode tentar novamente
+  }
+}
+
+async function handleAcceptShare(notification: Notification) {
+  if (!notification.shareId) return;
+  respondingId.value = notification.id;
+  try {
+    await acceptShare(notification.shareId);
+    notification.readAt = new Date().toISOString();
+    await refreshUnreadCount();
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao aceitar convite";
+  } finally {
+    respondingId.value = null;
+  }
+}
+
+async function handleRejectShare(notification: Notification) {
+  if (!notification.shareId) return;
+  respondingId.value = notification.id;
+  try {
+    await rejectShare(notification.shareId);
+    notification.readAt = new Date().toISOString();
+    await refreshUnreadCount();
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao rejeitar convite";
+  } finally {
+    respondingId.value = null;
   }
 }
 
@@ -155,7 +185,7 @@ onMounted(loadNotifications);
             v-for="notification in items"
             :key="notification.id"
             class="relative cursor-pointer rounded-2xl border border-ink-200/70 bg-white p-4 shadow-sm transition hover:border-brand-200"
-            :class="{ 'bg-ink-50/40': notification.readAt }"
+            :class="{ 'bg-ink-50/40': notification.readAt, 'cursor-default': notification.kind === 'share_invited' }"
             @click="handleMarkRead(notification)"
           >
             <span
@@ -163,10 +193,13 @@ onMounted(loadNotifications);
               :class="
                 notification.kind === 'bill_overdue'
                   ? 'bg-coral-100 text-coral-600'
-                  : 'bg-brand-100 text-brand-600'
+                  : notification.kind?.startsWith('share_')
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-brand-100 text-brand-600'
               "
             >
               <AlertTriangle v-if="notification.kind === 'bill_overdue'" class="h-3.5 w-3.5" />
+              <Share2 v-else-if="notification.kind?.startsWith('share_')" class="h-3.5 w-3.5" />
               <CalendarClock v-else class="h-3.5 w-3.5" />
             </span>
 
@@ -177,6 +210,24 @@ onMounted(loadNotifications);
                 <p class="mt-1.5 text-xs text-ink-400">
                   {{ formatDateTime(notification.createdAt) }}
                 </p>
+                <div v-if="notification.kind === 'share_invited' && !notification.readAt" class="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    :disabled="respondingId === notification.id"
+                    class="rounded-full bg-ink-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+                    @click.stop="handleAcceptShare(notification)"
+                  >
+                    Aceitar
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="respondingId === notification.id"
+                    class="rounded-full border border-ink-200 px-3.5 py-1.5 text-xs font-semibold text-ink-700 transition hover:bg-ink-100 disabled:opacity-50"
+                    @click.stop="handleRejectShare(notification)"
+                  >
+                    Rejeitar
+                  </button>
+                </div>
               </div>
               <span
                 v-if="!notification.readAt"
