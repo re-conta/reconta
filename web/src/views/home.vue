@@ -24,19 +24,19 @@ watchEffect(async () => {
 
 <template>
   <div
-    class="mx-auto flex max-w-6xl flex-col items-center gap-8 px-2 md:px-6 py-4 md:py-10 sm:gap-12 sm:py-12 lg:flex-row lg:items-center lg:justify-between lg:py-32"
+    class="mx-auto flex max-w-6xl flex-col items-center gap-8 px-2 md:px-6 py-6 sm:py-12 md:py-10 lg:py-32 sm:gap-12 lg:flex-row lg:items-center lg:justify-between"
   >
-    <div class="max-w-xl text-center lg:text-left">
+    <div class="max-w-xl text-center md:text-left">
       <span
         class="inline-flex items-center gap-2 rounded-full border border-brand-300/60 bg-brand-100/70 px-3 py-1 text-xs font-semibold text-brand-700"
       >
         Suas finanças, organizadas
       </span>
       <h1
-        class="mt-5 font-display text-2xl md:text-5xl font-bold leading-tight tracking-tight transition-colors duration-500"
+        class="mt-5 font-display text-xl md:text-5xl font-bold leading-tight tracking-tight transition-colors duration-500"
         :class="fontsReady ? 'text-ink-900' : 'text-skeleton'"
       >
-        {{ appName }} seu dinheiro com
+        {{ appName }} - seu dinheiro com
         <span
           class="bg-clip-text text-transparent transition-[background-image] duration-500"
           :class="
@@ -49,7 +49,9 @@ watchEffect(async () => {
         Centralize contas, transações e categorias em um só lugar &mdash; sem planilhas, sem
         complicação.
       </p>
-      <div class="mt-3 md:mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+      <div
+        class="mt-3 md:mt-6 inline-flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
+      >
         <RouterLink
           v-if="!currentUser"
           to="/login"

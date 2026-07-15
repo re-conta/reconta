@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bunx --bun vite",
+    "dev": "bunx --bun vite -- --host",
     "build": "vue-tsc -b && /home/nginx/.bun/bin/bunx --bun vite build",
     "preview": "vite preview",
     "lint": "oxlint",

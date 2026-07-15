@@ -28,14 +28,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100vh-140px)] items-center justify-center px-6 py-4 md:py-12">
+  <div class="flex items-center justify-center px-2 md:px-6 md:py-12">
     <div class="w-full max-w-sm">
       <div class="mb-8 flex flex-col items-center text-center">
         <h1 class="mt-4 font-display text-2xl font-bold text-ink-900">Bem-vindo de volta</h1>
         <p class="mt-1 text-sm text-ink-500">Acesse sua conta</p>
       </div>
 
-      <div class="rounded-3xl border border-ink-200/70 bg-white p-8 shadow-xl shadow-ink-900/5">
+      <div class="rounded-3xl border border-ink-200/70 bg-white p-4 md:p-8 shadow-xl shadow-ink-900/5">
         <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
           <label class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-ink-700">E-mail</span>

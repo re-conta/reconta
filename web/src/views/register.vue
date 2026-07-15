@@ -64,14 +64,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100vh-140px)] items-center justify-center py-4 md:py-12">
+  <div class="flex items-center justify-center px-2 md:py-12">
     <div class="w-full max-w-sm">
-      <div class="mb-8 flex flex-col items-center text-center">
-        <h1 class="mt-4 font-display text-2xl font-bold text-ink-900">Crie sua conta</h1>
-        <p class="mt-1 text-sm text-ink-500">Comece a organizar suas finanças</p>
+      <div class="mb-4 md:mb-8 flex flex-col items-center text-center">
+        <h1 class="mt-2 md:mt-4 font-display text-2xl font-bold text-ink-900">Crie sua conta</h1>
+        <p class="md:mt-1 text-sm text-ink-500">Comece a organizar suas finanças</p>
       </div>
 
-      <div class="rounded-3xl border border-ink-200/70 bg-white p-8 shadow-xl shadow-ink-900/5">
+      <div class="rounded-3xl border border-ink-200/70 bg-white p-4 md:p-8 shadow-xl shadow-ink-900/5">
         <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
           <fieldset class="flex flex-col gap-1.5">
             <legend class="text-sm font-medium text-ink-700">Tipo de conta</legend>
