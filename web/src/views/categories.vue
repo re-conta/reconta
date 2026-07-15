@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   ApiError,
   createCategory,
@@ -7,9 +7,16 @@ import {
   listCategories,
   updateCategory,
 } from "../api/categories";
+import { createTag, deleteTag, listTags, updateTag } from "../api/tags";
 import type { Category, CategoryInput } from "../types/category";
+import type { Tag, TagInput } from "../types/tag";
+
+type Tab = "categories" | "tags";
+
+const activeTab = ref<Tab>("categories");
 
 const categories = ref<Category[]>([]);
+const tags = ref<Tag[]>([]);
 const errorMessage = ref("");
 const loading = ref(true);
 const submitting = ref(false);
@@ -17,7 +24,7 @@ const submitting = ref(false);
 const editingId = ref<number | null>(null);
 const showForm = ref(false);
 const showPatternsHelp = ref(false);
-const form = reactive<CategoryInput>({
+const form = reactive<CategoryInput & TagInput>({
   name: "",
   color: "#6366f1",
   icon: "circle",
@@ -31,13 +38,40 @@ const categoryTypes = [
   { value: "both", label: "Ambos" },
 ];
 
-async function loadCategories() {
+const tabs: { id: Tab; label: string }[] = [
+  { id: "categories", label: "Categorias" },
+  { id: "tags", label: "Tags" },
+];
+
+const title = computed(() => (activeTab.value === "categories" ? "Categorias" : "Tags"));
+const subtitle = computed(() =>
+  activeTab.value === "categories"
+    ? "Organize receitas e despesas"
+    : "Etiquetas livres para organizar transações",
+);
+const addLabel = computed(() =>
+  activeTab.value === "categories" ? "+ Nova categoria" : "+ Nova tag",
+);
+const emptyTitle = computed(() =>
+  activeTab.value === "categories"
+    ? "Nenhuma categoria cadastrada ainda"
+    : "Nenhuma tag cadastrada ainda",
+);
+const emptySubtitle = computed(() =>
+  activeTab.value === "categories"
+    ? "Crie a primeira categoria para começar."
+    : "Crie a primeira tag para começar.",
+);
+
+async function loadAll() {
   loading.value = true;
   errorMessage.value = "";
   try {
-    categories.value = await listCategories();
+    const [categoriesResult, tagsResult] = await Promise.all([listCategories(), listTags()]);
+    categories.value = categoriesResult;
+    tags.value = tagsResult;
   } catch (err) {
-    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao carregar categorias";
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao carregar dados";
   } finally {
     loading.value = false;
   }
@@ -51,6 +85,12 @@ function resetForm() {
   form.patterns = "";
   editingId.value = null;
   showForm.value = false;
+  showPatternsHelp.value = false;
+}
+
+function switchTab(tab: Tab) {
+  activeTab.value = tab;
+  resetForm();
 }
 
 function startCreate() {
@@ -58,7 +98,7 @@ function startCreate() {
   showForm.value = true;
 }
 
-function startEdit(category: Category) {
+function startEditCategory(category: Category) {
   editingId.value = category.id;
   form.name = category.name;
   form.color = category.color;
@@ -68,50 +108,101 @@ function startEdit(category: Category) {
   showForm.value = true;
 }
 
+function startEditTag(tag: Tag) {
+  editingId.value = tag.id;
+  form.name = tag.name;
+  form.color = tag.color;
+  showForm.value = true;
+}
+
 async function handleSubmit() {
   errorMessage.value = "";
   submitting.value = true;
   try {
-    if (editingId.value) {
-      await updateCategory(editingId.value, { ...form });
+    if (activeTab.value === "categories") {
+      const input: CategoryInput = {
+        name: form.name,
+        color: form.color,
+        icon: form.icon,
+        type: form.type,
+        patterns: form.patterns,
+      };
+      if (editingId.value) {
+        await updateCategory(editingId.value, input);
+      } else {
+        await createCategory(input);
+      }
     } else {
-      await createCategory({ ...form });
+      const input: TagInput = { name: form.name, color: form.color };
+      if (editingId.value) {
+        await updateTag(editingId.value, input);
+      } else {
+        await createTag(input);
+      }
     }
     resetForm();
-    await loadCategories();
+    await loadAll();
   } catch (err) {
-    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao salvar categoria";
+    const label = activeTab.value === "categories" ? "categoria" : "tag";
+    errorMessage.value = err instanceof ApiError ? err.message : `Falha ao salvar ${label}`;
   } finally {
     submitting.value = false;
   }
 }
 
-async function handleDelete(id: number) {
+async function handleDeleteCategory(id: number) {
   if (!confirm("Excluir esta categoria?")) return;
   try {
     await deleteCategory(id);
-    await loadCategories();
+    await loadAll();
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir categoria";
   }
 }
 
-onMounted(loadCategories);
+async function handleDeleteTag(id: number) {
+  if (!confirm("Excluir esta tag?")) return;
+  try {
+    await deleteTag(id);
+    await loadAll();
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir tag";
+  }
+}
+
+onMounted(loadAll);
 </script>
 
 <template>
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink-900">Categorias</h1>
-        <p class="mt-0.5 text-sm text-ink-500">Organize receitas e despesas</p>
+        <h1 class="font-display text-2xl font-bold text-ink-900">{{ title }}</h1>
+        <p class="mt-0.5 text-sm text-ink-500">{{ subtitle }}</p>
       </div>
       <button
         type="button"
         class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
         @click="startCreate"
       >
-        + Nova categoria
+        {{ addLabel }}
+      </button>
+    </div>
+
+    <div class="flex gap-1 rounded-full border border-ink-200/70 bg-white p-1 shadow-sm w-fit">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-semibold transition"
+        :class="
+          activeTab === tab.id
+            ? 'bg-ink-900 text-white'
+            : 'text-ink-600 hover:bg-ink-100'
+        "
+        @click="switchTab(tab.id)"
+      >
+        {{ tab.label }}
       </button>
     </div>
 
@@ -130,7 +221,7 @@ onMounted(loadCategories);
             class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
           />
         </label>
-        <label class="flex flex-col gap-1.5">
+        <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Tipo</span>
           <select
             v-model="form.type"
@@ -149,7 +240,7 @@ onMounted(loadCategories);
             class="h-10.5 w-16 cursor-pointer rounded-xl border border-ink-200"
           />
         </label>
-        <label class="flex flex-col gap-1.5">
+        <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-ink-700">Ícone (nome lucide)</span>
           <input
             v-model="form.icon"
@@ -159,7 +250,7 @@ onMounted(loadCategories);
           />
         </label>
       </div>
-      <label class="flex flex-col gap-1.5">
+      <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
         <span class="flex items-center justify-between text-sm font-medium text-ink-700">
           Padrões de auto-categorização (opcional)
           <button
@@ -212,13 +303,13 @@ onMounted(loadCategories);
         {{ errorMessage }}
       </p>
       <div
-        v-else-if="categories.length === 0"
+        v-else-if="activeTab === 'categories' && categories.length === 0"
         class="flex flex-col items-center gap-1 p-12 text-center"
       >
-        <p class="text-sm font-medium text-ink-600">Nenhuma categoria cadastrada ainda</p>
-        <p class="text-sm text-ink-400">Crie a primeira categoria para começar.</p>
+        <p class="text-sm font-medium text-ink-600">{{ emptyTitle }}</p>
+        <p class="text-sm text-ink-400">{{ emptySubtitle }}</p>
       </div>
-      <ul v-else class="divide-y divide-ink-100">
+      <ul v-else-if="activeTab === 'categories'" class="divide-y divide-ink-100">
         <li
           v-for="category in categories"
           :key="category.id"
@@ -241,14 +332,49 @@ onMounted(loadCategories);
             <button
               type="button"
               class="text-xs font-semibold text-brand-700 hover:text-brand-800"
-              @click="startEdit(category)"
+              @click="startEditCategory(category)"
             >
               Editar
             </button>
             <button
               type="button"
               class="text-xs font-semibold text-coral-600 hover:text-coral-700"
-              @click="handleDelete(category.id)"
+              @click="handleDeleteCategory(category.id)"
+            >
+              Excluir
+            </button>
+          </div>
+        </li>
+      </ul>
+      <div v-else-if="tags.length === 0" class="flex flex-col items-center gap-1 p-12 text-center">
+        <p class="text-sm font-medium text-ink-600">{{ emptyTitle }}</p>
+        <p class="text-sm text-ink-400">{{ emptySubtitle }}</p>
+      </div>
+      <ul v-else class="divide-y divide-ink-100">
+        <li
+          v-for="tag in tags"
+          :key="tag.id"
+          class="flex items-center justify-between gap-3 px-5 py-4 transition hover:bg-ink-50/60"
+        >
+          <div class="flex items-center gap-2.5">
+            <span
+              class="h-3 w-3 shrink-0 rounded-full"
+              :style="{ backgroundColor: tag.color }"
+            ></span>
+            <p class="truncate text-sm font-semibold text-ink-900">{{ tag.name }}</p>
+          </div>
+          <div class="flex shrink-0 gap-2">
+            <button
+              type="button"
+              class="text-xs font-semibold text-brand-700 hover:text-brand-800"
+              @click="startEditTag(tag)"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              class="text-xs font-semibold text-coral-600 hover:text-coral-700"
+              @click="handleDeleteTag(tag.id)"
             >
               Excluir
             </button>

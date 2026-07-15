@@ -14,7 +14,6 @@ import RegisterView from "./views/register.vue";
 import ReportsView from "./views/reports.vue";
 import ResetPasswordView from "./views/reset-password.vue";
 import SettingsView from "./views/settings.vue";
-import TagsView from "./views/tags.vue";
 import TransactionsView from "./views/transactions.vue";
 import AdminView from "./views/admin.vue";
 import NotFound from "./views/notfound.vue";
@@ -47,7 +46,7 @@ const routes = [
     component: CategoriesView,
     meta: { requiresAuth: true },
   },
-  { path: "/tags", name: "Tags", component: TagsView, meta: { requiresAuth: true } },
+  { path: "/tags", redirect: "/categorias" },
   {
     path: "/configuracoes",
     name: "Settings",

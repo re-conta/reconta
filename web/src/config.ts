@@ -19,11 +19,6 @@ export const navLinks = [
     authRequired: true,
   },
   {
-    name: "Tags",
-    path: "/tags",
-    authRequired: true,
-  },
-  {
     name: "Relatórios",
     path: "/relatorios",
     authRequired: true,
