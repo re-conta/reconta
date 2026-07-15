@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth";
 import { useSiteModals } from "../composables/useSiteModals";
+import { canAccessAdmin } from "../types/user";
 
 const { currentUser, logout } = useAuth();
 const { open: openSiteModal } = useSiteModals();
@@ -21,9 +22,7 @@ const initials = computed(() => {
     .join("");
 });
 
-const isAdmin = computed(
-  () => currentUser.value?.role === "admin" || currentUser.value?.role === "super_admin",
-);
+const isAdmin = computed(() => canAccessAdmin(currentUser.value));
 
 const avatarError = ref(false);
 const avatarUrl = computed(() => (avatarError.value ? "" : currentUser.value?.avatarUrl || ""));
@@ -149,7 +148,7 @@ async function handleLogout() {
         <nav class="py-1">
           <RouterLink
             v-if="isAdmin"
-            to="/users"
+            to="/admin"
             class="flex items-center gap-2 px-4 py-2 text-sm text-ink-700 transition hover:bg-ink-50"
             role="menuitem"
             @click="close"
@@ -159,7 +158,7 @@ async function handleLogout() {
                 d="M10 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-6 9a6 6 0 1 1 12 0 1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"
               />
             </svg>
-            Usuários
+            Administração
           </RouterLink>
           <RouterLink
             to="/configuracoes"

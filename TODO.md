@@ -1,12 +1,17 @@
+Usando o plano gratuito do Groq(https://groq.com) crie um sistema que analisa a conta do usuário com base na "saúde" oferece recomendações de meios de economizar ou de investir o dinheiro que sobra(no caso de saúde >= 3), para dicas de corte de gastos ou dicas de investimentos analize as transações, como por exemplo: 
+
+- + de 1 Streaming recomende cancelar os excedentes deixando um apenas
+- Gastos com combustível(procure se na região do usuários existem postos com combustível mais barato)
+- Não se prenda a esses dois eventos e seja criativo(usando a api do Groq para "pensar" em tempo real e recomendar).
+
+Na consulta usando o Groq tome muito cuidado para não exceder os limites da API gratuita, ou seja, as interações devem obedecer uma "fila" para executar apenas uma requisição por vez e inserir um delay/debounce/throttle indepente do número de usuários que estejam sendo processados para não exceder os limites horários, diários, semanais e mensais em hipótese alguma.
+
+
 Permita compartilhar suas transações e relatórios com outros usuários cadastrados no site, o usuário poderá selecionar quais periodos e quais contas bancárias deseja compartilhar, deve haver uma opção para habilitar ou desabilitar o compartilhamento de transações futuras, permita tambem que a pessoa que compartilha escolha se o usuário convidado poderá editar as transações ou não. A pessoa que recebe o convite deve receber uma notificação mas tome cuidado, essa notificação não pode ser marcada como lida e não ser que o usuário convidado rejeite, o usuário que convidou deve ter a opção de cancelar o compartilhamento a qualquer momento. Quando o usuário aceita ou rejeita quem compartilhou deve ser notificado. Lembre-se, todas as notificações devem ser em tempo real(sem necessidade de refresh).
 
-Em desktops algumas páginas estão muito estreitas(nas rotas /tags, /categorias entre outras), preciso que em desktops deixe o layout(parte central onde é mostrado o conteúdo) um pouco mais largo, em celulares eu preciso da mesma padronização porem preciso que o layout ocupe a maior área horizontal para otimizar a visualização nestes dispositivos de tela pequena. Use seu bom gosto e siga os padrões de cores e fontes do site. 
 
-Na página inicial durante o carregamento onde há escrito: "ReConta seu dinheiro com clareza" primeiro o texto carrega "expremido" e depois ele se ajusta, ache uma forma criativa de evitar esse tipo de "layout shift"
 
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.
-
-Crie uma página administrativa seguindo o layout do site, o usuário com o e-mail sistematico@gmail.com ou lsbrum@icloud.com ou reconta@reconta.app será sempre o Super Admin, os cargos do site são: 1- Pessoa Física(padrão), 2- Pessoa Jurídica(será necessário no cadastro um CNPJ válido), 3- Contador ou Técnico Contábil, 4- Administrador, 5- Super Administrador(eu), apenas Super Administrador e Administrador tem acesso ao painel de admin, mas as permissões devem poder serem editadas.
 
 No painel de admin crie uma página de estatísticas com um set completo de estatíticas: Visitas únicas, Visitas, quais páginas visitadas, ips, agentes de navegador, gráficos(com a opção de selecionar o range), referrer localização(por ip) usando IP real(fornecido pela cloudflare e passada para o nginx) e o sistema de GeoIP2 Lite da Maxmind, para isso preciso que ajuste na VPS esse sistema e alem disso crie este painel com mais informações que achar pertinentes, documente tudo no README.md
 

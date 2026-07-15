@@ -1,25 +1,60 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ApiError, createUser } from "../api/users";
 import PasswordInput from "../components/PasswordInput.vue";
+import { formatCnpj, isValidCnpj, normalizeCnpj } from "../utils/cnpj";
+import type { UserRole } from "../types/user";
 
 const router = useRouter();
 
-const form = reactive({ name: "", email: "", password: "" });
+const accountTypes: { value: UserRole; label: string; description: string }[] = [
+  { value: "pessoa_fisica", label: "Pessoa Física", description: "Para uso pessoal" },
+  { value: "pessoa_juridica", label: "Pessoa Jurídica", description: "Para empresas (CNPJ)" },
+  { value: "contador", label: "Contador", description: "Contador ou Técnico Contábil" },
+];
+
+const form = reactive({
+  name: "",
+  email: "",
+  password: "",
+  role: "pessoa_fisica" as UserRole,
+  cnpj: "",
+});
 const errorMessage = ref("");
 const submitting = ref(false);
 
+const isPessoaJuridica = computed(() => form.role === "pessoa_juridica");
+const cnpjTouched = ref(false);
+const cnpjInvalid = computed(
+  () => cnpjTouched.value && form.cnpj.length > 0 && !isValidCnpj(form.cnpj),
+);
+
+function handleCnpjInput(event: Event) {
+  const target = event.target as HTMLInputElement;
+  form.cnpj = formatCnpj(target.value);
+  target.value = form.cnpj;
+}
+
 async function handleSubmit() {
   errorMessage.value = "";
+
+  if (isPessoaJuridica.value && !isValidCnpj(form.cnpj)) {
+    cnpjTouched.value = true;
+    errorMessage.value = "Informe um CNPJ válido para contas Pessoa Jurídica.";
+    return;
+  }
+
   submitting.value = true;
   try {
     await createUser({
       name: form.name.trim(),
       email: form.email.trim(),
       password: form.password.trim(),
+      role: form.role,
+      cnpj: isPessoaJuridica.value ? normalizeCnpj(form.cnpj) : undefined,
     });
-    router.push("/users");
+    router.push("/login");
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao cadastrar usuário";
   } finally {
@@ -38,6 +73,25 @@ async function handleSubmit() {
 
       <div class="rounded-3xl border border-ink-200/70 bg-white p-8 shadow-xl shadow-ink-900/5">
         <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
+          <fieldset class="flex flex-col gap-1.5">
+            <legend class="text-sm font-medium text-ink-700">Tipo de conta</legend>
+            <div class="mt-1.5 grid grid-cols-3 gap-2">
+              <label
+                v-for="type in accountTypes"
+                :key="type.value"
+                class="flex cursor-pointer flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-center transition"
+                :class="
+                  form.role === type.value
+                    ? 'border-brand-400 bg-brand-50 ring-2 ring-brand-100'
+                    : 'border-ink-200 bg-ink-50/50 hover:border-ink-300'
+                "
+              >
+                <input v-model="form.role" type="radio" :value="type.value" class="sr-only" />
+                <span class="text-xs font-semibold text-ink-900">{{ type.label }}</span>
+                <span class="text-[10px] leading-tight text-ink-500">{{ type.description }}</span>
+              </label>
+            </div>
+          </fieldset>
           <label class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-ink-700">Nome</span>
             <input
@@ -48,6 +102,26 @@ async function handleSubmit() {
               autocomplete="name"
               class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition placeholder:text-ink-400 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
             />
+          </label>
+          <label v-if="isPessoaJuridica" class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-ink-700">CNPJ</span>
+            <input
+              :value="form.cnpj"
+              type="text"
+              inputmode="numeric"
+              placeholder="00.000.000/0000-00"
+              required
+              maxlength="18"
+              class="rounded-xl border bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition placeholder:text-ink-400 focus:bg-white focus:ring-4"
+              :class="
+                cnpjInvalid
+                  ? 'border-coral-400 focus:border-coral-400 focus:ring-coral-100'
+                  : 'border-ink-200 focus:border-brand-400 focus:ring-brand-100'
+              "
+              @input="handleCnpjInput"
+              @blur="cnpjTouched = true"
+            />
+            <span v-if="cnpjInvalid" class="text-xs text-coral-600">CNPJ inválido</span>
           </label>
           <label class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-ink-700">E-mail</span>

@@ -1,5 +1,7 @@
 import type {
   CreateUserInput,
+  Permission,
+  RolePermissions,
   UpdatePasswordInput,
   UpdateProfileInput,
   User,
@@ -36,6 +38,24 @@ export function updateUserRole(id: number, role: UserRole): Promise<User> {
     credentials: "include",
     body: JSON.stringify({ role }),
   }).then((res) => parseResponse<User>(res));
+}
+
+export function fetchRolePermissions(): Promise<RolePermissions> {
+  return fetch("/api/admin/permissions", { credentials: "include" }).then((res) =>
+    parseResponse<RolePermissions>(res),
+  );
+}
+
+export function updateRolePermissions(
+  role: UserRole,
+  permissions: Permission[],
+): Promise<{ permissions: Permission[] }> {
+  return fetch(`/api/admin/permissions/${role}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ permissions }),
+  }).then((res) => parseResponse<{ permissions: Permission[] }>(res));
 }
 
 export function updateProfile(input: UpdateProfileInput): Promise<User> {

@@ -15,9 +15,10 @@ import ResetPasswordView from "./views/reset-password.vue";
 import SettingsView from "./views/settings.vue";
 import TagsView from "./views/tags.vue";
 import TransactionsView from "./views/transactions.vue";
-import UsersView from "./views/users.vue";
+import AdminView from "./views/admin.vue";
 import NotFound from "./views/notfound.vue";
 import { useAuth } from "./composables/useAuth";
+import { canAccessAdmin } from "./types/user";
 
 const routes = [
   { path: "/", name: "Home", component: HomeView },
@@ -26,11 +27,12 @@ const routes = [
   { path: "/esqueci-senha", name: "ForgotPassword", component: ForgotPasswordView },
   { path: "/redefinir-senha", name: "ResetPassword", component: ResetPasswordView },
   {
-    path: "/users",
-    name: "Users",
-    component: UsersView,
+    path: "/admin",
+    name: "Admin",
+    component: AdminView,
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  { path: "/users", redirect: "/admin" },
   {
     path: "/contas",
     name: "Accounts",
@@ -104,11 +106,7 @@ router.beforeEach(async (to) => {
     return { name: "Login", query: { redirect: to.fullPath } };
   }
 
-  if (
-    to.meta.requiresAdmin &&
-    currentUser.value.role !== "admin" &&
-    currentUser.value.role !== "super_admin"
-  ) {
+  if (to.meta.requiresAdmin && !canAccessAdmin(currentUser.value)) {
     return { name: "Home" };
   }
 

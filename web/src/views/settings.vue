@@ -42,8 +42,11 @@ watch(
 
 const roleLabels: Record<string, string> = {
   user: "Usuário",
+  pessoa_fisica: "Pessoa Física",
+  pessoa_juridica: "Pessoa Jurídica",
+  contador: "Contador / Técnico Contábil",
   admin: "Administrador",
-  super_admin: "Super admin",
+  super_admin: "Super Administrador",
 };
 
 function formatDate(value: string) {
@@ -147,7 +150,7 @@ async function handlePasswordSubmit() {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-2xl flex-col gap-6 px-2 md:px-4 py-4 md:py-8">
+  <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
     <div>
       <h1 class="font-display text-2xl font-bold text-ink-900">Configurações</h1>
       <p class="mt-0.5 text-sm text-ink-500">Gerencie seus dados de conta</p>

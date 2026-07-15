@@ -132,7 +132,7 @@ onMounted(loadAll);
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-3xl flex-col gap-6 px-2 md:px-4 py-4 md:py-8">
+  <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
     <div class="flex items-center justify-between gap-4">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Contas Fixas</h1>

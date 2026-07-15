@@ -44,6 +44,12 @@ func migrate(conn *sql.DB) error {
 		created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS role_permissions (
+		role       TEXT NOT NULL,
+		permission TEXT NOT NULL,
+		PRIMARY KEY (role, permission)
+	);
+
 	CREATE TABLE IF NOT EXISTS sessions (
 		token      TEXT PRIMARY KEY,
 		user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -235,6 +241,50 @@ func addMissingColumns(conn *sql.DB) error {
 		if _, err := conn.Exec(`ALTER TABLE notifications ADD COLUMN email_sent_at TEXT`); err != nil {
 			return fmt.Errorf("adicionando coluna email_sent_at: %w", err)
 		}
+	}
+
+	hasCNPJ, err := columnExists(conn, "users", "cnpj")
+	if err != nil {
+		return fmt.Errorf("verificando coluna cnpj: %w", err)
+	}
+	if !hasCNPJ {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN cnpj TEXT`); err != nil {
+			return fmt.Errorf("adicionando coluna cnpj: %w", err)
+		}
+	}
+
+	// A role legada "user" virou "pessoa_fisica" quando os cargos do site
+	// foram introduzidos (Pessoa Física, Pessoa Jurídica, Contador, ...).
+	if _, err := conn.Exec(`UPDATE users SET role = 'pessoa_fisica' WHERE role = 'user'`); err != nil {
+		return fmt.Errorf("migrando role legada 'user': %w", err)
+	}
+
+	return seedDefaultRolePermissions(conn)
+}
+
+// seedDefaultRolePermissions grava as permissões padrão das roles uma única
+// vez (controlado via PRAGMA user_version, para não sobrescrever edições
+// feitas depois no painel de admin). Por padrão apenas a role admin tem
+// acesso ao painel; o super_admin tem todas as permissões implicitamente.
+func seedDefaultRolePermissions(conn *sql.DB) error {
+	var version int
+	if err := conn.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		return fmt.Errorf("lendo user_version: %w", err)
+	}
+	if version >= 1 {
+		return nil
+	}
+
+	if _, err := conn.Exec(`
+		INSERT OR IGNORE INTO role_permissions (role, permission) VALUES
+			('admin', 'admin_panel'),
+			('admin', 'manage_users')
+	`); err != nil {
+		return fmt.Errorf("populando permissões padrão: %w", err)
+	}
+
+	if _, err := conn.Exec(`PRAGMA user_version = 1`); err != nil {
+		return fmt.Errorf("gravando user_version: %w", err)
 	}
 	return nil
 }

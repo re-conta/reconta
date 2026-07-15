@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -24,14 +25,28 @@ var ErrCannotModifyRole = errors.New("não é possível alterar a role deste usu
 var superAdminEmails = map[string]bool{
 	"sistematico@gmail.com": true,
 	"lsbrum@icloud.com":     true,
+	"reconta@reconta.app":   true,
 }
 
-// roleForEmail determina a role inicial de um usuário a partir do e-mail.
+// roleForEmail determina a role inicial de um usuário a partir do e-mail,
+// quando nenhuma role foi escolhida no cadastro.
 func roleForEmail(email string) string {
 	if superAdminEmails[strings.ToLower(strings.TrimSpace(email))] {
 		return RoleSuperAdmin
 	}
-	return RoleUser
+	return RolePessoaFisica
+}
+
+// resolveSignupRole aplica a role escolhida no cadastro, exceto para os
+// e-mails reservados de Super Admin, que sempre entram como super_admin.
+func resolveSignupRole(email, role string) string {
+	if superAdminEmails[strings.ToLower(strings.TrimSpace(email))] {
+		return RoleSuperAdmin
+	}
+	if role == "" {
+		return RolePessoaFisica
+	}
+	return role
 }
 
 type Repository struct {
@@ -46,9 +61,17 @@ func NewRepository(db *sql.DB) *Repository {
 // sempre com a role correta, mesmo que tenham sido criados antes desta
 // funcionalidade existir ou alterados manualmente no banco.
 func (r *Repository) SyncSuperAdmins(ctx context.Context) error {
+	placeholders := make([]string, 0, len(superAdminEmails))
+	args := []any{RoleSuperAdmin}
+	for email := range superAdminEmails {
+		placeholders = append(placeholders, "?")
+		args = append(args, email)
+	}
+	args = append(args, RoleSuperAdmin)
+
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE users SET role = ? WHERE email IN (?, ?) AND role <> ?`,
-		RoleSuperAdmin, "sistematico@gmail.com", "lsbrum@icloud.com", RoleSuperAdmin,
+		fmt.Sprintf(`UPDATE users SET role = ? WHERE email IN (%s) AND role <> ?`, strings.Join(placeholders, ", ")),
+		args...,
 	)
 	if err != nil {
 		return fmt.Errorf("sincronizando super admins: %w", err)
@@ -56,11 +79,11 @@ func (r *Repository) SyncSuperAdmins(ctx context.Context) error {
 	return nil
 }
 
-// UpdateRole altera a role de um usuário para "user" ou "admin". A role
-// super_admin nunca pode ser atribuída manualmente, e a role dos e-mails
+// UpdateRole altera a role de um usuário para uma das roles atribuíveis. A
+// role super_admin nunca pode ser atribuída manualmente, e a role dos e-mails
 // reservados de Super Admin nunca pode ser alterada.
 func (r *Repository) UpdateRole(ctx context.Context, id int64, role string) (*User, error) {
-	if role != RoleUser && role != RoleAdmin {
+	if !slices.Contains(AssignableRoles, role) {
 		return nil, ErrCannotModifyRole
 	}
 
@@ -123,10 +146,10 @@ func (r *Repository) GetPasswordHashByID(ctx context.Context, id int64) (string,
 	return hash, nil
 }
 
-func (r *Repository) Create(ctx context.Context, name, email, passwordHash string) (*User, error) {
+func (r *Repository) Create(ctx context.Context, name, email, passwordHash, role, cnpj string) (*User, error) {
 	res, err := r.db.ExecContext(ctx,
-		`INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
-		name, email, passwordHash, roleForEmail(email),
+		`INSERT INTO users (name, email, password_hash, role, cnpj) VALUES (?, ?, ?, ?, ?)`,
+		name, email, passwordHash, resolveSignupRole(email, role), nullableString(cnpj),
 	)
 	if err != nil {
 		if isUniqueConstraintErr(err) {
@@ -145,49 +168,65 @@ func (r *Repository) Create(ctx context.Context, name, email, passwordHash strin
 
 func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users WHERE id = ?`, id,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users WHERE id = ?`, id,
 	)
-	return scanUser(row)
+	u, err := scanUser(row)
+	if err != nil {
+		return nil, err
+	}
+	return u, r.attachPermissions(ctx, u)
 }
 
 // GetByEmailWithPasswordHash retorna o usuário e o hash de senha correspondente,
 // usado exclusivamente pelo fluxo de autenticação.
 func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email string) (*User, string, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, avatar_url, created_at, password_hash FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, cnpj, avatar_url, created_at, password_hash FROM users WHERE email = ?`, email,
 	)
 
 	var u User
-	var avatarURL sql.NullString
+	var cnpj, avatarURL sql.NullString
 	var createdAt, passwordHash string
-	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &avatarURL, &createdAt, &passwordHash); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &createdAt, &passwordHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, "", ErrNotFound
 		}
 		return nil, "", fmt.Errorf("lendo usuário: %w", err)
 	}
+	u.CNPJ = cnpj.String
 	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
 	u.HasPassword = passwordHash != ""
 
+	if err := r.attachPermissions(ctx, &u); err != nil {
+		return nil, "", err
+	}
 	return &u, passwordHash, nil
 }
 
 // GetByGoogleID busca um usuário previamente vinculado a uma conta Google.
 func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users WHERE google_id = ?`, googleID,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users WHERE google_id = ?`, googleID,
 	)
-	return scanUser(row)
+	u, err := scanUser(row)
+	if err != nil {
+		return nil, err
+	}
+	return u, r.attachPermissions(ctx, u)
 }
 
 // GetByEmail busca um usuário pelo e-mail, usado para vincular uma conta Google
 // a um cadastro já existente por e-mail/senha.
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users WHERE email = ?`, email,
 	)
-	return scanUser(row)
+	u, err := scanUser(row)
+	if err != nil {
+		return nil, err
+	}
+	return u, r.attachPermissions(ctx, u)
 }
 
 // CreateWithGoogle cria um usuário autenticado apenas via Google, sem senha.
@@ -232,12 +271,17 @@ func (r *Repository) UpdateAvatarURL(ctx context.Context, id int64, avatarURL st
 
 func (r *Repository) List(ctx context.Context) ([]User, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, email, role, avatar_url, password_hash <> '', created_at FROM users ORDER BY id DESC`,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users ORDER BY id DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listando usuários: %w", err)
 	}
 	defer rows.Close()
+
+	perms, err := r.PermissionsByRole(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	users := []User{}
 	for rows.Next() {
@@ -245,9 +289,87 @@ func (r *Repository) List(ctx context.Context) ([]User, error) {
 		if err != nil {
 			return nil, err
 		}
+		u.Permissions = permissionsForRole(u.Role, perms)
 		users = append(users, *u)
 	}
 	return users, rows.Err()
+}
+
+// PermissionsByRole retorna as permissões gravadas para cada role atribuível.
+// Roles sem nenhuma permissão aparecem no mapa com lista vazia.
+func (r *Repository) PermissionsByRole(ctx context.Context) (map[string][]string, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT role, permission FROM role_permissions`)
+	if err != nil {
+		return nil, fmt.Errorf("listando permissões de roles: %w", err)
+	}
+	defer rows.Close()
+
+	perms := map[string][]string{}
+	for _, role := range AssignableRoles {
+		perms[role] = []string{}
+	}
+	for rows.Next() {
+		var role, perm string
+		if err := rows.Scan(&role, &perm); err != nil {
+			return nil, fmt.Errorf("lendo permissão de role: %w", err)
+		}
+		perms[role] = append(perms[role], perm)
+	}
+	return perms, rows.Err()
+}
+
+// SetRolePermissions substitui todas as permissões da role informada.
+func (r *Repository) SetRolePermissions(ctx context.Context, role string, permissions []string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("iniciando transação de permissões: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM role_permissions WHERE role = ?`, role); err != nil {
+		return fmt.Errorf("limpando permissões da role: %w", err)
+	}
+	for _, perm := range permissions {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO role_permissions (role, permission) VALUES (?, ?)`, role, perm); err != nil {
+			return fmt.Errorf("gravando permissão da role: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
+// attachPermissions popula u.Permissions a partir da role do usuário. O
+// super_admin sempre recebe todas as permissões, sem consultar o banco.
+func (r *Repository) attachPermissions(ctx context.Context, u *User) error {
+	if u.Role == RoleSuperAdmin {
+		u.Permissions = slices.Clone(AllPermissions)
+		return nil
+	}
+
+	rows, err := r.db.QueryContext(ctx, `SELECT permission FROM role_permissions WHERE role = ?`, u.Role)
+	if err != nil {
+		return fmt.Errorf("lendo permissões do usuário: %w", err)
+	}
+	defer rows.Close()
+
+	u.Permissions = []string{}
+	for rows.Next() {
+		var perm string
+		if err := rows.Scan(&perm); err != nil {
+			return fmt.Errorf("lendo permissão do usuário: %w", err)
+		}
+		u.Permissions = append(u.Permissions, perm)
+	}
+	return rows.Err()
+}
+
+func permissionsForRole(role string, perms map[string][]string) []string {
+	if role == RoleSuperAdmin {
+		return slices.Clone(AllPermissions)
+	}
+	if p, ok := perms[role]; ok {
+		return p
+	}
+	return []string{}
 }
 
 type scanner interface {
@@ -256,14 +378,15 @@ type scanner interface {
 
 func scanUser(s scanner) (*User, error) {
 	var u User
-	var avatarURL sql.NullString
+	var cnpj, avatarURL sql.NullString
 	var createdAt string
-	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &avatarURL, &u.HasPassword, &createdAt); err != nil {
+	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &u.HasPassword, &createdAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("lendo usuário: %w", err)
 	}
+	u.CNPJ = cnpj.String
 	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
 	return &u, nil
