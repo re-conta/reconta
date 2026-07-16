@@ -175,6 +175,9 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request, userID 
 	if len(req.Offsets) == 0 {
 		req.Offsets = DefaultOffsets
 	}
+	if req.AfterOffsets == nil {
+		req.AfterOffsets = []int{}
+	}
 
 	settings, err := h.repo.UpdateSettings(r.Context(), userID, req)
 	if err != nil {
@@ -239,12 +242,17 @@ func (h *Handler) scan(w http.ResponseWriter, r *http.Request) {
 					created++
 				}
 			}
-		} else if settings.OverdueEnabled {
-			daysOverdue := int(math.Ceil(float64(-minutesUntilDue) / 1440))
-			title := fmt.Sprintf("Conta vencida: %s", bill.Name)
-			message := fmt.Sprintf("%s venceu em %s e ainda não foi paga.", bill.Name, bill.DueDate)
-			if h.notify(ctx, bill, settings, KindOverdue, title, message, -daysOverdue) {
-				created++
+		} else {
+			minutesOverdue := -minutesUntilDue
+			for _, offset := range settings.AfterOffsets {
+				if minutesOverdue < offset {
+					continue
+				}
+				title := fmt.Sprintf("Conta vencida: %s", bill.Name)
+				message := fmt.Sprintf("%s venceu em %s e ainda não foi paga.", bill.Name, bill.DueDate)
+				if h.notify(ctx, bill, settings, KindOverdue, title, message, -offset) {
+					created++
+				}
 			}
 		}
 	}

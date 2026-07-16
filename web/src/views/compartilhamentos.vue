@@ -310,20 +310,20 @@ onMounted(() => {
 
 <template>
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
-    <div class="flex items-center justify-between">
+    <div class="flex items-start justify-between">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink-900">Compartilhamentos</h1>
-        <p class="mt-0.5 text-sm text-ink-500">
+        <h1 class="font-display text-base sm:text-lg md:text-2xl font-bold text-ink-900">Compartilhamentos</h1>
+        <p class="mt-0.5 text-xs md:text-sm text-ink-500">
           Compartilhe suas transações e veja o que compartilharam com você
         </p>
       </div>
       <button
         v-if="activeTab === 'sent'"
         type="button"
-        class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
+        class="shrink-0 rounded-full bg-ink-900 px-2 md:px-4 py-2 text-xs md:text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
         @click="showForm = !showForm"
       >
-        + Novo compartilhamento
+        + Novo <span class="hidden sm:inline"> compartilhamento</span>
       </button>
     </div>
 
@@ -332,7 +332,7 @@ onMounted(() => {
         v-for="tab in tabs"
         :key="tab.id"
         type="button"
-        class="rounded-full px-4 py-1.5 text-sm font-semibold transition"
+        class="rounded-full px-2 md:px-4 py-1.5 text-xs md:text-sm font-semibold transition"
         :class="
           activeTab === tab.id
             ? 'bg-ink-900 text-white'

@@ -169,7 +169,7 @@ func migrate(conn *sql.DB) error {
 		site_enabled    INTEGER NOT NULL DEFAULT 1,
 		email_enabled   INTEGER NOT NULL DEFAULT 0,
 		offsets         TEXT NOT NULL DEFAULT '[1440,120,60]',
-		overdue_enabled INTEGER NOT NULL DEFAULT 1,
+		after_offsets   TEXT NOT NULL DEFAULT '[1440]',
 		updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
@@ -357,6 +357,21 @@ func addMissingColumns(conn *sql.DB) error {
 	if !hasOverdueEnabled {
 		if _, err := conn.Exec(`ALTER TABLE notification_settings ADD COLUMN overdue_enabled INTEGER NOT NULL DEFAULT 1`); err != nil {
 			return fmt.Errorf("adicionando coluna overdue_enabled: %w", err)
+		}
+	}
+
+	hasAfterOffsets, err := columnExists(conn, "notification_settings", "after_offsets")
+	if err != nil {
+		return fmt.Errorf("verificando coluna after_offsets: %w", err)
+	}
+	if !hasAfterOffsets {
+		if _, err := conn.Exec(`ALTER TABLE notification_settings ADD COLUMN after_offsets TEXT NOT NULL DEFAULT '[]'`); err != nil {
+			return fmt.Errorf("adicionando coluna after_offsets: %w", err)
+		}
+		// Preserva o comportamento anterior (aviso diário enquanto vencida)
+		// como um único lembrete de 1 dia após o vencimento.
+		if _, err := conn.Exec(`UPDATE notification_settings SET after_offsets = '[1440]' WHERE overdue_enabled = 1`); err != nil {
+			return fmt.Errorf("migrando overdue_enabled para after_offsets: %w", err)
 		}
 	}
 

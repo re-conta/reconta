@@ -23,25 +23,39 @@ export interface NotificationSettings {
   siteEnabled: boolean;
   emailEnabled: boolean;
   offsets: number[];
-  overdueEnabled: boolean;
+  afterOffsets: number[];
 }
 
-// Unidades disponíveis para montar um lembrete de antecedência (dropdown na
-// tela de configurações). O valor é o multiplicador em minutos.
+// Unidades disponíveis para montar um lembrete (dropdown na tela de
+// configurações). O valor é o multiplicador em minutos.
 export const OFFSET_UNIT_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: "Hora(s)" },
   { value: 1440, label: "Dia(s)" },
 ];
 
-export function formatOffsetLabel(minutes: number): string {
-  if (minutes === 0) return "No vencimento";
+// Momento do lembrete em relação ao vencimento.
+export const OFFSET_TIMING_OPTIONS: { value: "before" | "after"; label: string }[] = [
+  { value: "before", label: "antes" },
+  { value: "after", label: "depois" },
+];
+
+function formatAmountUnit(minutes: number): string {
   if (minutes % 1440 === 0) {
     const days = minutes / 1440;
-    return `${days} dia${days > 1 ? "s" : ""} antes`;
+    return `${days} dia${days > 1 ? "s" : ""}`;
   }
   if (minutes % 60 === 0) {
     const hours = minutes / 60;
-    return `${hours} hora${hours > 1 ? "s" : ""} antes`;
+    return `${hours} hora${hours > 1 ? "s" : ""}`;
   }
-  return `${minutes} min antes`;
+  return `${minutes} min`;
+}
+
+export function formatOffsetLabel(minutes: number): string {
+  if (minutes === 0) return "No vencimento";
+  return `${formatAmountUnit(minutes)} antes`;
+}
+
+export function formatAfterOffsetLabel(minutes: number): string {
+  return `${formatAmountUnit(minutes)} depois`;
 }

@@ -8,7 +8,12 @@ import {
 import { ApiError, updatePassword, updateProfile } from "../api/users";
 import PasswordInput from "../components/PasswordInput.vue";
 import { useAuth } from "../composables/useAuth";
-import { OFFSET_UNIT_OPTIONS, formatOffsetLabel } from "../types/notification";
+import {
+  OFFSET_UNIT_OPTIONS,
+  OFFSET_TIMING_OPTIONS,
+  formatOffsetLabel,
+  formatAfterOffsetLabel,
+} from "../types/notification";
 import type { NotificationSettings } from "../types/notification";
 import { ApiError as BillingApiError, getSubscription } from "../api/billing";
 import CancelSubscriptionModal from "../components/modals/CancelSubscriptionModal.vue";
@@ -79,7 +84,7 @@ const notificationSettings = reactive<NotificationSettings>({
   siteEnabled: true,
   emailEnabled: false,
   offsets: [],
-  overdueEnabled: true,
+  afterOffsets: [],
 });
 const notificationsLoading = ref(true);
 const notificationsError = ref("");
@@ -88,8 +93,12 @@ const savingNotifications = ref(false);
 
 const newOffsetAmount = ref(1);
 const newOffsetUnit = ref(OFFSET_UNIT_OPTIONS[1]!.value);
+const newOffsetTiming = ref(OFFSET_TIMING_OPTIONS[0]!.value);
 
 const sortedOffsets = computed(() => [...notificationSettings.offsets].sort((a, b) => a - b));
+const sortedAfterOffsets = computed(() =>
+  [...notificationSettings.afterOffsets].sort((a, b) => a - b),
+);
 
 async function loadNotificationSettings() {
   notificationsLoading.value = true;
@@ -98,7 +107,7 @@ async function loadNotificationSettings() {
     notificationSettings.siteEnabled = settings.siteEnabled;
     notificationSettings.emailEnabled = settings.emailEnabled;
     notificationSettings.offsets = settings.offsets;
-    notificationSettings.overdueEnabled = settings.overdueEnabled;
+    notificationSettings.afterOffsets = settings.afterOffsets;
   } catch (err) {
     notificationsError.value =
       err instanceof NotificationApiError ? err.message : "Falha ao carregar preferências";
@@ -110,8 +119,10 @@ async function loadNotificationSettings() {
 function addOffset() {
   const minutes = Math.round(newOffsetAmount.value) * newOffsetUnit.value;
   if (!Number.isFinite(minutes) || minutes <= 0) return;
-  if (!notificationSettings.offsets.includes(minutes)) {
-    notificationSettings.offsets.push(minutes);
+  const list =
+    newOffsetTiming.value === "before" ? notificationSettings.offsets : notificationSettings.afterOffsets;
+  if (!list.includes(minutes)) {
+    list.push(minutes);
   }
   newOffsetAmount.value = 1;
 }
@@ -119,6 +130,11 @@ function addOffset() {
 function removeOffset(value: number) {
   const idx = notificationSettings.offsets.indexOf(value);
   if (idx >= 0) notificationSettings.offsets.splice(idx, 1);
+}
+
+function removeAfterOffset(value: number) {
+  const idx = notificationSettings.afterOffsets.indexOf(value);
+  if (idx >= 0) notificationSettings.afterOffsets.splice(idx, 1);
 }
 
 async function handleNotificationSubmit() {
@@ -130,7 +146,7 @@ async function handleNotificationSubmit() {
     notificationSettings.siteEnabled = saved.siteEnabled;
     notificationSettings.emailEnabled = saved.emailEnabled;
     notificationSettings.offsets = saved.offsets;
-    notificationSettings.overdueEnabled = saved.overdueEnabled;
+    notificationSettings.afterOffsets = saved.afterOffsets;
     notificationsSuccess.value = "Preferências de notificação salvas.";
   } catch (err) {
     notificationsError.value =
@@ -464,9 +480,9 @@ async function handlePasswordSubmit() {
         </div>
 
         <div>
-          <span class="text-sm font-medium text-ink-700">Lembretes antes do vencimento</span>
+          <span class="text-sm font-medium text-ink-700">Lembretes de vencimento</span>
           <p class="mt-0.5 text-xs text-ink-500">
-            Escolha uma antecedência e adicione quantos alertas quiser.
+            Escolha quanto tempo antes ou depois do vencimento e adicione quantos alertas quiser.
           </p>
 
           <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -485,7 +501,14 @@ async function handlePasswordSubmit() {
                 {{ unit.label }}
               </option>
             </select>
-            <span class="text-sm text-ink-500">antes</span>
+            <select
+              v-model="newOffsetTiming"
+              class="rounded-xl border border-ink-200 bg-ink-50/50 px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+            >
+              <option v-for="timing in OFFSET_TIMING_OPTIONS" :key="timing.value" :value="timing.value">
+                {{ timing.label }}
+              </option>
+            </select>
             <button
               type="button"
               class="rounded-full border border-ink-200 px-4 py-2 text-sm font-semibold text-ink-700 transition hover:border-brand-400 hover:text-brand-700"
@@ -495,10 +518,13 @@ async function handlePasswordSubmit() {
             </button>
           </div>
 
-          <div v-if="sortedOffsets.length" class="mt-3 flex flex-wrap gap-2">
+          <div
+            v-if="sortedOffsets.length || sortedAfterOffsets.length"
+            class="mt-3 flex flex-wrap gap-2"
+          >
             <span
               v-for="offset in sortedOffsets"
-              :key="offset"
+              :key="`before-${offset}`"
               class="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700"
             >
               {{ formatOffsetLabel(offset) }}
@@ -511,18 +537,24 @@ async function handlePasswordSubmit() {
                 ×
               </button>
             </span>
+            <span
+              v-for="offset in sortedAfterOffsets"
+              :key="`after-${offset}`"
+              class="flex items-center gap-1.5 rounded-full bg-coral-50 px-3 py-1.5 text-xs font-medium text-coral-700"
+            >
+              {{ formatAfterOffsetLabel(offset) }}
+              <button
+                type="button"
+                class="text-coral-500 transition hover:text-coral-700"
+                aria-label="Remover lembrete"
+                @click="removeAfterOffset(offset)"
+              >
+                ×
+              </button>
+            </span>
           </div>
-          <p v-else class="mt-3 text-xs text-ink-400">Nenhum lembrete de antecedência configurado.</p>
+          <p v-else class="mt-3 text-xs text-ink-400">Nenhum lembrete configurado.</p>
         </div>
-
-        <label class="flex items-center gap-2 text-sm font-medium text-ink-700">
-          <input
-            v-model="notificationSettings.overdueEnabled"
-            type="checkbox"
-            class="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
-          />
-          Avisar diariamente enquanto a conta estiver vencida
-        </label>
       </template>
 
       <p v-if="notificationsError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">

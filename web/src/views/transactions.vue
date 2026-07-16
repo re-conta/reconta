@@ -500,14 +500,14 @@ onUnmounted(() => {
       <div class="flex gap-2">
         <button
           type="button"
-          class="rounded-full border border-ink-200 bg-white px-4 py-2 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
+          class="rounded-lg md:rounded-full border border-ink-200 bg-white px-2 md:px-4 py-2 text-xs md:text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
           @click="runAutoCategorize"
         >
           Auto-categorizar
         </button>
         <button
           type="button"
-          class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
+          class="rounded-lg md:rounded-full bg-ink-900 px-2 md:px-4 py-2 text-xs md:text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
           @click="startCreate"
         >
           + Nova transação
@@ -515,7 +515,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <p v-if="autoCategorizeMessage" class="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-700">
+    <p v-if="autoCategorizeMessage" class="rounded-xl bg-brand-50 px-2 md:px-3 py-2 text-xs md:text-sm text-brand-700">
       {{ autoCategorizeMessage }}
     </p>
 
@@ -655,22 +655,22 @@ onUnmounted(() => {
         </div>
 
         <!-- Totais -->
-        <div class="grid grid-cols-3 gap-3">
-          <div class="rounded-2xl border border-ink-200/70 bg-white p-4 text-center shadow-sm">
+        <div class="grid grid-cols-3 gap-1 md:gap-3">
+          <div class="rounded-2xl border border-ink-200/70 bg-white p-2 md:p-4 text-center shadow-sm">
             <p class="text-xs font-medium text-ink-500">Receitas</p>
-            <p class="mt-1 font-display text-lg font-bold text-brand-600">
+            <p class="mt-1 font-display text-base md:text-lg font-bold text-brand-600">
               {{ formatCurrency(totals.income) }}
             </p>
           </div>
-          <div class="rounded-2xl border border-ink-200/70 bg-white p-4 text-center shadow-sm">
+          <div class="rounded-2xl border border-ink-200/70 bg-white p-2 md:p-4 text-center shadow-sm">
             <p class="text-xs font-medium text-ink-500">Despesas</p>
-            <p class="mt-1 font-display text-lg font-bold text-coral-600">
+            <p class="mt-1 font-display text-base md:text-lg font-bold text-coral-600">
               {{ formatCurrency(totals.expense) }}
             </p>
           </div>
-          <div class="rounded-2xl border border-ink-200/70 bg-white p-4 text-center shadow-sm">
+          <div class="rounded-2xl border border-ink-200/70 bg-white p-2 md:p-4 text-center shadow-sm">
             <p class="text-xs font-medium text-ink-500">Saldo</p>
-            <p class="mt-1 font-display text-lg font-bold text-ink-900">
+            <p class="mt-1 font-display text-base md:text-lg font-bold text-ink-900">
               {{ formatCurrency(totals.balance) }}
             </p>
           </div>

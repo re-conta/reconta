@@ -226,9 +226,10 @@ func (r *Repository) GetOrCreateSettings(ctx context.Context, userID int64) (*Se
 	settings, err := r.getSettings(ctx, userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		defaultOffsets, _ := json.Marshal(DefaultOffsets)
+		defaultAfterOffsets, _ := json.Marshal(DefaultAfterOffsets)
 		if _, err := r.db.ExecContext(ctx,
-			`INSERT OR IGNORE INTO notification_settings (user_id, offsets) VALUES (?, ?)`,
-			userID, string(defaultOffsets),
+			`INSERT OR IGNORE INTO notification_settings (user_id, offsets, after_offsets) VALUES (?, ?, ?)`,
+			userID, string(defaultOffsets), string(defaultAfterOffsets),
 		); err != nil {
 			return nil, fmt.Errorf("criando preferências de notificação padrão: %w", err)
 		}
@@ -241,11 +242,11 @@ func (r *Repository) GetOrCreateSettings(ctx context.Context, userID int64) (*Se
 }
 
 func (r *Repository) getSettings(ctx context.Context, userID int64) (*Settings, error) {
-	var siteEnabled, emailEnabled, overdueEnabled bool
-	var offsetsJSON string
+	var siteEnabled, emailEnabled bool
+	var offsetsJSON, afterOffsetsJSON string
 	err := r.db.QueryRowContext(ctx,
-		`SELECT site_enabled, email_enabled, offsets, overdue_enabled FROM notification_settings WHERE user_id = ?`, userID,
-	).Scan(&siteEnabled, &emailEnabled, &offsetsJSON, &overdueEnabled)
+		`SELECT site_enabled, email_enabled, offsets, after_offsets FROM notification_settings WHERE user_id = ?`, userID,
+	).Scan(&siteEnabled, &emailEnabled, &offsetsJSON, &afterOffsetsJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +255,11 @@ func (r *Repository) getSettings(ctx context.Context, userID int64) (*Settings, 
 	if err := json.Unmarshal([]byte(offsetsJSON), &offsets); err != nil {
 		offsets = DefaultOffsets
 	}
-	return &Settings{SiteEnabled: siteEnabled, EmailEnabled: emailEnabled, Offsets: offsets, OverdueEnabled: overdueEnabled}, nil
+	var afterOffsets []int
+	if err := json.Unmarshal([]byte(afterOffsetsJSON), &afterOffsets); err != nil {
+		afterOffsets = DefaultAfterOffsets
+	}
+	return &Settings{SiteEnabled: siteEnabled, EmailEnabled: emailEnabled, Offsets: offsets, AfterOffsets: afterOffsets}, nil
 }
 
 func (r *Repository) UpdateSettings(ctx context.Context, userID int64, s Settings) (*Settings, error) {
@@ -262,17 +267,21 @@ func (r *Repository) UpdateSettings(ctx context.Context, userID int64, s Setting
 	if err != nil {
 		return nil, fmt.Errorf("codificando antecedências: %w", err)
 	}
+	afterOffsetsJSON, err := json.Marshal(s.AfterOffsets)
+	if err != nil {
+		return nil, fmt.Errorf("codificando atrasos: %w", err)
+	}
 
 	_, err = r.db.ExecContext(ctx, `
-		INSERT INTO notification_settings (user_id, site_enabled, email_enabled, offsets, overdue_enabled, updated_at)
+		INSERT INTO notification_settings (user_id, site_enabled, email_enabled, offsets, after_offsets, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE SET
 			site_enabled = excluded.site_enabled,
 			email_enabled = excluded.email_enabled,
 			offsets = excluded.offsets,
-			overdue_enabled = excluded.overdue_enabled,
+			after_offsets = excluded.after_offsets,
 			updated_at = excluded.updated_at`,
-		userID, s.SiteEnabled, s.EmailEnabled, string(offsetsJSON), s.OverdueEnabled, time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+		userID, s.SiteEnabled, s.EmailEnabled, string(offsetsJSON), string(afterOffsetsJSON), time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("salvando preferências de notificação: %w", err)

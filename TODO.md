@@ -1,5 +1,3 @@
-Em /configuracoes no bloco notificações ao invés de checkbox com datas pré-determinadas crie um dropdown com horas e dias e outro antes e depois onde a pessoa pode escolher e adicionar vários alertas
-
 Usando o plano gratuito do Groq(https://groq.com) crie um sistema que analisa a conta do usuário com base na "saúde" oferece recomendações de meios de economizar ou de investir o dinheiro que sobra(no caso de saúde >= 3), para dicas de corte de gastos ou dicas de investimentos analize as transações, como por exemplo: 
 
 - + de 1 Streaming recomende cancelar os excedentes deixando um apenas

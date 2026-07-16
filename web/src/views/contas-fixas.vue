@@ -132,19 +132,19 @@ onMounted(loadAll);
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
-    <div class="flex items-center justify-between gap-4">
+  <div class="mx-auto flex w-full md:max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
+    <div class="flex items-start justify-between gap-1 md:gap-4">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink-900">Contas Fixas</h1>
-        <p class="mt-0.5 text-sm text-ink-500">Despesas recorrentes e seus vencimentos</p>
+        <h1 class="font-display text-base md:text-2xl font-bold text-ink-900">Contas Fixas</h1>
+        <p class="mt-0.5 text-xs md:text-sm text-ink-500">Despesas recorrentes e seus vencimentos</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1 md:gap-3 mr-4 md:mr-0">
         <button
           type="button"
-          class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
+          class="shrink-0 rounded-full bg-ink-900 px-2 md:px-4 py-2 text-xs md:text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800"
           @click="startCreate"
         >
-          + Nova conta fixa
+          + Nova conta <span class="hidden sm:inline">fixa</span>
         </button>
       </div>
     </div>

@@ -37,7 +37,7 @@ onBeforeUnmount(() => {
       leave-to-class="opacity-0"
     >
       <div
-        class="fixed inset-x-0 top-0 z-100 flex h-dvh items-end justify-center bg-ink-900/60 backdrop-blur-md p-0 sm:items-center sm:p-4"
+        class="fixed inset-x-0 top-0 z-100 flex h-dvh items-center justify-center bg-ink-900/60 backdrop-blur-md p-0 sm:items-center sm:p-4"
         @mousedown.self="emit('close')"
       >
         <Transition
@@ -50,7 +50,7 @@ onBeforeUnmount(() => {
           leave-to-class="opacity-0 translate-y-4 sm:scale-95"
         >
           <div
-            class="relative flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-ink-900/5 sm:max-h-[85dvh] sm:rounded-3xl"
+            class="relative flex h-svh w-full my-6 max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-ink-900/5 sm:rounded-3xl"
             role="dialog"
             aria-modal="true"
             :aria-label="props.title"
@@ -62,7 +62,7 @@ onBeforeUnmount(() => {
                 class="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-linear-to-br from-brand-200/60 to-coral-200/50 blur-2xl"
               ></div>
               <div class="relative flex items-start justify-between gap-4">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 md:gap-3">
                   <span
                     v-if="props.icon"
                     class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-400 to-coral-500 text-white shadow-sm"
@@ -70,10 +70,10 @@ onBeforeUnmount(() => {
                     <component :is="props.icon" class="h-5.5 w-5.5" />
                   </span>
                   <div>
-                    <h2 class="font-display text-xl font-bold text-ink-900 sm:text-2xl">
+                    <h2 class="font-display text-base md:text-xl font-bold text-ink-900 sm:text-2xl">
                       {{ props.title }}
                     </h2>
-                    <p v-if="props.subtitle" class="mt-0.5 text-sm text-ink-500">
+                    <p v-if="props.subtitle" class="mt-0.5 text-xs md:text-sm text-ink-500">
                       {{ props.subtitle }}
                     </p>
                   </div>
@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="grow overflow-y-auto px-6 py-6 sm:px-8 sm:py-7">
+            <div class="grow overflow-y-auto p-4 sm:p-6 md:p-8">
               <slot />
             </div>
           </div>
