@@ -51,6 +51,11 @@ Monorepo com backend em **Go** (`api/`) e frontend em **Vue 3 + TypeScript** (`w
 - **Lint/format com oxlint + oxfmt** (não ESLint/Prettier). Comandos: `bun run lint`, `bun run fix`, `bun run format`, `bun run check`.
 - Type-check com `vue-tsc`; o script `build` já roda `vue-tsc -b` antes do `vite build` — não pular essa etapa.
 
+### Runtime — o que não usar
+- `npm`, `yarn`, `pnpm` — usar `bun`.
+- `node`, `ts-node` — usar `bun`.
+- `express`, `fastify` ou qualquer framework HTTP JS — a API é em Go (`net/http` puro, sem framework).
+
 ## Comandos
 
 ### Backend
@@ -97,7 +102,7 @@ make notify-install/uninstall     # instala/remove timer systemd --user
 
 - `api/data/*.db*` contém dados reais em dev local — nunca commitar, nunca ler/alterar diretamente fora de migrations/seeds.
 - `certs/*.pem` são certificados autoassinados locais — não gerar novos sem necessidade nem versionar chaves de produção.
-- Segredos de ambiente ficam em `api/.env` (com fallback para `api/.env.example` conforme o `Makefile`) — nunca commitar `.env` real.
+- Segredos de ambiente ficam em `api/.env` e `web/.env` (com fallback para os respectivos `.env.example` conforme o `Makefile`) — nunca commitar `.env`/`.env.production` reais. O `main.go` carrega `api/.env` manualmente (não é auto-load do Bun).
 - Webhooks do Mercado Pago e o token interno de notificações (`X-Internal-Token`) exigem validação estrita — não relaxar checagem "para debugar mais rápido".
 
 ## Regras de commit / PR
@@ -115,6 +120,3 @@ make notify-install/uninstall     # instala/remove timer systemd --user
 - Não criar `tailwind.config.js` estilo v3 — a config é CSS-first (v4).
 - Não editar `api/data/*.db*` nem `certs/*.pem` diretamente.
 - Não alterar a lógica de auth interna (`X-Internal-Token`) sem revisão humana explícita.
-
----
-**Ainda faltam alguns arquivos para deixar isto 100% fiel ao repo:** `package.json` da raiz (para confirmar como `bun run dev` orquestra api+web), `api/main.go`/`api/README.md` (padrão exato de bootstrap/injeção de dependência), e o conteúdo atual do `AGENTS.md`/`CLAUDE.md` já existentes no repo (para não contradizer decisões já registradas). Cole esses aqui se quiser que eu feche esses pontos.

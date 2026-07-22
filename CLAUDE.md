@@ -16,7 +16,7 @@ reconta/
 │   ├── vite.config.ts
 │   └── package.json
 ├── api/                    # Backend Go
-│   └── go.mod              # module github.com/lucasbrum/reconta/api
+│   └── go.mod              # module github.com/re-conta/reconta/api
 ├── files/                  # Arquivos de configuração do servidor (VPS)
 │   ├── reconta.service     # Systemd service da aplicação
 │   └── reconta.conf        # Configuração Nginx
@@ -85,7 +85,7 @@ Scripts ficam em `web/package.json`. Na raiz, todos delegam com `--cwd web`.
 
 ## api/ (Go)
 
-Module: `github.com/lucasbrum/reconta/api`  
+Module: `github.com/re-conta/reconta/api`  
 Go: 1.26+
 
 Estrutura esperada:

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useAuth } from "../composables/useAuth";
 import {
   ApiError,
@@ -16,6 +16,26 @@ import {
 import type { HealthSettings } from "../types/health";
 import { ApiError as BillingApiError, listPlans, updatePlan } from "../api/billing";
 import type { Plan } from "../types/billing";
+import {
+  ApiError as AnalyticsApiError,
+  getActiveNow,
+  getDeviceBreakdown,
+  getOverview,
+  getRecentVisits,
+  getTopLocations,
+  getTopPages,
+  getTopReferrers,
+} from "../api/analytics";
+import type {
+  AnalyticsOverview,
+  DeviceBreakdown,
+  LocationCount,
+  PathCount,
+  ReferrerCount,
+  RecentVisit,
+} from "../types/analytics";
+import VisitsOverTimeChart from "../components/charts/VisitsOverTimeChart.vue";
+import DeviceBreakdownChart from "../components/charts/DeviceBreakdownChart.vue";
 import { formatCnpj } from "../utils/cnpj";
 import {
   permissionLabels,
@@ -39,7 +59,7 @@ const canManagePlans = computed(
   () => isSuperAdmin.value || currentUser.value?.permissions?.includes("manage_plans"),
 );
 
-const activeTab = ref<"users" | "permissions" | "health" | "plans">("users");
+const activeTab = ref<"users" | "permissions" | "health" | "plans" | "stats">("users");
 
 // --- Aba de usuários ---
 
@@ -271,6 +291,86 @@ async function savePlan(plan: Plan) {
   }
 }
 
+// --- Aba de estatísticas ---
+
+type StatsPreset = "7d" | "30d" | "90d" | "custom";
+
+function toInputDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+const statsPreset = ref<StatsPreset>("30d");
+const statsFrom = ref(toInputDate(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)));
+const statsTo = ref(toInputDate(new Date()));
+
+const statsOverview = ref<AnalyticsOverview | null>(null);
+const statsPages = ref<PathCount[]>([]);
+const statsReferrers = ref<ReferrerCount[]>([]);
+const statsLocations = ref<LocationCount[]>([]);
+const statsDevices = ref<DeviceBreakdown | null>(null);
+const statsRecentVisits = ref<RecentVisit[]>([]);
+const statsActiveNow = ref<number | null>(null);
+const statsError = ref("");
+const loadingStats = ref(true);
+
+let activeNowTimer: ReturnType<typeof setInterval> | undefined;
+
+function setStatsPreset(preset: StatsPreset) {
+  statsPreset.value = preset;
+  const days = { "7d": 7, "30d": 30, "90d": 90, custom: 30 }[preset];
+  if (preset !== "custom") {
+    statsFrom.value = toInputDate(new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000));
+    statsTo.value = toInputDate(new Date());
+  }
+  loadStats();
+}
+
+async function loadStats() {
+  loadingStats.value = true;
+  statsError.value = "";
+  const range = { from: statsFrom.value, to: statsTo.value };
+  try {
+    const [overview, pages, referrers, locations, devices, recentVisits] = await Promise.all([
+      getOverview(range),
+      getTopPages(range),
+      getTopReferrers(range),
+      getTopLocations(range),
+      getDeviceBreakdown(range),
+      getRecentVisits(range),
+    ]);
+    statsOverview.value = overview;
+    statsPages.value = pages;
+    statsReferrers.value = referrers;
+    statsLocations.value = locations;
+    statsDevices.value = devices;
+    statsRecentVisits.value = recentVisits;
+  } catch (err) {
+    statsError.value =
+      err instanceof AnalyticsApiError ? err.message : "Falha ao carregar estatísticas";
+  } finally {
+    loadingStats.value = false;
+  }
+}
+
+async function pollActiveNow() {
+  try {
+    statsActiveNow.value = await getActiveNow();
+  } catch {
+    // silencioso: é um indicador auxiliar, não deve gerar erro visível
+  }
+}
+
+function formatVisitDate(iso: string) {
+  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+pollActiveNow();
+activeNowTimer = setInterval(pollActiveNow, 30_000);
+
+onUnmounted(() => {
+  if (activeNowTimer) clearInterval(activeNowTimer);
+});
+
 // --- Visual ---
 
 const roleBadgeClasses: Record<UserRole, string> = {
@@ -320,6 +420,7 @@ onMounted(() => {
   loadPermissions();
   loadHealthSettings();
   if (canManagePlans.value) loadPlans();
+  loadStats();
 });
 </script>
 
@@ -375,6 +476,14 @@ onMounted(() => {
         @click="activeTab = 'plans'"
       >
         Planos
+      </button>
+      <button
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-semibold transition"
+        :class="activeTab === 'stats' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900'"
+        @click="activeTab = 'stats'"
+      >
+        Estatísticas
       </button>
     </div>
 
@@ -656,8 +765,214 @@ onMounted(() => {
       </p>
     </div>
 
+    <!-- Aba: Estatísticas -->
+    <div v-else-if="activeTab === 'stats'" class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            v-for="preset in (['7d', '30d', '90d'] as const)"
+            :key="preset"
+            type="button"
+            class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition"
+            :class="
+              statsPreset === preset
+                ? 'bg-ink-900 text-white'
+                : 'border border-ink-200 text-ink-600 hover:border-ink-300'
+            "
+            @click="setStatsPreset(preset)"
+          >
+            {{ preset === "7d" ? "7 dias" : preset === "30d" ? "30 dias" : "90 dias" }}
+          </button>
+          <div class="flex items-center gap-1.5">
+            <input
+              v-model="statsFrom"
+              type="date"
+              class="rounded-full border border-ink-200 px-3 py-1.5 text-xs outline-none focus:border-brand-400"
+              @change="
+                statsPreset = 'custom';
+                loadStats();
+              "
+            />
+            <span class="text-xs text-ink-400">até</span>
+            <input
+              v-model="statsTo"
+              type="date"
+              class="rounded-full border border-ink-200 px-3 py-1.5 text-xs outline-none focus:border-brand-400"
+              @change="
+                statsPreset = 'custom';
+                loadStats();
+              "
+            />
+          </div>
+        </div>
+        <div
+          v-if="statsActiveNow !== null"
+          class="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700"
+        >
+          <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-500"></span>
+          {{ statsActiveNow }} ativo{{ statsActiveNow === 1 ? "" : "s" }} agora
+        </div>
+      </div>
+
+      <div
+        v-if="loadingStats"
+        class="flex flex-col items-center gap-2 rounded-3xl border border-ink-200/70 bg-white p-12 text-sm text-ink-400 shadow-sm"
+      >
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
+        Carregando...
+      </div>
+      <p v-else-if="statsError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ statsError }}
+      </p>
+      <template v-else>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
+            <p class="text-xs text-ink-500">Visitantes únicos</p>
+            <p class="mt-1 font-display text-2xl font-bold text-ink-900">
+              {{ statsOverview?.uniqueVisitors ?? 0 }}
+            </p>
+          </div>
+          <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
+            <p class="text-xs text-ink-500">Visitas totais</p>
+            <p class="mt-1 font-display text-2xl font-bold text-ink-900">
+              {{ statsOverview?.totalVisits ?? 0 }}
+            </p>
+          </div>
+          <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
+            <p class="text-xs text-ink-500">Novos visitantes</p>
+            <p class="mt-1 font-display text-2xl font-bold text-ink-900">
+              {{ statsOverview?.newVisitors ?? 0 }}
+            </p>
+          </div>
+          <div class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm">
+            <p class="text-xs text-ink-500">Recorrentes</p>
+            <p class="mt-1 font-display text-2xl font-bold text-ink-900">
+              {{ statsOverview?.returningVisitors ?? 0 }}
+            </p>
+          </div>
+        </div>
+
+        <VisitsOverTimeChart :by-day="statsOverview?.byDay ?? []" />
+
+        <div class="grid gap-4 lg:grid-cols-2">
+          <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+            <h2 class="px-5 pt-4 font-display text-sm font-bold text-ink-900">
+              Páginas mais visitadas
+            </h2>
+            <ul class="divide-y divide-ink-100 px-5 py-2">
+              <li
+                v-for="p in statsPages"
+                :key="p.path"
+                class="flex items-center justify-between gap-3 py-2 text-sm"
+              >
+                <span class="truncate text-ink-700">{{ p.path }}</span>
+                <span class="shrink-0 font-semibold text-ink-900">{{ p.visits }}</span>
+              </li>
+              <li v-if="statsPages.length === 0" class="py-4 text-center text-sm text-ink-400">
+                Sem dados
+              </li>
+            </ul>
+          </div>
+
+          <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+            <h2 class="px-5 pt-4 font-display text-sm font-bold text-ink-900">Referrers</h2>
+            <ul class="divide-y divide-ink-100 px-5 py-2">
+              <li
+                v-for="r in statsReferrers"
+                :key="r.referrer"
+                class="flex items-center justify-between gap-3 py-2 text-sm"
+              >
+                <span class="truncate text-ink-700">{{ r.referrer }}</span>
+                <span class="shrink-0 font-semibold text-ink-900">{{ r.visits }}</span>
+              </li>
+              <li
+                v-if="statsReferrers.length === 0"
+                class="py-4 text-center text-sm text-ink-400"
+              >
+                Sem dados
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-3">
+          <DeviceBreakdownChart title="Navegadores" :items="statsDevices?.browsers ?? []" />
+          <DeviceBreakdownChart title="Sistemas operacionais" :items="statsDevices?.os ?? []" />
+          <DeviceBreakdownChart title="Dispositivos" :items="statsDevices?.devices ?? []" />
+        </div>
+
+        <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+          <h2 class="px-5 pt-4 font-display text-sm font-bold text-ink-900">Localizações</h2>
+          <ul class="divide-y divide-ink-100 px-5 py-2">
+            <li
+              v-for="(l, idx) in statsLocations"
+              :key="`${l.country}-${l.city}-${idx}`"
+              class="flex items-center justify-between gap-3 py-2 text-sm"
+            >
+              <span class="truncate text-ink-700">
+                {{ l.city ? `${l.city}, ${l.country}` : l.country }}
+              </span>
+              <span class="shrink-0 font-semibold text-ink-900">{{ l.visits }}</span>
+            </li>
+            <li v-if="statsLocations.length === 0" class="py-4 text-center text-sm text-ink-400">
+              Sem dados
+            </li>
+          </ul>
+        </div>
+
+        <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+          <h2 class="px-5 pt-4 font-display text-sm font-bold text-ink-900">Visitas recentes</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr
+                  class="border-b border-ink-100 text-left text-xs uppercase tracking-wide text-ink-400"
+                >
+                  <th class="px-5 py-3 font-semibold">Quando</th>
+                  <th class="px-4 py-3 font-semibold">Página</th>
+                  <th class="px-4 py-3 font-semibold">IP</th>
+                  <th class="px-4 py-3 font-semibold">Local</th>
+                  <th class="px-4 py-3 font-semibold">Navegador</th>
+                  <th class="px-4 py-3 font-semibold">SO</th>
+                  <th class="px-4 py-3 font-semibold">Referrer</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink-100">
+                <tr v-for="v in statsRecentVisits" :key="v.id" class="hover:bg-ink-50/60">
+                  <td class="whitespace-nowrap px-5 py-2.5 text-ink-500">
+                    {{ formatVisitDate(v.createdAt) }}
+                  </td>
+                  <td class="max-w-[16rem] truncate px-4 py-2.5 text-ink-700">{{ v.path }}</td>
+                  <td class="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-ink-500">
+                    {{ v.ip }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 text-ink-500">
+                    {{ v.city ? `${v.city}, ${v.country}` : v.country || "—" }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 text-ink-500">
+                    {{ v.browser || "—" }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 text-ink-500">{{ v.os || "—" }}</td>
+                  <td class="max-w-[12rem] truncate px-4 py-2.5 text-ink-500">
+                    {{ v.referrer || "(direto)" }}
+                  </td>
+                </tr>
+                <tr v-if="statsRecentVisits.length === 0">
+                  <td colspan="7" class="px-5 py-6 text-center text-sm text-ink-400">
+                    Sem visitas registradas neste período
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
     <!-- Aba: Permissões -->
-    <div v-else class="flex flex-col gap-3">
+    <div v-else-if="activeTab === 'permissions'" class="flex flex-col gap-3">
       <p class="text-sm text-ink-500">
         O Super Administrador sempre possui todas as permissões e não pode ser alterado.
         <span v-if="!canManagePermissions">Você não tem permissão para editar — somente visualizar.</span>

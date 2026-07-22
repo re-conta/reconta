@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/re-conta/reconta/api/internal/account"
+	"github.com/re-conta/reconta/api/internal/analytics"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/billing"
 	"github.com/re-conta/reconta/api/internal/category"
@@ -92,6 +93,9 @@ func main() {
 	report.NewHandler(transactionRepo, categoryRepo, accountRepo, tagRepo, authHandler).RegisterRoutes(mux)
 
 	health.NewHandler(health.NewRepository(conn), authHandler).RegisterRoutes(mux)
+
+	geoIP := analytics.NewGeoIP(getEnv("GEOIP_DB_PATH", ""))
+	analytics.NewHandler(analytics.NewRepository(conn), authHandler, geoIP, secureCookies).RegisterRoutes(mux)
 
 	fixedBillRepo := fixedbill.NewRepository(conn)
 	fixedbill.NewHandler(fixedBillRepo, authHandler).RegisterRoutes(mux)

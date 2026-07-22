@@ -248,6 +248,28 @@ func migrate(conn *sql.DB) error {
 		updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS page_visits (
+		id              INTEGER PRIMARY KEY AUTOINCREMENT,
+		visitor_id      TEXT NOT NULL,
+		session_id      TEXT NOT NULL,
+		user_id         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+		path            TEXT NOT NULL,
+		referrer        TEXT NOT NULL DEFAULT '',
+		ip              TEXT NOT NULL,
+		country         TEXT NOT NULL DEFAULT '',
+		region          TEXT NOT NULL DEFAULT '',
+		city            TEXT NOT NULL DEFAULT '',
+		latitude        REAL,
+		longitude       REAL,
+		user_agent      TEXT NOT NULL DEFAULT '',
+		browser         TEXT NOT NULL DEFAULT '',
+		browser_version TEXT NOT NULL DEFAULT '',
+		os              TEXT NOT NULL DEFAULT '',
+		device_type     TEXT NOT NULL DEFAULT '',
+		is_bot          INTEGER NOT NULL DEFAULT 0,
+		created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 	CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON subscriptions(user_id, status);
 	CREATE INDEX IF NOT EXISTS idx_subscription_payments_mp ON subscription_payments(mp_payment_id);
@@ -260,6 +282,9 @@ func migrate(conn *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_shares_owner ON shares(owner_id, status);
 	CREATE INDEX IF NOT EXISTS idx_shares_recipient ON shares(recipient_id, status);
 	CREATE INDEX IF NOT EXISTS idx_share_accounts_account ON share_accounts(account_id);
+	CREATE INDEX IF NOT EXISTS idx_page_visits_created_at ON page_visits(created_at);
+	CREATE INDEX IF NOT EXISTS idx_page_visits_visitor_id ON page_visits(visitor_id, created_at);
+	CREATE INDEX IF NOT EXISTS idx_page_visits_path ON page_visits(path);
 	`
 	if _, err := conn.Exec(schema); err != nil {
 		return err

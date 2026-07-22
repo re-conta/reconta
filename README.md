@@ -225,6 +225,74 @@ Sem `MP_ACCESS_TOKEN`, o site funciona normalmente e apenas o checkout fica desa
 
 > Dica: em desenvolvimento não é preciso webhook — o modal de checkout faz polling e reconsulta o status direto na API do Mercado Pago.
 
+## Estatísticas de visitas (painel de admin)
+
+O painel `/admin` tem uma aba **Estatísticas** com visitas únicas, visitas totais, novos vs. recorrentes, série diária (gráfico com range de datas selecionável), páginas mais visitadas, referrers, navegador/SO/dispositivo, localização por IP e uma tabela de visitas recentes (com IP, país/cidade, navegador, SO e referrer). Também mostra um indicador de "ativos agora" (visitantes únicos nos últimos 5 minutos).
+
+### Como funciona
+
+- Como o site é uma SPA (o Nginx serve `index.html` para qualquer rota), não existe log de navegação por página no servidor — cada troca de rota é reportada por um beacon (`POST /api/track`, disparado em `router.afterEach` no front-end). O beacon nunca bloqueia nem falha visivelmente a navegação.
+- **Visitante único**: cookie próprio `rc_vid` (HttpOnly, 1 ano) gerado pelo backend na primeira visita. `rc_sid` é um cookie de sessão do navegador (sem expiração fixa), usado para agrupar visitas da mesma sessão.
+- **IP real**: o handler lê, nessa ordem, `CF-Connecting-IP` → `X-Real-IP` → o IP da conexão TCP. Ver seção de Nginx abaixo para o IP do Cloudflare chegar corretamente.
+- **Geolocalização**: via [GeoLite2 City](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data) da MaxMind, lido de um arquivo `.mmdb` local (`GEOIP_DB_PATH`). Se a variável não estiver definida ou o arquivo não existir, a geolocalização fica desabilitada e os campos de país/cidade ficam vazios — o resto do rastreamento continua funcionando normalmente.
+- **Navegador/SO/dispositivo**: parseados do `User-Agent` no backend (`github.com/mileusna/useragent`). Bots conhecidos são marcados (`is_bot`) e excluídos de todas as estatísticas.
+- A aba **Estatísticas** é visível a qualquer usuário com a permissão `admin_panel` (mesmo critério de acesso ao restante do painel); os dados de IP/localização são de uso interno/administrativo.
+
+### Tabelas
+
+| Tabela        | Conteúdo                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| `page_visits` | Uma linha por navegação: visitante/sessão, path, referrer, IP, geo, user agent, browser/SO/dispositivo, timestamp |
+
+### Variáveis de ambiente
+
+No `api/.env` (backend):
+
+```sh
+GEOIP_DB_PATH=   # Caminho absoluto do GeoLite2-City.mmdb (opcional — sem ele, geolocalização fica desabilitada)
+```
+
+### Configuração em produção (VPS)
+
+**1. IP real do Cloudflare no Nginx** — o site roda atrás do Cloudflare, então por padrão o Nginx (e o backend) só enxergam o IP da borda do Cloudflare, não o do visitante. `files/cloudflare-realip.conf` configura o [`ngx_http_realip_module`](https://nginx.org/en/docs/http/ngx_http_realip_module.html) para confiar no cabeçalho `CF-Connecting-IP` **somente** quando a requisição vem de uma faixa de IP publicada pelo Cloudflare (evita spoofing por quem não vier da borda deles). `files/reconta.conf` inclui esse arquivo no server block principal.
+
+   > ⚠️ O `scripts/deploy.sh` **não** copia nem recarrega a configuração do Nginx — só o app (API + frontend). Mudanças em `files/reconta.conf` ou `files/cloudflare-realip.conf` precisam ser aplicadas manualmente na VPS. Na VPS de produção, o site fica em `/etc/nginx/sites.d/40-reconta.app.conf` (carregado via `include /etc/nginx/sites.d/*.conf` no `nginx.conf` principal — `/etc/nginx/conf.d/` **não** é incluído, apesar de existir um arquivo antigo lá):
+   > ```sh
+   > scp files/reconta.conf root@<vps>:/etc/nginx/sites.d/40-reconta.app.conf
+   > scp files/cloudflare-realip.conf root@<vps>:/etc/nginx/sites.d/cloudflare-realip.conf
+   > ssh root@<vps> "nginx -t && systemctl reload nginx"
+   > ```
+   > As faixas de IP do Cloudflare mudam raramente, mas convém revisar de tempos em tempos contra [cloudflare.com/ips-v4](https://www.cloudflare.com/ips-v4/) e [/ips-v6](https://www.cloudflare.com/ips-v6/).
+
+**2. GeoLite2 via `geoipupdate`** — a ferramenta oficial da MaxMind. Em distros sem pacote pronto (ex.: Rocky/RHEL sem repo próprio), instalar a partir do [release oficial no GitHub](https://github.com/maxmind/geoipupdate/releases):
+
+   ```sh
+   curl -sL -o /tmp/geoipupdate.rpm https://github.com/maxmind/geoipupdate/releases/latest/download/geoipupdate_8.0.0_linux_amd64.rpm
+   sudo dnf install -y /tmp/geoipupdate.rpm   # ou dpkg -i / apt install geoipupdate em Debian/Ubuntu
+   sudo nano /etc/GeoIP.conf
+   ```
+   ```
+   AccountID   SEU_ACCOUNT_ID
+   LicenseKey  SUA_LICENSE_KEY
+   EditionIDs  GeoLite2-City
+   ```
+   ```sh
+   sudo geoipupdate -v   # baixa o banco pela primeira vez (grava em /usr/share/GeoIP por padrão)
+   ```
+
+   O binário **não vem com timer systemd próprio** — `files/geoipupdate.service` e `files/geoipupdate.timer` cobrem isso (roda 1x/dia, com atraso aleatório de até 1h para não bater exatamente na hora cheia):
+
+   ```sh
+   scp files/geoipupdate.service files/geoipupdate.timer root@<vps>:/etc/systemd/system/
+   ssh root@<vps> "systemctl daemon-reload && systemctl enable --now geoipupdate.timer"
+   ```
+
+   Por padrão o `geoipupdate` grava em `/usr/share/GeoIP/GeoLite2-City.mmdb` (verifique `DatabaseDirectory` em `/etc/GeoIP.conf` se for diferente). Defina esse caminho em `GEOIP_DB_PATH` no `.env` de produção da API. O backend recarrega o arquivo do disco a cada hora sozinho, então atualizações do `geoipupdate` são pegas sem reiniciar o serviço.
+
+### Privacidade
+
+Os dados de IP, geolocalização e User-Agent são coletados para fins administrativos internos (métricas de uso e segurança), não são compartilhados com terceiros e ficam restritos a quem tem a permissão `admin_panel`. Antes de usar em produção com tráfego real, vale revisar com um jurídico se a política de privacidade do site precisa mencionar essa coleta (LGPD, interesse legítimo).
+
 ## Endpoints da API
 
 Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **protegidas** exigem sessão autenticada (cookie `session_token`), validada pelo middleware `auth.Handler.RequireUser()`.
@@ -307,6 +375,19 @@ Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **
 | POST   | `/api/internal/billing/scan`        | Header `X-Internal-Token`   |
 | GET    | `/api/admin/plans`                  | Permissão `manage_plans`    |
 | PUT    | `/api/admin/plans/{id}`             | Permissão `manage_plans`    |
+
+### Estatísticas de visitas (`analytics`)
+
+| Método | Rota                             | Auth                       |
+| ------ | --------------------------------- | --------------------------- |
+| POST   | `/api/track`                      | Não                         |
+| GET    | `/api/admin/analytics/overview`   | Permissão `admin_panel`     |
+| GET    | `/api/admin/analytics/pages`      | Permissão `admin_panel`     |
+| GET    | `/api/admin/analytics/referrers`  | Permissão `admin_panel`     |
+| GET    | `/api/admin/analytics/locations`  | Permissão `admin_panel`     |
+| GET    | `/api/admin/analytics/devices`    | Permissão `admin_panel`     |
+| GET    | `/api/admin/analytics/visitors`   | Permissão `admin_panel`     |
+| GET    | `/api/admin/analytics/active`     | Permissão `admin_panel`     |
 
 ## Testes
 

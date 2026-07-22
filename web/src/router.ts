@@ -20,6 +20,7 @@ import AdminView from "./views/admin.vue";
 import NotFound from "./views/notfound.vue";
 import { useAuth } from "./composables/useAuth";
 import { canAccessAdmin } from "./types/user";
+import { trackPageView } from "./api/analytics";
 
 const routes = [
   { path: "/", name: "Home", component: HomeView },
@@ -120,4 +121,12 @@ router.beforeEach(async (to) => {
   }
 
   return true;
+});
+
+// Como o Nginx serve a SPA via fallback para index.html, não há log de
+// navegação por rota no servidor — cada troca de rota é reportada aqui.
+// Ignora o próprio /admin para não poluir as estatísticas com o uso do painel.
+router.afterEach((to) => {
+  if (to.path.startsWith("/admin")) return;
+  trackPageView(to.fullPath, document.referrer);
 });
