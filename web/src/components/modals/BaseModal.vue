@@ -37,7 +37,7 @@ onBeforeUnmount(() => {
       leave-to-class="opacity-0"
     >
       <div
-        class="fixed inset-x-0 top-0 z-100 flex h-dvh items-center justify-center bg-ink-900/60 backdrop-blur-md p-0 sm:items-center sm:p-4"
+        class="fixed inset-x-0 top-0 z-100 flex h-full items-center justify-center bg-ink-900/60 backdrop-blur-md p-0 sm:items-center sm:p-4"
         @mousedown.self="emit('close')"
       >
         <Transition
@@ -50,7 +50,7 @@ onBeforeUnmount(() => {
           leave-to-class="opacity-0 translate-y-4 sm:scale-95"
         >
           <div
-            class="relative flex h-svh w-full my-6 max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-ink-900/5 sm:rounded-3xl"
+            class="relative flex h-auto w-full my-6 max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-ink-900/5 sm:rounded-3xl"
             role="dialog"
             aria-modal="true"
             :aria-label="props.title"
