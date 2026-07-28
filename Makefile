@@ -41,7 +41,6 @@ up: build certs hosts-check ## Sobe API + Nginx/Web no mesmo pod (HTTPS em https
 down: ## Para e remove o pod (mantém o volume com o banco de dados)
 	podman pod rm -f $(POD) || true
 
-
 restart: ## Reinicia containers já buildados, sem rebuild
 	podman pod restart $(POD)
 

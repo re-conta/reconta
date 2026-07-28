@@ -8,8 +8,6 @@ Na consulta usando o Groq tome muito cuidado para não exceder os limites da API
 
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.
 
-No painel de admin crie uma página de estatísticas com um set completo de estatíticas: Visitas únicas, Visitas, quais páginas visitadas, ips, agentes de navegador, gráficos(com a opção de selecionar o range), referrer localização(por ip) usando IP real(fornecido pela cloudflare e passada para o nginx) e o sistema de GeoIP2 Lite da Maxmind, para isso preciso que ajuste na VPS esse sistema e alem disso crie este painel com mais informações que achar pertinentes, documente tudo no README.md
-
 No painel de admin crie uma página de logs onde toda visita deve ser logada assim como agente, ip, navegador, sistema e as páginas que visitou e as ações que este usuário fez no site.
 
 Transforme a pasta files/ em ansible/ crie um playbook simples mais completo usando o ansible com:
