@@ -69,7 +69,7 @@ certs: ## Gera certificado TLS autoassinado para reconta.local, se ainda não ex
 	fi
 
 hosts-check: ## Verifica se reconta.local resolve para 127.0.0.1 em /etc/hosts
-	@if getent hosts $(DOMAIN) | grep -q '^127\.0\.0\.1'; then \
+	@if grep -qE '^127\.0\.0\.1[[:space:]].*$(DOMAIN)' /etc/hosts; then \
 		echo "✅ $(DOMAIN) resolve para 127.0.0.1"; \
 	else \
 		echo "⚠️  $(DOMAIN) não está em /etc/hosts. Adicione a linha abaixo:"; \
