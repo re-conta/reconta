@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import { ApiError, downloadBlob, exportReport, importBackup } from "../api/reports";
@@ -81,6 +81,7 @@ function toBase64(dataUrl: string | undefined): string | null {
 }
 
 async function collectCharts(): Promise<ChartImagePayload[]> {
+  await nextTick();
   const charts: ChartImagePayload[] = [];
   if (scopeKind.value === "month") {
     const img = toBase64(cashFlowRef.value?.toImage());
@@ -95,7 +96,7 @@ async function handleExport(format: ExportFormat) {
   exportError.value = "";
   exportingFormat.value = format;
   try {
-    const charts = format === "json" ? [] : await collectCharts();
+    const charts = format === "json" || loadingPreview.value ? [] : await collectCharts();
     const { blob, filename } = await exportReport(
       format,
       {
@@ -264,7 +265,7 @@ onMounted(async () => {
           v-for="format in ['xlsx', 'ods', 'pdf', 'json'] as ExportFormat[]"
           :key="format"
           type="button"
-          :disabled="exportingFormat !== null"
+          :disabled="exportingFormat !== null || loadingPreview"
           class="rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
           @click="handleExport(format)"
         >
