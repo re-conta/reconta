@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { Pencil, Plus, Trash2, X } from "lucide-vue-next";
 import { listAccounts } from "../api/accounts";
+import { getSubscription } from "../api/billing";
 import { createCategory, listCategories } from "../api/categories";
 import { createTag, listTags } from "../api/tags";
 import AccountsManager from "../components/AccountsManager.vue";
@@ -28,10 +30,54 @@ import type { Category, CategoryInput } from "../types/category";
 import type { Tag } from "../types/tag";
 import type { Period, Transaction, TransactionInput } from "../types/transaction";
 
+const isPayingUser = ref(false);
+
+async function loadSubscription() {
+  try {
+    const info = await getSubscription();
+    isPayingUser.value = info.subscription?.status === "active" && info.planCode !== "gratuito";
+  } catch {
+    isPayingUser.value = false;
+  }
+}
+
+const route = useRoute();
+const router = useRouter();
+
+const PERIOD_STORAGE_KEY = "reconta:transacoes:periodo";
+
+function readStoredPeriod(): { month: number; year: number } | null {
+  try {
+    const raw = sessionStorage.getItem(PERIOD_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed?.month === "number" &&
+      typeof parsed?.year === "number" &&
+      parsed.month >= 1 &&
+      parsed.month <= 12
+    ) {
+      return { month: parsed.month, year: parsed.year };
+    }
+  } catch {
+    // ignora storage indisponível/corrompido
+  }
+  return null;
+}
+
+function initialPeriod() {
+  const now = new Date();
+  const queryMonth = Number(route.query.mes);
+  const queryYear = Number(route.query.ano);
+  if (queryMonth >= 1 && queryMonth <= 12 && queryYear > 0) {
+    return { month: queryMonth, year: queryYear };
+  }
+  return readStoredPeriod() ?? { month: now.getMonth() + 1, year: now.getFullYear() };
+}
+
 const now = new Date();
 const filters = reactive({
-  month: now.getMonth() + 1,
-  year: now.getFullYear(),
+  ...initialPeriod(),
   type: "" as "" | "income" | "expense",
   categoryId: "" as number | "",
   tagId: "" as number | "",
@@ -448,7 +494,16 @@ watch(
     loadOpeningBalance();
     editingOpeningBalance.value = false;
     selectedDate.value = null;
+
+    sessionStorage.setItem(
+      PERIOD_STORAGE_KEY,
+      JSON.stringify({ month: filters.month, year: filters.year }),
+    );
+    router.replace({
+      query: { ...route.query, mes: String(filters.month), ano: String(filters.year) },
+    });
   },
+  { immediate: true },
 );
 
 let searchDebounce: ReturnType<typeof setTimeout> | undefined;
@@ -482,7 +537,7 @@ onMounted(async () => {
   window.addEventListener("keydown", handleKeydown);
   await loadReferenceData();
   await loadTransactions();
-  await loadOpeningBalance();
+  await loadSubscription();
 });
 
 onUnmounted(() => {
@@ -495,7 +550,7 @@ onUnmounted(() => {
   <div class="mx-auto flex w-full flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink-900">Transações</h1>
+        <h2 class="font-display text-xl font-bold text-ink-900">Transações</h2>
         <p class="mt-0.5 text-sm text-ink-500">Lançamentos de receitas e despesas</p>
       </div>
       <div class="flex gap-2">
@@ -525,8 +580,6 @@ onUnmounted(() => {
       <div
         class="order-first flex flex-col gap-6 md:sticky md:top-20 md:order-2 md:w-80 md:shrink-0 xl:w-96"
       >
-        <FinancialHealthCard :month="filters.month" :year="filters.year" />
-        <FinancialRecommendations :month="filters.month" :year="filters.year" />
         <TransactionCalendar
           :month="filters.month"
           :year="filters.year"
@@ -538,6 +591,8 @@ onUnmounted(() => {
           @next="goToNextPeriod"
           @select-date="(d) => (selectedDate = d)"
         />
+        <FinancialHealthCard :month="filters.month" :year="filters.year" />
+        <FinancialRecommendations v-if="isPayingUser" :month="filters.month" :year="filters.year" />
       </div>
 
       <div class="flex min-w-0 flex-1 flex-col gap-6 md:order-1">

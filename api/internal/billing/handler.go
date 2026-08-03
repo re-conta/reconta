@@ -73,6 +73,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/admin/plans", h.requirePermission(h.adminListPlans, user.PermManagePlans))
 	mux.HandleFunc("PUT /api/admin/plans/{id}", h.requirePermission(h.adminUpdatePlan, user.PermManagePlans))
+
+	mux.HandleFunc("GET /api/admin/users/{id}/subscription", h.requirePermission(h.adminGetUserSubscription, user.PermManagePlans))
+	mux.HandleFunc("PUT /api/admin/users/{id}/subscription", h.requirePermission(h.adminGrantSubscription, user.PermManagePlans))
+	mux.HandleFunc("DELETE /api/admin/users/{id}/subscription", h.requirePermission(h.adminCancelUserSubscription, user.PermManagePlans))
 }
 
 // --- Planos (público) ---
@@ -717,6 +721,120 @@ func (h *Handler) adminUpdatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, updated)
+}
+
+// adminGetUserSubscription retorna o plano vigente de um usuário específico,
+// usado no painel de admin para exibir e gerenciar o plano de cada conta.
+func (h *Handler) adminGetUserSubscription(w http.ResponseWriter, r *http.Request) {
+	userID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+
+	sub, err := h.repo.CurrentSubscription(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: PlanFree})
+			return
+		}
+		log.Printf("erro ao buscar assinatura do usuário %d: %v", userID, err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	code := sub.PlanCode
+	if sub.Status == StatusPending {
+		code = PlanFree
+	}
+	writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: code, Subscription: sub})
+}
+
+type adminGrantSubscriptionRequest struct {
+	PlanCode string `json:"planCode"`
+	Cycle    string `json:"cycle"`
+}
+
+// adminGrantSubscription concede (ou renova) manualmente um plano pago a um
+// usuário — cortesia dada pelo admin, sem cobrança no Mercado Pago. Conceder
+// o plano gratuito equivale a remover a assinatura paga vigente.
+func (h *Handler) adminGrantSubscription(w http.ResponseWriter, r *http.Request) {
+	userID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+
+	var req adminGrantSubscriptionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	ctx := r.Context()
+	plan, err := h.repo.GetPlanByCode(ctx, req.PlanCode)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "plano não encontrado")
+		return
+	}
+	if plan.IsFree() {
+		h.removeUserSubscription(w, r, userID)
+		return
+	}
+	if !ValidCycle(req.Cycle) {
+		writeError(w, http.StatusBadRequest, "ciclo inválido: use monthly ou yearly")
+		return
+	}
+
+	sub, err := h.repo.CreateSubscription(ctx, userID, plan.ID, req.Cycle, MethodAdminGrant)
+	if err != nil {
+		log.Printf("erro ao conceder assinatura ao usuário %d: %v", userID, err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	sub, err = h.repo.Activate(ctx, sub.ID, MethodAdminGrant)
+	if err != nil {
+		log.Printf("erro ao ativar assinatura concedida ao usuário %d: %v", userID, err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	title := fmt.Sprintf("Assinatura do plano %s ativa", sub.PlanName)
+	message := fmt.Sprintf(
+		"Um administrador liberou o plano %s para sua conta, válido até %s.",
+		sub.PlanName, formatDate(sub.CurrentPeriodEnd),
+	)
+	h.notifyUser(ctx, userID, KindSubscriptionActive, title, message, sub.CurrentPeriodEnd, 0, true)
+
+	writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: sub.PlanCode, Subscription: sub})
+}
+
+// adminCancelUserSubscription remove o plano pago vigente de um usuário,
+// voltando-o ao plano gratuito imediatamente, sem reembolso automático (o
+// admin decide fora do sistema se há reembolso a fazer).
+func (h *Handler) adminCancelUserSubscription(w http.ResponseWriter, r *http.Request) {
+	userID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	h.removeUserSubscription(w, r, userID)
+}
+
+func (h *Handler) removeUserSubscription(w http.ResponseWriter, r *http.Request, userID int64) {
+	ctx := r.Context()
+	sub, err := h.repo.CurrentSubscription(ctx, userID)
+	if err != nil || sub.Status != StatusActive {
+		writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: PlanFree})
+		return
+	}
+
+	if err := h.repo.Cancel(ctx, sub.ID, true, nil); err != nil {
+		log.Printf("erro ao remover assinatura do usuário %d: %v", userID, err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: PlanFree})
 }
 
 // --- Helpers ---

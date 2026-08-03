@@ -72,6 +72,16 @@ func (r *Repository) Delete(ctx context.Context, token string) error {
 	return nil
 }
 
+// DeleteByUserID encerra todas as sessões ativas de um usuário, usado para
+// desconectá-lo imediatamente ao ser banido.
+func (r *Repository) DeleteByUserID(ctx context.Context, userID int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, userID)
+	if err != nil {
+		return fmt.Errorf("removendo sessões do usuário: %w", err)
+	}
+	return nil
+}
+
 // ErrResetTokenNotFound é retornado quando o token de redefinição de senha é
 // inválido, já foi usado ou expirou.
 var ErrResetTokenNotFound = errors.New("token de redefinição não encontrado")

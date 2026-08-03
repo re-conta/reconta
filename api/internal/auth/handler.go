@@ -85,6 +85,11 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if u.IsBanned() {
+		writeError(w, http.StatusForbidden, "esta conta foi banida")
+		return
+	}
+
 	if err := h.createSession(w, r, u.ID); err != nil {
 		log.Printf("erro ao criar sessão: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
@@ -271,7 +276,14 @@ func (h *Handler) CurrentUser(r *http.Request) (*user.User, error) {
 		return nil, err
 	}
 
-	return h.users.GetByID(r.Context(), session.UserID)
+	u, err := h.users.GetByID(r.Context(), session.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if u.IsBanned() {
+		return nil, ErrSessionNotFound
+	}
+	return u, nil
 }
 
 // RequireUser envolve um handler que precisa do usuário autenticado, resolvendo-o

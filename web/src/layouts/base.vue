@@ -22,9 +22,9 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-svh flex-col bg-ink-50">
+  <div class="relative flex min-h-svh flex-col bg-ink-50">
     <div
-      class="pointer-events-none fixed inset-x-0 top-0 -z-10 h-120 bg-[radial-gradient(60%_60%_at_15%_0%,--theme(--color-brand-200/60%),transparent),radial-gradient(50%_50%_at_85%_10%,--theme(--color-coral-200/50%),transparent)]"
+      class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-120 bg-[radial-gradient(60%_60%_at_15%_0%,--theme(--color-brand-200/60%),transparent),radial-gradient(50%_50%_at_85%_10%,--theme(--color-coral-200/50%),transparent)]"
     ></div>
 
     <header

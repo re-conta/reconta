@@ -1,6 +1,13 @@
 export type BillingCycle = "monthly" | "yearly";
 
+// Código do plano gratuito, espelhando billing.PlanFree no backend.
+export const PlanFree = "gratuito";
+
 export type PaymentMethod = "pix" | "boleto" | "debit_card" | "credit_card";
+
+// Método usado quando um admin concede um plano manualmente pelo painel,
+// sem passar pelo checkout do Mercado Pago.
+export type SubscriptionMethod = PaymentMethod | "admin_grant";
 
 export type SubscriptionStatus = "pending" | "active" | "canceled" | "expired";
 
@@ -24,7 +31,7 @@ export interface Subscription {
   planName: string;
   cycle: BillingCycle;
   status: SubscriptionStatus;
-  paymentMethod: PaymentMethod;
+  paymentMethod: SubscriptionMethod;
   startedAt: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
@@ -81,6 +88,14 @@ export interface CancelResult {
   refundAmount: number;
 }
 
+// GrantSubscriptionInput concede um plano a um usuário pelo painel de admin.
+// cycle é obrigatório apenas para planos pagos; conceder o plano gratuito
+// ("gratuito") remove a assinatura paga vigente do usuário.
+export interface GrantSubscriptionInput {
+  planCode: string;
+  cycle?: BillingCycle;
+}
+
 export interface UpdatePlanInput {
   name: string;
   description: string;
@@ -90,11 +105,12 @@ export interface UpdatePlanInput {
   highlight: boolean;
 }
 
-export const paymentMethodLabels: Record<PaymentMethod, string> = {
+export const paymentMethodLabels: Record<SubscriptionMethod, string> = {
   pix: "PIX",
   boleto: "Boleto",
   debit_card: "Cartão de débito",
   credit_card: "Cartão de crédito",
+  admin_grant: "Cortesia concedida por admin",
 };
 
 export function formatPrice(value: number): string {

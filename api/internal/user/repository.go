@@ -20,6 +20,10 @@ var ErrNotFound = errors.New("usuário não encontrado")
 // reservado a Super Admin, ou ao tentar atribuir a role super_admin manualmente.
 var ErrCannotModifyRole = errors.New("não é possível alterar a role deste usuário")
 
+// ErrProtectedUser é retornado ao tentar banir ou excluir um e-mail reservado
+// de Super Admin.
+var ErrProtectedUser = errors.New("não é possível realizar esta ação neste usuário")
+
 // superAdminEmails são os e-mails que devem sempre ter a role super_admin,
 // com poderes irrestritos e acesso ao painel de admin.
 var superAdminEmails = map[string]bool{
@@ -101,6 +105,89 @@ func (r *Repository) UpdateRole(ctx context.Context, id int64, role string) (*Us
 	return r.GetByID(ctx, id)
 }
 
+// BanUser bane ou reabilita a conta de um usuário. E-mails reservados de
+// Super Admin nunca podem ser banidos.
+func (r *Repository) BanUser(ctx context.Context, id int64, banned bool) (*User, error) {
+	u, err := r.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if superAdminEmails[strings.ToLower(u.Email)] {
+		return nil, ErrProtectedUser
+	}
+
+	var err2 error
+	if banned {
+		_, err2 = r.db.ExecContext(ctx, `UPDATE users SET banned_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`, id)
+	} else {
+		_, err2 = r.db.ExecContext(ctx, `UPDATE users SET banned_at = NULL WHERE id = ?`, id)
+	}
+	if err2 != nil {
+		return nil, fmt.Errorf("atualizando banimento do usuário: %w", err2)
+	}
+	return r.GetByID(ctx, id)
+}
+
+// Delete exclui permanentemente a conta de um usuário e todos os seus dados
+// (contas, categorias, transações, assinaturas, etc. são removidos em
+// cascata pelas chaves estrangeiras). E-mails reservados de Super Admin nunca
+// podem ser excluídos.
+func (r *Repository) Delete(ctx context.Context, id int64) error {
+	u, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if superAdminEmails[strings.ToLower(u.Email)] {
+		return ErrProtectedUser
+	}
+
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id); err != nil {
+		return fmt.Errorf("excluindo usuário: %w", err)
+	}
+	return nil
+}
+
+// AdminCreate cria um usuário com uma role escolhida diretamente pelo
+// administrador (ao contrário de Create, não passa pelas regras de cadastro
+// público). O chamador é responsável por validar que a role é atribuível.
+func (r *Repository) AdminCreate(ctx context.Context, name, email, passwordHash, role, cnpj string) (*User, error) {
+	res, err := r.db.ExecContext(ctx,
+		`INSERT INTO users (name, email, password_hash, role, cnpj) VALUES (?, ?, ?, ?, ?)`,
+		name, email, passwordHash, role, nullableString(cnpj),
+	)
+	if err != nil {
+		if isUniqueConstraintErr(err) {
+			return nil, ErrEmailTaken
+		}
+		return nil, fmt.Errorf("inserindo usuário: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("obtendo id do usuário: %w", err)
+	}
+	return r.GetByID(ctx, id)
+}
+
+// AdminUpdate altera nome, e-mail e CNPJ de um usuário a partir do painel de
+// admin.
+func (r *Repository) AdminUpdate(ctx context.Context, id int64, name, email, cnpj string) (*User, error) {
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE users SET name = ?, email = ?, cnpj = ? WHERE id = ?`,
+		name, email, nullableString(cnpj), id,
+	)
+	if err != nil {
+		if isUniqueConstraintErr(err) {
+			return nil, ErrEmailTaken
+		}
+		return nil, fmt.Errorf("atualizando usuário: %w", err)
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return nil, ErrNotFound
+	}
+	return r.GetByID(ctx, id)
+}
+
 // UpdateProfile altera nome e e-mail do usuário.
 func (r *Repository) UpdateProfile(ctx context.Context, id int64, name, email string) (*User, error) {
 	res, err := r.db.ExecContext(ctx, `UPDATE users SET name = ?, email = ? WHERE id = ?`, name, email, id)
@@ -168,7 +255,7 @@ func (r *Repository) Create(ctx context.Context, name, email, passwordHash, role
 
 func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users WHERE id = ?`, id,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users WHERE id = ?`, id,
 	)
 	u, err := scanUser(row)
 	if err != nil {
@@ -181,13 +268,13 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 // usado exclusivamente pelo fluxo de autenticação.
 func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email string) (*User, string, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, created_at, password_hash FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, cnpj, avatar_url, created_at, banned_at, password_hash FROM users WHERE email = ?`, email,
 	)
 
 	var u User
-	var cnpj, avatarURL sql.NullString
+	var cnpj, avatarURL, bannedAt sql.NullString
 	var createdAt, passwordHash string
-	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &createdAt, &passwordHash); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &createdAt, &bannedAt, &passwordHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, "", ErrNotFound
 		}
@@ -196,6 +283,7 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 	u.CNPJ = cnpj.String
 	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
+	u.BannedAt = parseNullTimestamp(bannedAt)
 	u.HasPassword = passwordHash != ""
 
 	if err := r.attachPermissions(ctx, &u); err != nil {
@@ -207,7 +295,7 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 // GetByGoogleID busca um usuário previamente vinculado a uma conta Google.
 func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users WHERE google_id = ?`, googleID,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users WHERE google_id = ?`, googleID,
 	)
 	u, err := scanUser(row)
 	if err != nil {
@@ -220,7 +308,7 @@ func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User,
 // a um cadastro já existente por e-mail/senha.
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users WHERE email = ?`, email,
 	)
 	u, err := scanUser(row)
 	if err != nil {
@@ -271,7 +359,7 @@ func (r *Repository) UpdateAvatarURL(ctx context.Context, id int64, avatarURL st
 
 func (r *Repository) List(ctx context.Context) ([]User, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', created_at FROM users ORDER BY id DESC`,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users ORDER BY id DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listando usuários: %w", err)
@@ -378,9 +466,9 @@ type scanner interface {
 
 func scanUser(s scanner) (*User, error) {
 	var u User
-	var cnpj, avatarURL sql.NullString
+	var cnpj, avatarURL, bannedAt sql.NullString
 	var createdAt string
-	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &u.HasPassword, &createdAt); err != nil {
+	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &u.HasPassword, &bannedAt, &createdAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -389,7 +477,19 @@ func scanUser(s scanner) (*User, error) {
 	u.CNPJ = cnpj.String
 	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
+	u.BannedAt = parseNullTimestamp(bannedAt)
 	return &u, nil
+}
+
+func parseNullTimestamp(s sql.NullString) *time.Time {
+	if !s.Valid {
+		return nil
+	}
+	t := parseTimestamp(s.String)
+	if t.IsZero() {
+		return nil
+	}
+	return &t
 }
 
 func nullableString(s string) any {

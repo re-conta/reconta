@@ -26,6 +26,7 @@ export interface User {
   avatarUrl: string;
   hasPassword: boolean;
   permissions: Permission[];
+  bannedAt: string | null;
   createdAt: string;
 }
 
@@ -45,6 +46,23 @@ export interface CreateUserInput {
 export interface UpdateProfileInput {
   name: string;
   email: string;
+}
+
+// AdminCreateUserInput cria uma conta pelo painel de admin, com a role
+// escolhida diretamente (ao contrário do cadastro público, que só permite
+// Pessoa Física/Jurídica/Contador).
+export interface AdminCreateUserInput {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  cnpj?: string;
+}
+
+export interface AdminUpdateUserInput {
+  name: string;
+  email: string;
+  cnpj?: string;
 }
 
 export interface UpdatePasswordInput {

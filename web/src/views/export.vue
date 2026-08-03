@@ -149,7 +149,7 @@ onMounted(async () => {
 <template>
   <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div>
-      <h1 class="font-display text-2xl font-bold text-ink-900">Exportar</h1>
+      <h2 class="font-display text-xl font-bold text-ink-900">Exportar</h2>
       <p class="mt-0.5 text-sm text-ink-500">
         Exporte um relatório de gastos do período escolhido em ODS, XLSX, PDF ou JSON, ou restaure
         um backup em JSON exportado anteriormente.

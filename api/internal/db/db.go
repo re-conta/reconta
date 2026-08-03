@@ -41,6 +41,7 @@ func migrate(conn *sql.DB) error {
 		email         TEXT NOT NULL UNIQUE,
 		password_hash TEXT NOT NULL,
 		role          TEXT NOT NULL DEFAULT 'user',
+		banned_at     TEXT,
 		created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
@@ -415,6 +416,16 @@ func addMissingColumns(conn *sql.DB) error {
 		// como um único lembrete de 1 dia após o vencimento.
 		if _, err := conn.Exec(`UPDATE notification_settings SET after_offsets = '[1440]' WHERE overdue_enabled = 1`); err != nil {
 			return fmt.Errorf("migrando overdue_enabled para after_offsets: %w", err)
+		}
+	}
+
+	hasBannedAt, err := columnExists(conn, "users", "banned_at")
+	if err != nil {
+		return fmt.Errorf("verificando coluna banned_at: %w", err)
+	}
+	if !hasBannedAt {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN banned_at TEXT`); err != nil {
+			return fmt.Errorf("adicionando coluna banned_at: %w", err)
 		}
 	}
 

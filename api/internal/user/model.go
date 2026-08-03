@@ -34,20 +34,26 @@ var AllPermissions = []string{PermAdminPanel, PermManageUsers, PermManagePermiss
 
 // User representa um usuário cadastrado.
 type User struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Email       string    `json:"email"`
-	Role        string    `json:"role"`
-	CNPJ        string    `json:"cnpj"`
-	AvatarURL   string    `json:"avatarUrl"`
-	HasPassword bool      `json:"hasPassword"`
-	Permissions []string  `json:"permissions"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID          int64      `json:"id"`
+	Name        string     `json:"name"`
+	Email       string     `json:"email"`
+	Role        string     `json:"role"`
+	CNPJ        string     `json:"cnpj"`
+	AvatarURL   string     `json:"avatarUrl"`
+	HasPassword bool       `json:"hasPassword"`
+	Permissions []string   `json:"permissions"`
+	BannedAt    *time.Time `json:"bannedAt"`
+	CreatedAt   time.Time  `json:"createdAt"`
 }
 
 // IsAdmin indica se o usuário tem acesso de administração (admin ou super_admin).
 func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin || u.Role == RoleSuperAdmin
+}
+
+// IsBanned indica se a conta foi banida por um admin.
+func (u *User) IsBanned() bool {
+	return u.BannedAt != nil
 }
 
 // HasPermission indica se o usuário possui a permissão informada. O Super

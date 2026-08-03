@@ -9,7 +9,9 @@ const router = useRouter();
 const { login } = useAuth();
 
 const form = reactive({ email: "", password: "" });
-const errorMessage = ref("");
+const errorMessage = ref(
+  router.currentRoute.value.query.error === "banned" ? "Esta conta foi banida." : "",
+);
 const submitting = ref(false);
 
 async function handleSubmit() {

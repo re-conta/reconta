@@ -101,9 +101,9 @@ onMounted(load);
         <Sparkles class="h-3.5 w-3.5" />
         Planos e preços
       </span>
-      <h1 class="font-display text-3xl font-bold text-ink-900 sm:text-4xl">
+      <h2 class="font-display text-2xl font-bold text-ink-900 sm:text-4xl">
         Escolha o plano ideal para as suas finanças
-      </h1>
+      </h2>
       <p class="max-w-xl text-sm text-ink-500 sm:text-base">
         Comece grátis e evolua quando precisar. Pague com PIX, boleto ou cartão — e cancele a
         qualquer momento, com reembolso proporcional ao tempo não usado.

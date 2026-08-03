@@ -24,6 +24,10 @@ const (
 	MethodCredit = "credit_card"
 )
 
+// MethodAdminGrant identifica uma assinatura concedida manualmente por um
+// admin no painel (cortesia), sem passar pelo checkout do Mercado Pago.
+const MethodAdminGrant = "admin_grant"
+
 // PlanFree é o código do plano gratuito — usuários sem assinatura ativa
 // pertencem a ele e não passam pelo checkout.
 const PlanFree = "gratuito"

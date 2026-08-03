@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { Ban, CreditCard, Pencil, Trash2, UserPlus } from "lucide-vue-next";
 import { useAuth } from "../composables/useAuth";
 import {
   ApiError,
+  adminDeleteUser,
+  adminSetUserBanned,
   fetchRolePermissions,
   listUsers,
   updateRolePermissions,
   updateUserRole,
 } from "../api/users";
+import UserFormModal from "../components/modals/UserFormModal.vue";
+import AssignPlanModal from "../components/modals/AssignPlanModal.vue";
 import {
   ApiError as HealthApiError,
   getHealthSettings,
@@ -107,6 +112,83 @@ async function handleRoleChange(target: User, role: UserRole) {
   } finally {
     roleUpdatingId.value = null;
   }
+}
+
+// canManageAccount decide se o ator pode editar/excluir/banir o alvo:
+// mesma regra usada para troca de cargo — rebaixar/mexer com um admin (ou o
+// Super Admin) é reservado ao próprio Super Admin.
+function canManageAccount(target: User) {
+  if (target.role === "super_admin") return false;
+  if (!canManageUsers.value) return false;
+  if (target.role === "admin" && !isSuperAdmin.value) return false;
+  return true;
+}
+
+const showUserModal = ref(false);
+const editingUser = ref<User | null>(null);
+const banningId = ref<number | null>(null);
+const deletingId = ref<number | null>(null);
+
+function openCreateUser() {
+  editingUser.value = null;
+  showUserModal.value = true;
+}
+
+function openEditUser(target: User) {
+  editingUser.value = target;
+  showUserModal.value = true;
+}
+
+function handleUserSaved(saved: User) {
+  const idx = users.value.findIndex((u) => u.id === saved.id);
+  if (idx !== -1) users.value[idx] = saved;
+  else users.value.unshift(saved);
+  showUserModal.value = false;
+}
+
+async function handleToggleBan(target: User) {
+  const willBan = !target.bannedAt;
+  const message = willBan
+    ? `Banir ${target.name}? A conta perde o acesso imediatamente.`
+    : `Reativar o acesso de ${target.name}?`;
+  if (!confirm(message)) return;
+
+  banningId.value = target.id;
+  usersError.value = "";
+  try {
+    const updated = await adminSetUserBanned(target.id, willBan);
+    const idx = users.value.findIndex((u) => u.id === target.id);
+    if (idx !== -1) users.value[idx] = updated;
+  } catch (err) {
+    usersError.value = err instanceof ApiError ? err.message : "Falha ao atualizar banimento";
+  } finally {
+    banningId.value = null;
+  }
+}
+
+async function handleDeleteUser(target: User) {
+  if (!confirm(`Excluir a conta de ${target.name}? Esta ação não pode ser desfeita.`)) return;
+
+  deletingId.value = target.id;
+  usersError.value = "";
+  try {
+    await adminDeleteUser(target.id);
+    users.value = users.value.filter((u) => u.id !== target.id);
+  } catch (err) {
+    usersError.value = err instanceof ApiError ? err.message : "Falha ao excluir usuário";
+  } finally {
+    deletingId.value = null;
+  }
+}
+
+// --- Plano do usuário (aba Usuários) ---
+
+const showPlanModal = ref(false);
+const planUser = ref<User | null>(null);
+
+function openAssignPlan(target: User) {
+  planUser.value = target;
+  showPlanModal.value = true;
 }
 
 // --- Aba de permissões ---
@@ -428,7 +510,7 @@ onMounted(() => {
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink-900">Administração</h1>
+        <h1 class="font-display text-xl font-bold text-ink-900">Administração</h1>
         <p class="mt-0.5 text-sm text-ink-500">Gerencie usuários, cargos e permissões</p>
       </div>
       <RouterLink
@@ -489,7 +571,18 @@ onMounted(() => {
 
     <!-- Aba: Usuários -->
     <div v-if="activeTab === 'users'" class="flex flex-col gap-3">
-      <p class="text-sm text-ink-500">{{ userCountLabel }}</p>
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm text-ink-500">{{ userCountLabel }}</p>
+        <button
+          v-if="canManageUsers"
+          type="button"
+          class="flex shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-ink-800"
+          @click="openCreateUser"
+        >
+          <UserPlus class="h-4 w-4" />
+          Novo usuário
+        </button>
+      </div>
       <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
         <div v-if="loadingUsers" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
           <span
@@ -529,7 +622,15 @@ onMounted(() => {
               {{ initialsFor(user.name) }}
             </span>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-ink-900">{{ user.name }}</p>
+              <p class="truncate text-sm font-semibold text-ink-900">
+                {{ user.name }}
+                <span
+                  v-if="user.bannedAt"
+                  class="ml-1.5 rounded-full bg-coral-100 px-2 py-0.5 text-[10px] font-semibold text-coral-700"
+                >
+                  Banido
+                </span>
+              </p>
               <p class="truncate text-xs text-ink-500">
                 {{ user.email }}
                 <span v-if="user.cnpj" class="text-ink-400"
@@ -557,10 +658,67 @@ onMounted(() => {
             >
               {{ roleLabels[user.role] }}
             </span>
+
+            <div class="flex shrink-0 items-center gap-1">
+              <button
+                v-if="canManagePlans"
+                type="button"
+                title="Gerenciar plano"
+                class="rounded-full p-2 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                @click="openAssignPlan(user)"
+              >
+                <CreditCard class="h-4 w-4" />
+              </button>
+              <button
+                v-if="canManageAccount(user)"
+                type="button"
+                title="Editar"
+                class="rounded-full p-2 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                @click="openEditUser(user)"
+              >
+                <Pencil class="h-4 w-4" />
+              </button>
+              <button
+                v-if="canManageAccount(user)"
+                type="button"
+                title="Banir/reativar"
+                :disabled="banningId === user.id"
+                class="rounded-full p-2 text-ink-400 transition hover:bg-coral-50 hover:text-coral-600 disabled:opacity-50"
+                @click="handleToggleBan(user)"
+              >
+                <Ban class="h-4 w-4" />
+              </button>
+              <button
+                v-if="canManageAccount(user)"
+                type="button"
+                title="Excluir"
+                :disabled="deletingId === user.id"
+                class="rounded-full p-2 text-ink-400 transition hover:bg-coral-50 hover:text-coral-600 disabled:opacity-50"
+                @click="handleDeleteUser(user)"
+              >
+                <Trash2 class="h-4 w-4" />
+              </button>
+            </div>
           </li>
         </ul>
       </div>
     </div>
+
+    <UserFormModal
+      v-if="showUserModal"
+      :user="editingUser"
+      :assignable-roles="assignableRoles"
+      @close="showUserModal = false"
+      @saved="handleUserSaved"
+    />
+
+    <AssignPlanModal
+      v-if="showPlanModal && planUser"
+      :user="planUser"
+      :plans="plans"
+      @close="showPlanModal = false"
+      @updated="showPlanModal = false"
+    />
 
     <!-- Aba: Saúde Financeira -->
     <div v-else-if="activeTab === 'health'" class="flex flex-col gap-3">

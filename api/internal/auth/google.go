@@ -114,6 +114,11 @@ func (g *GoogleHandler) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if u.IsBanned() {
+		http.Redirect(w, r, g.appURL+"/login?error=banned", http.StatusFound)
+		return
+	}
+
 	if err := g.auth.createSession(w, r, u.ID); err != nil {
 		log.Printf("erro ao criar sessão para login Google: %v", err)
 		http.Redirect(w, r, g.appURL+"/login?error=oauth_session", http.StatusFound)

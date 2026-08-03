@@ -200,7 +200,7 @@ onUnmounted(() => {
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-2 md:p-4">
     <div class="flex items-start justify-between">
       <div>
-        <h1 class="font-display text-xl md:text-2xl font-bold text-ink-900">{{ title }}</h1>
+        <h2 class="font-display text-xl md:text-2xl font-bold text-ink-900">{{ title }}</h2>
         <p class="mt-0.5 text-xs md:text-sm text-ink-500">{{ subtitle }}</p>
       </div>
       <button

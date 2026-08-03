@@ -1,5 +1,6 @@
 import type {
   CancelResult,
+  GrantSubscriptionInput,
   Plan,
   SubscribeInput,
   SubscribeResult,
@@ -60,4 +61,29 @@ export function updatePlan(id: number, input: UpdatePlanInput): Promise<Plan> {
     credentials: "include",
     body: JSON.stringify(input),
   }).then((res) => parseResponse<Plan>(res));
+}
+
+export function adminGetUserSubscription(userId: number): Promise<SubscriptionInfo> {
+  return fetch(`/api/admin/users/${userId}/subscription`, { credentials: "include" }).then((res) =>
+    parseResponse<SubscriptionInfo>(res),
+  );
+}
+
+export function adminGrantSubscription(
+  userId: number,
+  input: GrantSubscriptionInput,
+): Promise<SubscriptionInfo> {
+  return fetch(`/api/admin/users/${userId}/subscription`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  }).then((res) => parseResponse<SubscriptionInfo>(res));
+}
+
+export function adminCancelSubscription(userId: number): Promise<SubscriptionInfo> {
+  return fetch(`/api/admin/users/${userId}/subscription`, {
+    method: "DELETE",
+    credentials: "include",
+  }).then((res) => parseResponse<SubscriptionInfo>(res));
 }

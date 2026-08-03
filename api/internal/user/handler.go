@@ -22,6 +22,7 @@ type Handler struct {
 	repo        *Repository
 	currentUser currentUserFunc
 	afterCreate func(ctx context.Context, userID int64)
+	onBan       func(ctx context.Context, userID int64)
 }
 
 func NewHandler(repo *Repository) *Handler {
@@ -81,6 +82,28 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/users/me/password", h.requireAuth(h.updatePassword))
 	mux.HandleFunc("GET /api/admin/permissions", h.requirePermission(h.listRolePermissions, PermAdminPanel))
 	mux.HandleFunc("PUT /api/admin/permissions/{role}", h.requirePermission(h.updateRolePermissions, PermManagePermissions))
+
+	mux.HandleFunc("POST /api/admin/users", h.requirePermission(h.adminCreateUser, PermManageUsers))
+	mux.HandleFunc("PATCH /api/admin/users/{id}", h.requirePermission(h.adminUpdateUser, PermManageUsers))
+	mux.HandleFunc("DELETE /api/admin/users/{id}", h.requirePermission(h.adminDeleteUser, PermManageUsers))
+	mux.HandleFunc("PATCH /api/admin/users/{id}/ban", h.requirePermission(h.adminBanUser, PermManageUsers))
+}
+
+// SetOnBan registra um callback executado após um usuário ser banido, usado
+// para encerrar imediatamente as sessões ativas dele. Deve ser chamado antes
+// de RegisterRoutes.
+func (h *Handler) SetOnBan(fn func(ctx context.Context, userID int64)) {
+	h.onBan = fn
+}
+
+// canManageTarget impede que um admin comum (não Super Admin) altere,
+// bane ou exclua outro admin ou o próprio Super Admin — reservado ao Super
+// Admin, mesmo que o ator tenha a permissão de gerenciar usuários.
+func canManageTarget(actor, target *User) bool {
+	if actor.Role == RoleSuperAdmin {
+		return true
+	}
+	return target.Role != RoleAdmin && target.Role != RoleSuperAdmin
 }
 
 type createUserRequest struct {
@@ -219,6 +242,243 @@ func (h *Handler) updateRole(w http.ResponseWriter, r *http.Request, actor *User
 		return
 	}
 	writeJSON(w, http.StatusOK, u)
+}
+
+type adminCreateUserRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
+	CNPJ     string `json:"cnpj"`
+}
+
+// adminCreateUser cria uma conta com a role escolhida diretamente pelo
+// administrador. Promover alguém direto para admin é reservado ao Super Admin.
+func (h *Handler) adminCreateUser(w http.ResponseWriter, r *http.Request, actor *User) {
+	var req adminCreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.Password = strings.TrimSpace(req.Password)
+
+	if req.Name == "" {
+		writeError(w, http.StatusUnprocessableEntity, "nome é obrigatório")
+		return
+	}
+	if !isValidEmail(req.Email) {
+		writeError(w, http.StatusUnprocessableEntity, "e-mail inválido")
+		return
+	}
+	if len(req.Password) < 8 {
+		writeError(w, http.StatusUnprocessableEntity, "senha deve ter no mínimo 8 caracteres")
+		return
+	}
+	if !slices.Contains(AssignableRoles, req.Role) {
+		writeError(w, http.StatusUnprocessableEntity, "cargo inválido")
+		return
+	}
+	if req.Role == RoleAdmin && actor.Role != RoleSuperAdmin {
+		writeError(w, http.StatusForbidden, "apenas o Super Admin pode criar administradores")
+		return
+	}
+
+	req.CNPJ = NormalizeCNPJ(req.CNPJ)
+	if req.Role == RolePessoaJuridica {
+		if !IsValidCNPJ(req.CNPJ) {
+			writeError(w, http.StatusUnprocessableEntity, "CNPJ inválido")
+			return
+		}
+	} else {
+		req.CNPJ = ""
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("erro ao gerar hash de senha: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	u, err := h.repo.AdminCreate(r.Context(), req.Name, req.Email, string(hash), req.Role, req.CNPJ)
+	if err != nil {
+		if errors.Is(err, ErrEmailTaken) {
+			writeError(w, http.StatusConflict, "e-mail já cadastrado")
+			return
+		}
+		log.Printf("erro ao criar usuário via admin: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	if h.afterCreate != nil {
+		h.afterCreate(r.Context(), u.ID)
+	}
+
+	writeJSON(w, http.StatusCreated, u)
+}
+
+type adminUpdateUserRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	CNPJ  string `json:"cnpj"`
+}
+
+func (h *Handler) adminUpdateUser(w http.ResponseWriter, r *http.Request, actor *User) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+
+	target, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, http.StatusNotFound, "usuário não encontrado")
+			return
+		}
+		log.Printf("erro ao buscar usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	if !canManageTarget(actor, target) {
+		writeError(w, http.StatusForbidden, "apenas o Super Admin pode editar este usuário")
+		return
+	}
+
+	var req adminUpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	if req.Name == "" {
+		writeError(w, http.StatusUnprocessableEntity, "nome é obrigatório")
+		return
+	}
+	if !isValidEmail(req.Email) {
+		writeError(w, http.StatusUnprocessableEntity, "e-mail inválido")
+		return
+	}
+
+	req.CNPJ = NormalizeCNPJ(req.CNPJ)
+	if req.CNPJ != "" && !IsValidCNPJ(req.CNPJ) {
+		writeError(w, http.StatusUnprocessableEntity, "CNPJ inválido")
+		return
+	}
+
+	updated, err := h.repo.AdminUpdate(r.Context(), id, req.Name, req.Email, req.CNPJ)
+	if err != nil {
+		if errors.Is(err, ErrEmailTaken) {
+			writeError(w, http.StatusConflict, "e-mail já cadastrado")
+			return
+		}
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, http.StatusNotFound, "usuário não encontrado")
+			return
+		}
+		log.Printf("erro ao atualizar usuário via admin: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (h *Handler) adminDeleteUser(w http.ResponseWriter, r *http.Request, actor *User) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if id == actor.ID {
+		writeError(w, http.StatusForbidden, "você não pode excluir sua própria conta por aqui")
+		return
+	}
+
+	target, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, http.StatusNotFound, "usuário não encontrado")
+			return
+		}
+		log.Printf("erro ao buscar usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	if !canManageTarget(actor, target) {
+		writeError(w, http.StatusForbidden, "apenas o Super Admin pode excluir este usuário")
+		return
+	}
+
+	if err := h.repo.Delete(r.Context(), id); err != nil {
+		if errors.Is(err, ErrProtectedUser) {
+			writeError(w, http.StatusForbidden, "não é possível excluir esta conta")
+			return
+		}
+		log.Printf("erro ao excluir usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type adminBanUserRequest struct {
+	Banned bool `json:"banned"`
+}
+
+func (h *Handler) adminBanUser(w http.ResponseWriter, r *http.Request, actor *User) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id inválido")
+		return
+	}
+	if id == actor.ID {
+		writeError(w, http.StatusForbidden, "você não pode banir sua própria conta")
+		return
+	}
+
+	var req adminBanUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	target, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, http.StatusNotFound, "usuário não encontrado")
+			return
+		}
+		log.Printf("erro ao buscar usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	if !canManageTarget(actor, target) {
+		writeError(w, http.StatusForbidden, "apenas o Super Admin pode banir este usuário")
+		return
+	}
+
+	updated, err := h.repo.BanUser(r.Context(), id, req.Banned)
+	if err != nil {
+		if errors.Is(err, ErrProtectedUser) {
+			writeError(w, http.StatusForbidden, "não é possível banir esta conta")
+			return
+		}
+		log.Printf("erro ao atualizar banimento do usuário: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	if req.Banned && h.onBan != nil {
+		h.onBan(r.Context(), id)
+	}
+
+	writeJSON(w, http.StatusOK, updated)
 }
 
 type updateProfileRequest struct {

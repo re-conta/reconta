@@ -1,4 +1,6 @@
 import type {
+  AdminCreateUserInput,
+  AdminUpdateUserInput,
   CreateUserInput,
   Permission,
   RolePermissions,
@@ -37,6 +39,44 @@ export function updateUserRole(id: number, role: UserRole): Promise<User> {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ role }),
+  }).then((res) => parseResponse<User>(res));
+}
+
+export function adminCreateUser(input: AdminCreateUserInput): Promise<User> {
+  return fetch("/api/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  }).then((res) => parseResponse<User>(res));
+}
+
+export function adminUpdateUser(id: number, input: AdminUpdateUserInput): Promise<User> {
+  return fetch(`/api/admin/users/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  }).then((res) => parseResponse<User>(res));
+}
+
+export async function adminDeleteUser(id: number): Promise<void> {
+  const response = await fetch(`/api/admin/users/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.error ?? "Erro inesperado ao comunicar com o servidor");
+  }
+}
+
+export function adminSetUserBanned(id: number, banned: boolean): Promise<User> {
+  return fetch(`/api/admin/users/${id}/ban`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ banned }),
   }).then((res) => parseResponse<User>(res));
 }
 

@@ -312,7 +312,7 @@ onMounted(() => {
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div class="flex items-start justify-between">
       <div>
-        <h1 class="font-display text-base sm:text-lg md:text-2xl font-bold text-ink-900">Compartilhamentos</h1>
+        <h2 class="font-display text-base sm:text-lg md:text-xl font-bold text-ink-900">Compartilhamentos</h2>
         <p class="mt-0.5 text-xs md:text-sm text-ink-500">
           Compartilhe suas transações e veja o que compartilharam com você
         </p>

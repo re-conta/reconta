@@ -133,7 +133,7 @@ onMounted(loadNotifications);
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div class="flex items-center justify-between gap-4">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink-900">Notificações</h1>
+        <h2 class="font-display text-xl font-bold text-ink-900">Notificações</h2>
         <p class="mt-0.5 text-sm text-ink-500">Lembretes de contas fixas vencendo ou vencidas</p>
       </div>
       <div class="flex shrink-0 items-center gap-2">

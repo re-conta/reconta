@@ -66,13 +66,19 @@ func main() {
 
 	mailQueue := email.NewQueue(email.NewFromEnv())
 
-	authHandler := auth.NewHandler(auth.NewRepository(conn), userRepo, secureCookies)
+	sessionsRepo := auth.NewRepository(conn)
+	authHandler := auth.NewHandler(sessionsRepo, userRepo, secureCookies)
 	authHandler.SetMail(mailQueue, appURL)
 	authHandler.RegisterRoutes(mux)
 
 	userHandler := user.NewHandler(userRepo)
 	userHandler.SetAfterCreate(seedDefaults)
 	userHandler.SetAuth(authHandler.CurrentUser)
+	userHandler.SetOnBan(func(ctx context.Context, userID int64) {
+		if err := sessionsRepo.DeleteByUserID(ctx, userID); err != nil {
+			log.Printf("erro ao encerrar sessões do usuário banido %d: %v", userID, err)
+		}
+	})
 	userHandler.RegisterRoutes(mux)
 
 	if clientID := getEnv("GOOGLE_CLIENT_ID", ""); clientID != "" {

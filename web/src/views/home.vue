@@ -21,7 +21,7 @@ const fontsReady = useFontsReady();
       >
         Suas finanças, organizadas
       </span>
-      <h1
+      <h2
         class="mt-5 font-display text-xl md:text-5xl font-bold leading-tight tracking-tight transition-colors duration-500"
         :class="fontsReady ? 'text-ink-900' : 'text-skeleton'"
       >
@@ -33,7 +33,7 @@ const fontsReady = useFontsReady();
           "
           >clareza</span
         >
-      </h1>
+      </h2>
       <p class="mt-2 md:mt-4 text-sm md:text-lg leading-relaxed text-ink-500">
         Centralize contas, transações e categorias em um só lugar &mdash; sem planilhas, sem
         complicação.
