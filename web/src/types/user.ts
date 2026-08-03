@@ -44,6 +44,13 @@ export interface CreateUserInput {
   turnstileToken: string;
 }
 
+// PendingSignup é a resposta do cadastro público antes da confirmação do
+// código OTP: a conta ainda não existe em users.
+export interface PendingSignup {
+  email: string;
+  expiresInMinutes: number;
+}
+
 export interface UpdateProfileInput {
   name: string;
   email: string;

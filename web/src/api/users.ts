@@ -2,6 +2,7 @@ import type {
   AdminCreateUserInput,
   AdminUpdateUserInput,
   CreateUserInput,
+  PendingSignup,
   Permission,
   RolePermissions,
   UpdatePasswordInput,
@@ -21,12 +22,33 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export function createUser(input: CreateUserInput): Promise<User> {
+export function createUser(input: CreateUserInput): Promise<PendingSignup> {
   return fetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  }).then((res) => parseResponse<PendingSignup>(res));
+}
+
+export function verifySignupOtp(email: string, code: string): Promise<User> {
+  return fetch("/api/users/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, code }),
   }).then((res) => parseResponse<User>(res));
+}
+
+export async function resendSignupOtp(email: string): Promise<void> {
+  const response = await fetch("/api/users/resend-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.error ?? "Erro inesperado ao comunicar com o servidor");
+  }
 }
 
 export function listUsers(): Promise<User[]> {

@@ -1,5 +1,3 @@
-Ao criar uma conta deve ser enviado para o e-mail de cadastro um código OTP, somente após a validação deste código a conta deve ser efetivamente criada. Após 2 horas se a conta não for apagada a mesma deve ser encerrada, no caso do otp perdido o usuário poderá re-enviar o código.
-
 Em /exportar não inclua os gráficos, porem os gráficos devem ser mostrados no pdf exportado.
 
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.

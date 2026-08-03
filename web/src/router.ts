@@ -2,6 +2,7 @@ import { createWebHistory, createRouter } from "vue-router";
 
 import AccountsView from "./views/accounts.vue";
 import CategoriesView from "./views/categories.vue";
+import ConfirmSignupView from "./views/confirm-signup.vue";
 import SharesView from "./views/compartilhamentos.vue";
 import FixedBillsView from "./views/contas-fixas.vue";
 import ExportView from "./views/export.vue";
@@ -26,6 +27,7 @@ const routes = [
   { path: "/", name: "Home", component: HomeView },
   { path: "/login", name: "Login", component: LoginView },
   { path: "/register", name: "Register", component: RegisterView },
+  { path: "/confirmar-cadastro", name: "ConfirmSignup", component: ConfirmSignupView },
   { path: "/planos", name: "Plans", component: PlansView },
   { path: "/esqueci-senha", name: "ForgotPassword", component: ForgotPasswordView },
   { path: "/redefinir-senha", name: "ResetPassword", component: ResetPasswordView },

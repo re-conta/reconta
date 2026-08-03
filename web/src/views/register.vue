@@ -113,7 +113,7 @@ async function handleSubmit() {
 
   submitting.value = true;
   try {
-    await createUser({
+    const pending = await createUser({
       name: form.name.trim(),
       email: form.email.trim(),
       password: form.password.trim(),
@@ -121,7 +121,7 @@ async function handleSubmit() {
       cnpj: isPessoaJuridica.value ? normalizeCnpj(form.cnpj) : undefined,
       turnstileToken: turnstileToken.value,
     });
-    router.push("/login");
+    router.push({ name: "ConfirmSignup", query: { email: pending.email } });
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao cadastrar usuário";
     if (turnstileWidgetId && window.turnstile) {

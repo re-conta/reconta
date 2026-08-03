@@ -511,8 +511,12 @@ func isUniqueConstraintErr(err error) bool {
 	return strings.Contains(msg, "UNIQUE constraint failed") || strings.Contains(msg, "constraint failed: UNIQUE")
 }
 
+// sqliteTimeFormat é o layout usado pelo SQLite (strftime) para colunas de
+// timestamp gravadas por este pacote.
+const sqliteTimeFormat = "2006-01-02T15:04:05.999Z"
+
 func parseTimestamp(s string) time.Time {
-	t, err := time.Parse("2006-01-02T15:04:05.999Z", s)
+	t, err := time.Parse(sqliteTimeFormat, s)
 	if err != nil {
 		return time.Time{}
 	}

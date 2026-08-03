@@ -99,6 +99,13 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+// Login cria uma sessão para o usuário informado e a grava como cookie na
+// resposta. Usado pelo pacote user após a confirmação do código OTP de
+// cadastro, para já deixar o visitante autenticado.
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request, userID int64) error {
+	return h.createSession(w, r, userID)
+}
+
 // createSession gera um token de sessão para o usuário informado e o grava
 // como cookie na resposta. Reutilizado pelo login por e-mail/senha e pelo
 // callback do Google OAuth.

@@ -77,10 +77,18 @@ func main() {
 		log.Print("TURNSTILE_SECRET_KEY não definido: verificação anti-robô no cadastro desabilitada")
 	}
 
+	internalToken := getEnv("INTERNAL_API_TOKEN", "")
+	if internalToken == "" {
+		log.Print("INTERNAL_API_TOKEN não definido: rotas de varredura interna desabilitadas")
+	}
+
 	userHandler := user.NewHandler(userRepo)
 	userHandler.SetAfterCreate(seedDefaults)
 	userHandler.SetAuth(authHandler.CurrentUser)
 	userHandler.SetTurnstile(turnstile.NewVerifier(turnstileSecret))
+	userHandler.SetMail(mailQueue, appURL)
+	userHandler.SetLogin(authHandler.Login)
+	userHandler.SetInternalToken(internalToken)
 	userHandler.SetOnBan(func(ctx context.Context, userID int64) {
 		if err := sessionsRepo.DeleteByUserID(ctx, userID); err != nil {
 			log.Printf("erro ao encerrar sessões do usuário banido %d: %v", userID, err)
@@ -127,10 +135,6 @@ func main() {
 
 	notificationHub := notification.NewHub()
 	notificationRepo := notification.NewRepository(conn)
-	internalToken := getEnv("INTERNAL_API_TOKEN", "")
-	if internalToken == "" {
-		log.Print("INTERNAL_API_TOKEN não definido: rota de varredura de notificações desabilitada")
-	}
 	notification.NewHandler(notificationRepo, authHandler, notificationHub, fixedBillRepo, userRepo, mailQueue, internalToken).RegisterRoutes(mux)
 
 	shareRepo := share.NewRepository(conn)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/re-conta/reconta/api/internal/email"
 	"github.com/re-conta/reconta/api/internal/turnstile"
 )
 
@@ -21,12 +23,21 @@ import (
 // já depende de user para o tipo User).
 type currentUserFunc func(r *http.Request) (*User, error)
 
+// loginFunc autentica o usuário recém-confirmado, gravando a sessão como
+// cookie na resposta. Fornecida pelo pacote auth via SetLogin, evitando um
+// ciclo de import.
+type loginFunc func(w http.ResponseWriter, r *http.Request, userID int64) error
+
 type Handler struct {
-	repo        *Repository
-	currentUser currentUserFunc
-	afterCreate func(ctx context.Context, userID int64)
-	onBan       func(ctx context.Context, userID int64)
-	turnstile   *turnstile.Verifier
+	repo          *Repository
+	currentUser   currentUserFunc
+	afterCreate   func(ctx context.Context, userID int64)
+	onBan         func(ctx context.Context, userID int64)
+	turnstile     *turnstile.Verifier
+	mail          *email.Queue
+	appURL        string
+	login         loginFunc
+	internalToken string
 }
 
 func NewHandler(repo *Repository) *Handler {
@@ -80,6 +91,9 @@ func (h *Handler) requireAuth(next func(w http.ResponseWriter, r *http.Request, 
 // RegisterRoutes registra as rotas de usuário no mux informado.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/users", h.create)
+	mux.HandleFunc("POST /api/users/verify-otp", h.verifyOTP)
+	mux.HandleFunc("POST /api/users/resend-otp", h.resendOTP)
+	mux.HandleFunc("POST /api/internal/users/scan", h.requireInternalToken(h.scan))
 	mux.HandleFunc("GET /api/users", h.requirePermission(h.list, PermAdminPanel))
 	mux.HandleFunc("PATCH /api/users/{id}/role", h.requirePermission(h.updateRole, PermManageUsers))
 	mux.HandleFunc("PATCH /api/users/me", h.requireAuth(h.updateProfile))
@@ -105,6 +119,28 @@ func (h *Handler) SetOnBan(fn func(ctx context.Context, userID int64)) {
 // RegisterRoutes.
 func (h *Handler) SetTurnstile(v *turnstile.Verifier) {
 	h.turnstile = v
+}
+
+// SetMail registra a fila de e-mail e a URL base do front-end, usadas para
+// enviar o código de confirmação do cadastro (OTP). Deve ser chamada antes de
+// RegisterRoutes. Se não for chamada, o código apenas será registrado em log
+// (ver email.Mailer).
+func (h *Handler) SetMail(mail *email.Queue, appURL string) {
+	h.mail = mail
+	h.appURL = appURL
+}
+
+// SetLogin registra a função que autentica o usuário logo após a confirmação
+// do código OTP de cadastro. Deve ser chamada antes de RegisterRoutes.
+func (h *Handler) SetLogin(fn loginFunc) {
+	h.login = fn
+}
+
+// SetInternalToken registra o token usado para proteger a rota de varredura
+// interna que encerra cadastros pendentes cujo prazo de confirmação expirou.
+// Deve ser chamada antes de RegisterRoutes.
+func (h *Handler) SetInternalToken(token string) {
+	h.internalToken = token
 }
 
 // clientIP resolve o IP real do visitante: primeiro o cabeçalho que o
@@ -198,6 +234,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		req.CNPJ = ""
 	}
 
+	if _, err := h.repo.GetByEmail(r.Context(), req.Email); err == nil {
+		writeError(w, http.StatusConflict, "e-mail já cadastrado")
+		return
+	} else if !errors.Is(err, ErrNotFound) {
+		log.Printf("erro ao verificar e-mail existente: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("erro ao gerar hash de senha: %v", err)
@@ -205,22 +250,154 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := h.repo.Create(r.Context(), req.Name, req.Email, string(hash), req.Role, req.CNPJ)
+	code, err := h.repo.CreatePendingSignup(r.Context(), req.Name, req.Email, string(hash), req.Role, req.CNPJ)
 	if err != nil {
-		if errors.Is(err, ErrEmailTaken) {
-			writeError(w, http.StatusConflict, "e-mail já cadastrado")
-			return
-		}
-		log.Printf("erro ao criar usuário: %v", err)
+		log.Printf("erro ao criar cadastro pendente: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	h.sendOTPEmail(req.Email, req.Name, code)
+
+	writeJSON(w, http.StatusAccepted, pendingSignupResponse{
+		Email:            req.Email,
+		ExpiresInMinutes: int(otpTTL.Minutes()),
+	})
+}
+
+type pendingSignupResponse struct {
+	Email            string `json:"email"`
+	ExpiresInMinutes int    `json:"expiresInMinutes"`
+}
+
+// sendOTPEmail envia o código de confirmação de cadastro. Se a fila de e-mail
+// não estiver configurada (SetMail nunca chamado), apenas registra em log.
+func (h *Handler) sendOTPEmail(to, name, code string) {
+	if h.mail == nil {
+		log.Printf("código OTP para %s: %s (fila de e-mail não configurada)", to, code)
+		return
+	}
+	msg := email.Message{
+		Preheader: "Confirme seu e-mail para concluir o cadastro no ReConta.",
+		Heading:   fmt.Sprintf("Olá, %s!", name),
+		Paragraphs: []string{
+			"Use o código abaixo para confirmar seu e-mail e concluir seu cadastro no ReConta.",
+			fmt.Sprintf("Código de confirmação: %s", code),
+			fmt.Sprintf("O código é válido por %d minutos. Se você não solicitou este cadastro, pode ignorar este e-mail.", int(otpTTL.Minutes())),
+		},
+		Footnote: "Perdeu o código? Você pode solicitar um novo na própria tela de cadastro.",
+	}
+	h.mail.Enqueue(to, "Confirme seu cadastro - ReConta", msg)
+}
+
+type verifyOTPRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+// verifyOTP confirma o código enviado por e-mail e, se válido, cria a conta
+// efetivamente e autentica o usuário.
+func (h *Handler) verifyOTP(w http.ResponseWriter, r *http.Request) {
+	var req verifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	code := strings.TrimSpace(req.Code)
+
+	u, err := h.repo.VerifyPendingSignup(r.Context(), email, code)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrPendingNotFound):
+			writeError(w, http.StatusNotFound, "cadastro pendente não encontrado, refaça o cadastro")
+		case errors.Is(err, ErrOTPExpired):
+			writeError(w, http.StatusGone, "código expirado, refaça o cadastro")
+		case errors.Is(err, ErrOTPLocked):
+			writeError(w, http.StatusTooManyRequests, "número de tentativas excedido, solicite um novo código")
+		case errors.Is(err, ErrOTPInvalid):
+			writeError(w, http.StatusUnprocessableEntity, "código inválido")
+		case errors.Is(err, ErrEmailTaken):
+			writeError(w, http.StatusConflict, "e-mail já cadastrado")
+		default:
+			log.Printf("erro ao confirmar cadastro pendente: %v", err)
+			writeError(w, http.StatusInternalServerError, "erro interno")
+		}
 		return
 	}
 
 	if h.afterCreate != nil {
 		h.afterCreate(r.Context(), u.ID)
 	}
+	if h.login != nil {
+		if err := h.login(w, r, u.ID); err != nil {
+			log.Printf("erro ao autenticar usuário após confirmação de cadastro: %v", err)
+		}
+	}
 
 	writeJSON(w, http.StatusCreated, u)
+}
+
+type resendOTPRequest struct {
+	Email string `json:"email"`
+}
+
+// resendOTP gera e envia um novo código de confirmação para um cadastro
+// pendente existente, usado quando o visitante perde o código original.
+// Sempre responde 204, mesmo quando o e-mail não tem cadastro pendente, para
+// não revelar quais e-mails têm cadastro em andamento.
+func (h *Handler) resendOTP(w http.ResponseWriter, r *http.Request) {
+	var req resendOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	addr := strings.ToLower(strings.TrimSpace(req.Email))
+
+	code, err := h.repo.ResendPendingOTP(r.Context(), addr)
+	if err != nil {
+		if errors.Is(err, ErrResendTooSoon) {
+			writeError(w, http.StatusTooManyRequests, "aguarde um pouco antes de solicitar um novo código")
+			return
+		}
+		if !errors.Is(err, ErrPendingNotFound) && !errors.Is(err, ErrOTPExpired) {
+			log.Printf("erro ao reenviar código OTP: %v", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	h.sendOTPEmail(addr, addr, code)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// requireInternalToken protege a rota de varredura interna, chamada apenas
+// pelo timer systemd (não usa sessão de usuário).
+func (h *Handler) requireInternalToken(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if h.internalToken == "" || r.Header.Get("X-Internal-Token") != h.internalToken {
+			writeError(w, http.StatusUnauthorized, "não autorizado")
+			return
+		}
+		next(w, r)
+	}
+}
+
+// scan remove cadastros pendentes cujo prazo de confirmação (2h) expirou sem
+// que o código OTP tivesse sido validado.
+func (h *Handler) scan(w http.ResponseWriter, r *http.Request) {
+	n, err := h.repo.DeleteExpiredPendingSignups(r.Context())
+	if err != nil {
+		log.Printf("erro ao remover cadastros pendentes expirados: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+	if n > 0 {
+		log.Printf("%d cadastro(s) pendente(s) expirado(s) removido(s)", n)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request, _ *User) {

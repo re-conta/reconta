@@ -45,6 +45,20 @@ func migrate(conn *sql.DB) error {
 		created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS pending_signups (
+		id            INTEGER PRIMARY KEY AUTOINCREMENT,
+		name          TEXT NOT NULL,
+		email         TEXT NOT NULL UNIQUE,
+		password_hash TEXT NOT NULL,
+		role          TEXT NOT NULL,
+		cnpj          TEXT,
+		otp_code      TEXT NOT NULL,
+		otp_attempts  INTEGER NOT NULL DEFAULT 0,
+		otp_sent_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		expires_at    TEXT NOT NULL,
+		created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE TABLE IF NOT EXISTS role_permissions (
 		role       TEXT NOT NULL,
 		permission TEXT NOT NULL,
@@ -305,6 +319,7 @@ func migrate(conn *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_page_visits_visitor_id ON page_visits(visitor_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_page_visits_path ON page_visits(path);
 	CREATE INDEX IF NOT EXISTS idx_advisor_api_calls_created_at ON advisor_api_calls(created_at);
+	CREATE INDEX IF NOT EXISTS idx_pending_signups_expires_at ON pending_signups(expires_at);
 	`
 	if _, err := conn.Exec(schema); err != nil {
 		return err
