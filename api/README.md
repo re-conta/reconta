@@ -20,6 +20,7 @@ API REST em Go que dá suporte ao Reconta, uma aplicação de controle financeir
   - [Relatórios e backup](#relatórios-e-backup)
   - [Contas Recorrentes](#contas-fixas)
   - [Notificações](#notificações)
+  - [Saúde financeira e recomendações de IA](#saúde-financeira-e-recomendações-de-ia)
 - [Modelos de dados](#modelos-de-dados)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Executando localmente](#executando-localmente)
@@ -46,6 +47,8 @@ A API é servida por um único binário Go (`main.go`) que registra rotas em um 
 | `internal/fixedbill`    | Contas fixas (despesas recorrentes): ciclo de vida e pagamentos                   |
 | `internal/notification` | Notificações de contas fixas (site em tempo real via SSE + e-mail) e preferências |
 | `internal/email`        | Envio de e-mail via SMTP (`net/smtp`)                                             |
+| `internal/health`       | Cálculo da "saúde financeira" do mês (receitas vs. despesas, 1 a 5 estrelas)       |
+| `internal/advisor`      | Recomendações de corte de gastos/investimento geradas por IA (Groq)               |
 
 O banco de dados é SQLite (caminho configurável via `DB_PATH`).
 
@@ -227,6 +230,33 @@ Lembretes de contas fixas vencendo/vencidas, entregues em tempo real no site (SS
 | PUT    | `/api/notification-settings`       | Sessão  | `{ siteEnabled, emailEnabled, offsets: number[] }` | Atualiza as preferências. `offsets` são minutos de antecedência antes do vencimento (ex.: `[2880,1440,120,60]`).                                                         |
 | POST   | `/api/internal/notifications/scan` | Interno | Header `X-Internal-Token: <INTERNAL_API_TOKEN>`    | Varre todas as contas fixas ativas, gera notificações (dedupe automático) e dispara e-mails. Chamada pelo timer systemd, nunca pelo frontend. `401` sem o token correto. |
 
+### Saúde financeira e recomendações de IA
+
+| Método | Rota                                   | Auth   | Body / Parâmetros              | Descrição                                                                                                                       |
+| ------ | --------------------------------------- | ------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/financial-health`                 | Sessão | Query: `month`, `year` (padrão: mês atual) | Retorna receita, despesa, saldo, taxa de poupança e a nota (1 a 5 estrelas / nível) do mês.                                     |
+| GET    | `/api/financial-health/recommendations` | Sessão | Query: `month`, `year` (padrão: mês atual) | Retorna as recomendações de IA geradas para o mês. Ver detalhes de status/assincronia abaixo.                                   |
+| GET    | `/api/admin/financial-health`           | admin+ | —                                | Lê os limites (%) que definem cada nível de saúde financeira.                                                                    |
+| PUT    | `/api/admin/financial-health`           | admin+ | `{ enabled, thresholdOtima, thresholdBoa, thresholdEstavel, thresholdRuim }` | Atualiza os limites. Precisam ser estritamente decrescentes (`422` caso contrário).                    |
+
+#### Como funcionam as recomendações de IA (`internal/advisor`)
+
+A cada carregamento de `/api/financial-health/recommendations`, o backend classifica a saúde financeira do mês (mesma lógica de `/api/financial-health`) e decide se precisa gerar uma nova análise (`needsGeneration`): nunca foi gerada, o nível de saúde mudou desde a última vez, a tentativa anterior falhou (novo retry após 1h) ou já passou mais de 24h. Se precisar, a análise é apenas **enfileirada** — a resposta HTTP nunca espera pela chamada ao Groq, retornando imediatamente com `status`:
+
+- `"disabled"` — saúde financeira desativada no admin, ou `GROQ_API_KEY` não configurada.
+- `"no_data"` — sem lançamentos no mês.
+- `"pending"` — análise enfileirada/em andamento; a última análise pronta (se houver) ainda não está disponível para este pedido.
+- `"ready"` — retorna `recommendations: [{ kind: "cut"|"invest", title, description, impact }]`, `stars`, `savingsRate` e `generatedAt`.
+
+**Análise (`internal/advisor/analyzer.go` + `prompt.go`)**: antes de chamar o Groq, o backend extrai sinais determinísticos das transações de despesa do mês — assinaturas de streaming duplicadas (por palavras-chave como Netflix, Spotify, Disney+ etc.) e gastos com combustível (postos, gasolina, etanol, GNV) — além das maiores categorias de despesa. Esses sinais viram contexto no prompt enviado ao Groq, que responde em JSON (`response_format: json_object`) com recomendações de corte de gastos (`"cut"`) e, apenas quando a saúde financeira é boa (≥ 3 estrelas) e sobrou saldo no mês, de investimento (`"invest"`).
+
+**Nunca estourar o plano gratuito do Groq (`internal/advisor/queue.go`)**: todas as chamadas de todos os usuários passam por uma `Queue` com uma única goroutine consumidora — ou seja, **no máximo uma chamada ao Groq acontece por vez, sempre**. Antes de cada chamada, a fila verifica (via banco, na tabela `advisor_api_calls`, o que sobrevive a reinícios do processo):
+
+- Um intervalo mínimo fixo entre chamadas (`GROQ_MIN_INTERVAL`, padrão 6s).
+- Tetos de chamadas por minuto/hora/dia/mês (`RateLimits` em `queue.go`, valores padrão conservadores — ver comentário no código sobre ajustar conforme os limites atuais em `console.groq.com/settings/limits`, que variam por modelo e mudam com o tempo).
+
+Se algum limite estiver perto de estourar, a goroutine simplesmente dorme até liberar — nunca descarta silenciosamente uma chamada por causa disso (só descarta jobs duplicados/fila cheia). Resultados são cacheados por usuário/mês/ano em `advisor_recommendations`, então, na prática, cada usuário só gera no máximo ~1 chamada real por dia (ou quando muda de nível de saúde).
+
 ---
 
 ## Modelos de dados
@@ -349,6 +379,17 @@ Lembretes de contas fixas vencendo/vencidas, entregues em tempo real no site (SS
 }
 ```
 
+### `Recommendation`
+
+```jsonc
+{
+  "kind": "cut", // "cut" (corte de gastos) | "invest" (investimento)
+  "title": "Cancele assinaturas de streaming duplicadas",
+  "description": "Você tem 3 assinaturas de streaming ativas (Netflix, Disney+, HBO Max)...",
+  "impact": "Economia estimada de R$ 45,90/mês",
+}
+```
+
 ## Variáveis de ambiente
 
 | Variável               | Padrão                  | Descrição                                                                                                                                                                                                       |
@@ -366,6 +407,8 @@ Lembretes de contas fixas vencendo/vencidas, entregues em tempo real no site (SS
 | `SMTP_USER`            | —                       | Usuário para autenticação SMTP (`PlainAuth`). Também usado como remetente se `SMTP_FROM` não for definido.                                                                                                      |
 | `SMTP_PASS`            | —                       | Senha/token do usuário SMTP.                                                                                                                                                                                    |
 | `SMTP_FROM`            | valor de `SMTP_USER`    | Endereço de remetente dos e-mails.                                                                                                                                                                              |
+| `GROQ_API_KEY`         | —                       | Chave da API do Groq (plano gratuito: [console.groq.com](https://console.groq.com)). Se ausente, `/api/financial-health/recommendations` sempre responde `status: "disabled"`.                                 |
+| `GROQ_MODEL`           | `llama-3.1-8b-instant`  | Modelo usado nas recomendações de IA.                                                                                                                                                                            |
 
 Variáveis podem ser definidas em um arquivo `.env` na raiz de `api/` (carregado apenas em desenvolvimento; em produção o systemd injeta o `EnvironmentFile`).
 

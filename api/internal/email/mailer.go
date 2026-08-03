@@ -37,9 +37,10 @@ func (m *Mailer) Enabled() bool {
 	return m.host != ""
 }
 
-// Send envia um e-mail com corpo em texto simples. Se o SMTP não estiver
+// Send envia um e-mail com as versões texto simples e HTML (multipart/
+// alternative), seguindo o padrão visual do site. Se o SMTP não estiver
 // configurado, apenas registra a intenção em log e retorna nil.
-func (m *Mailer) Send(to, subject, body string) error {
+func (m *Mailer) Send(to, subject, textBody, htmlBody string) error {
 	if !m.Enabled() {
 		log.Printf("e-mail não enviado (SMTP não configurado): para=%s assunto=%q", to, subject)
 		return nil
@@ -51,14 +52,19 @@ func (m *Mailer) Send(to, subject, body string) error {
 		auth = smtp.PlainAuth("", m.user, m.pass, m.host)
 	}
 
-	msg := buildMessage(m.from, to, subject, body)
+	msg := buildMessage(m.from, to, subject, textBody, htmlBody)
 	if err := smtp.SendMail(addr, auth, m.from, []string{to}, []byte(msg)); err != nil {
 		return fmt.Errorf("enviando e-mail via smtp: %w", err)
 	}
 	return nil
 }
 
-func buildMessage(from, to, subject, body string) string {
+// boundary delimita as partes texto/HTML do e-mail multipart/alternative.
+// Fixo por processo é suficiente: não precisa ser globalmente único, apenas
+// não colidir com o próprio conteúdo do e-mail.
+const boundary = "reconta-email-boundary-7f3a9c"
+
+func buildMessage(from, to, subject, textBody, htmlBody string) string {
 	var b strings.Builder
 	b.WriteString("From: ")
 	b.WriteString(from)
@@ -70,9 +76,22 @@ func buildMessage(from, to, subject, body string) string {
 	b.WriteString(subject)
 	b.WriteString("\r\n")
 	b.WriteString("MIME-Version: 1.0\r\n")
+	b.WriteString("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n")
+	b.WriteString("\r\n")
+
+	b.WriteString("--" + boundary + "\r\n")
 	b.WriteString("Content-Type: text/plain; charset=\"utf-8\"\r\n")
 	b.WriteString("\r\n")
-	b.WriteString(body)
+	b.WriteString(textBody)
+	b.WriteString("\r\n\r\n")
+
+	b.WriteString("--" + boundary + "\r\n")
+	b.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
+	b.WriteString("\r\n")
+	b.WriteString(htmlBody)
+	b.WriteString("\r\n\r\n")
+
+	b.WriteString("--" + boundary + "--\r\n")
 	return b.String()
 }
 

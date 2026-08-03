@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/re-conta/reconta/api/internal/account"
+	"github.com/re-conta/reconta/api/internal/advisor"
 	"github.com/re-conta/reconta/api/internal/analytics"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/billing"
@@ -92,7 +93,18 @@ func main() {
 	statement.NewHandler(transactionRepo, categoryRepo, authHandler).RegisterRoutes(mux)
 	report.NewHandler(transactionRepo, categoryRepo, accountRepo, tagRepo, authHandler).RegisterRoutes(mux)
 
-	health.NewHandler(health.NewRepository(conn), authHandler).RegisterRoutes(mux)
+	healthRepo := health.NewRepository(conn)
+	health.NewHandler(healthRepo, authHandler).RegisterRoutes(mux)
+
+	advisorRepo := advisor.NewRepository(conn)
+	var advisorQueue *advisor.Queue
+	if groqAPIKey := getEnv("GROQ_API_KEY", ""); groqAPIKey != "" {
+		groqClient := advisor.NewGroqClient(groqAPIKey, getEnv("GROQ_MODEL", ""))
+		advisorQueue = advisor.NewQueue(advisorRepo, groqClient, transactionRepo, healthRepo, advisor.DefaultRateLimits())
+	} else {
+		log.Print("GROQ_API_KEY não definido: recomendações de IA desabilitadas")
+	}
+	advisor.NewHandler(advisorRepo, healthRepo, authHandler, advisorQueue).RegisterRoutes(mux)
 
 	geoIP := analytics.NewGeoIP(getEnv("GEOIP_DB_PATH", ""))
 	analytics.NewHandler(analytics.NewRepository(conn), authHandler, geoIP, secureCookies).RegisterRoutes(mux)

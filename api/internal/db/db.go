@@ -183,6 +183,23 @@ func migrate(conn *sql.DB) error {
 		updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS advisor_recommendations (
+		user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		month      INTEGER NOT NULL,
+		year       INTEGER NOT NULL,
+		stars      INTEGER NOT NULL,
+		status     TEXT NOT NULL DEFAULT 'ready',
+		error      TEXT,
+		content    TEXT NOT NULL DEFAULT '[]',
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+		PRIMARY KEY (user_id, month, year)
+	);
+
+	CREATE TABLE IF NOT EXISTS advisor_api_calls (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE TABLE IF NOT EXISTS plans (
 		id            INTEGER PRIMARY KEY AUTOINCREMENT,
 		code          TEXT NOT NULL UNIQUE,
@@ -285,6 +302,7 @@ func migrate(conn *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_page_visits_created_at ON page_visits(created_at);
 	CREATE INDEX IF NOT EXISTS idx_page_visits_visitor_id ON page_visits(visitor_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_page_visits_path ON page_visits(path);
+	CREATE INDEX IF NOT EXISTS idx_advisor_api_calls_created_at ON advisor_api_calls(created_at);
 	`
 	if _, err := conn.Exec(schema); err != nil {
 		return err

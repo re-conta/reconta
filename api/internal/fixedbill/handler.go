@@ -63,10 +63,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 		return
 	}
 
-	b, err := h.repo.Create(r.Context(), userID, Input{
-		Name: req.Name, Amount: req.Amount, CategoryID: req.CategoryID, AccountID: req.AccountID,
-		Periodicity: req.Periodicity, DueDate: req.DueDate, Notes: req.Notes,
-	})
+	b, err := h.repo.Create(r.Context(), userID, Input(req))
 	if err != nil {
 		log.Printf("erro ao criar conta fixa: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
@@ -92,10 +89,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request, userID int64) {
 		return
 	}
 
-	b, err := h.repo.Update(r.Context(), userID, id, Input{
-		Name: req.Name, Amount: req.Amount, CategoryID: req.CategoryID, AccountID: req.AccountID,
-		Periodicity: req.Periodicity, DueDate: req.DueDate, Notes: req.Notes,
-	})
+	b, err := h.repo.Update(r.Context(), userID, id, Input(req))
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			writeError(w, http.StatusNotFound, "não encontrada")
@@ -186,10 +180,7 @@ func (h *Handler) pay(w http.ResponseWriter, r *http.Request, userID int64) {
 		}
 	}
 
-	payment, bill, err := h.repo.Pay(r.Context(), userID, id, PayInput{
-		Bank: req.Bank, PaymentMethod: req.PaymentMethod, PaidAt: req.PaidAt,
-		AmountPaid: req.AmountPaid, AccountID: req.AccountID, Notes: req.Notes,
-	})
+	payment, bill, err := h.repo.Pay(r.Context(), userID, id, PayInput(req))
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			writeError(w, http.StatusNotFound, "não encontrada")

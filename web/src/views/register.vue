@@ -64,7 +64,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex items-center justify-center px-2 md:py-12">
+  <div class="flex items-center justify-center px-2 py-2 md:py-4">
     <div class="w-full max-w-sm">
       <div class="mb-4 md:mb-8 flex flex-col items-center text-center">
         <h1 class="mt-2 md:mt-4 font-display text-2xl font-bold text-ink-900">Crie sua conta</h1>

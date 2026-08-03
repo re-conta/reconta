@@ -91,14 +91,16 @@ func (h *Handler) score(w http.ResponseWriter, r *http.Request, userID int64) {
 		Balance: income - expense,
 	}
 	if resp.HasData {
-		resp.SavingsRate, resp.Level, resp.Stars = classify(income, expense, settings)
+		resp.SavingsRate, resp.Level, resp.Stars = Classify(income, expense, settings)
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// classify converte receitas vs despesas em taxa de poupança (%) e a compara
-// aos limites configurados, do melhor para o pior nível.
-func classify(income, expense float64, s Settings) (rate float64, level string, stars int) {
+// Classify converte receitas vs despesas em taxa de poupança (%) e a compara
+// aos limites configurados, do melhor para o pior nível. Exportada para uso
+// pelo pacote advisor, que reaproveita a mesma classificação para decidir
+// quando recomendar investimentos.
+func Classify(income, expense float64, s Settings) (rate float64, level string, stars int) {
 	if income > 0 {
 		rate = (income - expense) / income * 100
 	} else {

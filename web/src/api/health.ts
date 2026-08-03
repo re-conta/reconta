@@ -1,4 +1,4 @@
-import type { HealthScore, HealthSettings } from "../types/health";
+import type { HealthScore, HealthSettings, RecommendationsResponse } from "../types/health";
 
 export class ApiError extends Error {}
 
@@ -31,4 +31,11 @@ export function updateHealthSettings(settings: HealthSettings): Promise<HealthSe
     credentials: "include",
     body: JSON.stringify(settings),
   }).then((res) => parseResponse<HealthSettings>(res));
+}
+
+export function getRecommendations(month: number, year: number): Promise<RecommendationsResponse> {
+  const params = new URLSearchParams({ month: String(month), year: String(year) });
+  return fetch(`/api/financial-health/recommendations?${params}`, { credentials: "include" }).then((res) =>
+    parseResponse<RecommendationsResponse>(res),
+  );
 }

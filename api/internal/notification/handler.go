@@ -293,7 +293,11 @@ func (h *Handler) sendEmail(ctx context.Context, userID int64, subject, body str
 		log.Printf("erro ao buscar usuário %d para envio de e-mail: %v", userID, err)
 		return
 	}
-	h.mailQueue.Enqueue(u.Email, subject, body)
+	h.mailQueue.Enqueue(u.Email, subject, email.Message{
+		Preheader:  body,
+		Heading:    subject,
+		Paragraphs: []string{body},
+	})
 }
 
 func formatDuration(minutes int) string {

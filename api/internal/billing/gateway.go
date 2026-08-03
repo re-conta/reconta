@@ -81,10 +81,10 @@ func (g *Gateway) CreatePayment(ctx context.Context, in PaymentInput) (*PaymentR
 	}
 
 	req := payment.Request{
-		TransactionAmount: in.Amount,
-		Description:       in.Description,
-		ExternalReference: in.ExternalReference,
-		NotificationURL:   in.NotificationURL,
+		TransactionAmount:   in.Amount,
+		Description:         in.Description,
+		ExternalReference:   in.ExternalReference,
+		NotificationURL:     in.NotificationURL,
 		StatementDescriptor: "RECONTA",
 		Payer: &payment.PayerRequest{
 			Email:     in.PayerEmail,

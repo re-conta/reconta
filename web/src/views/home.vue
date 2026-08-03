@@ -13,7 +13,7 @@ const fontsReady = useFontsReady();
   <TransactionsView v-if="currentUser" />
   <div
     v-else
-    class="mx-auto flex max-w-6xl flex-col items-center gap-8 px-2 md:px-6 py-6 sm:py-12 md:py-10 lg:py-32 sm:gap-12 lg:flex-row lg:items-center lg:justify-between"
+    class="mx-auto flex max-w-6xl flex-col items-center gap-8 px-2 md:px-6 py-2 sm:py-4 md:py-8 lg:py-12 sm:gap-12 lg:flex-row lg:items-center lg:justify-between"
   >
     <div class="max-w-xl text-center md:text-left">
       <span

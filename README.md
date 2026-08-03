@@ -225,6 +225,27 @@ Sem `MP_ACCESS_TOKEN`, o site funciona normalmente e apenas o checkout fica desa
 
 > Dica: em desenvolvimento não é preciso webhook — o modal de checkout faz polling e reconsulta o status direto na API do Mercado Pago.
 
+## Saúde financeira e recomendações de IA (Groq)
+
+A tela de transações mostra um cartão de **saúde financeira** do mês (1 a 5 estrelas, com base na taxa de poupança: saldo/receitas) e, logo abaixo, um bloco de **recomendações geradas por IA** — de corte de gastos e, quando sobra dinheiro no mês, de onde investir o excedente.
+
+### Como funciona
+
+- O backend extrai sinais das transações do mês (assinaturas de streaming duplicadas, gastos com combustível, maiores categorias de despesa) e monta um prompt enviado ao [Groq](https://groq.com) (plano gratuito), pedindo recomendações específicas em português — não apenas os dois exemplos citados, o modelo é instruído a ser criativo com o restante dos dados.
+- Recomendações de **investimento** só são pedidas quando a saúde financeira é boa (≥ 3 estrelas) e sobrou saldo no mês; caso contrário, o foco é só em cortar gastos.
+- Como o plano gratuito do Groq tem cota compartilhada por toda a aplicação (não por usuário), **todas** as análises passam por uma fila com uma única goroutine consumidora: no máximo uma chamada ao Groq acontece por vez, com um intervalo mínimo fixo e tetos de chamadas por minuto/hora/dia/mês — controlados via banco de dados, então sobrevivem a reinícios do servidor. Detalhes em `api/README.md` → [Saúde financeira e recomendações de IA](api/README.md#saúde-financeira-e-recomendações-de-ia).
+- A análise é assíncrona: a página nunca espera pela resposta do Groq. O resultado fica em cache por usuário/mês, e só é regerado quando o nível de saúde muda ou passa mais de 24h.
+- Sem `GROQ_API_KEY` configurada, o recurso fica desabilitado automaticamente — o resto do site funciona normalmente.
+
+### Variáveis de ambiente
+
+No `api/.env` (backend):
+
+```sh
+GROQ_API_KEY=    # chave do plano gratuito do Groq (console.groq.com)
+GROQ_MODEL=llama-3.1-8b-instant
+```
+
 ## Estatísticas de visitas (painel de admin)
 
 O painel `/admin` tem uma aba **Estatísticas** com visitas únicas, visitas totais, novos vs. recorrentes, série diária (gráfico com range de datas selecionável), páginas mais visitadas, referrers, navegador/SO/dispositivo, localização por IP e uma tabela de visitas recentes (com IP, país/cidade, navegador, SO e referrer). Também mostra um indicador de "ativos agora" (visitantes únicos nos últimos 5 minutos).
@@ -375,6 +396,15 @@ Todas as rotas usam o prefixo `/api` (sem versionamento). Rotas marcadas como **
 | POST   | `/api/internal/billing/scan`        | Header `X-Internal-Token`   |
 | GET    | `/api/admin/plans`                  | Permissão `manage_plans`    |
 | PUT    | `/api/admin/plans/{id}`             | Permissão `manage_plans`    |
+
+### Saúde financeira e recomendações de IA
+
+| Método | Rota                                     | Auth |
+| ------ | ----------------------------------------- | ---- |
+| GET    | `/api/financial-health`                   | Sim  |
+| GET    | `/api/financial-health/recommendations`   | Sim  |
+| GET    | `/api/admin/financial-health`             | admin+ |
+| PUT    | `/api/admin/financial-health`             | admin+ |
 
 ### Estatísticas de visitas (`analytics`)
 

@@ -154,9 +154,9 @@ func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := strings.ToLower(strings.TrimSpace(req.Email))
+	addr := strings.ToLower(strings.TrimSpace(req.Email))
 
-	u, err := h.users.GetByEmail(r.Context(), email)
+	u, err := h.users.GetByEmail(r.Context(), addr)
 	if err != nil {
 		if !errors.Is(err, user.ErrNotFound) {
 			log.Printf("erro ao buscar usuário para redefinição de senha: %v", err)
@@ -180,11 +180,17 @@ func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	if h.mail != nil {
 		link := fmt.Sprintf("%s/redefinir-senha?token=%s", strings.TrimRight(h.appURL, "/"), token)
-		body := fmt.Sprintf(
-			"Olá, %s!\n\nRecebemos uma solicitação para redefinir sua senha no Reconta.\n\nClique no link abaixo para criar uma nova senha (válido por 1 hora):\n%s\n\nSe você não solicitou isso, pode ignorar este e-mail.",
-			u.Name, link,
-		)
-		h.mail.Enqueue(u.Email, "Redefinição de senha - Reconta", body)
+		msg := email.Message{
+			Preheader: "Crie uma nova senha para sua conta no ReConta.",
+			Heading:   fmt.Sprintf("Olá, %s!", u.Name),
+			Paragraphs: []string{
+				"Recebemos uma solicitação para redefinir sua senha no ReConta.",
+				"Clique no botão abaixo para criar uma nova senha. O link é válido por 1 hora.",
+			},
+			Button:   &email.Button{Text: "Redefinir senha", URL: link},
+			Footnote: "Se você não solicitou isso, pode ignorar este e-mail com segurança — sua senha atual continuará válida.",
+		}
+		h.mail.Enqueue(u.Email, "Redefinição de senha - ReConta", msg)
 	}
 
 	w.WriteHeader(http.StatusNoContent)

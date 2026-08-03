@@ -26,3 +26,22 @@ export const healthLevelLabels: Record<HealthLevel, string> = {
   ruim: "Ruim",
   pessima: "Péssima",
 };
+
+export type RecommendationKind = "cut" | "invest";
+
+export interface Recommendation {
+  kind: RecommendationKind;
+  title: string;
+  description: string;
+  impact?: string;
+}
+
+export type RecommendationsStatus = "disabled" | "no_data" | "pending" | "ready";
+
+export interface RecommendationsResponse {
+  status: RecommendationsStatus;
+  stars?: number;
+  savingsRate?: number;
+  generatedAt?: string;
+  recommendations?: Recommendation[];
+}

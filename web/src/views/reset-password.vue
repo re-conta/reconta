@@ -41,7 +41,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100vh-140px)] items-center justify-center px-6 py-4 md:py-12">
+  <div class="flex min-h-[calc(100vh-140px)] items-center justify-center px-6 py-2 md:py-4">
     <div class="w-full max-w-sm">
       <div class="mb-8 flex flex-col items-center text-center">
         <h1 class="mt-4 font-display text-2xl font-bold text-ink-900">Redefinir senha</h1>

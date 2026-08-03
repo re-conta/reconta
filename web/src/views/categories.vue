@@ -174,7 +174,7 @@ onMounted(loadAll);
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
+  <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-2 md:p-4">
     <div class="flex items-start justify-between">
       <div>
         <h1 class="font-display text-xl md:text-2xl font-bold text-ink-900">{{ title }}</h1>

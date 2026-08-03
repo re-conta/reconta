@@ -18,7 +18,7 @@ const queueSize = 500
 type job struct {
 	To      string
 	Subject string
-	Body    string
+	Message Message
 }
 
 // Queue enfileira e-mails e os envia em uma goroutine dedicada, garantindo no
@@ -45,11 +45,12 @@ func NewQueue(mailer *Mailer) *Queue {
 	return q
 }
 
-// Enqueue agenda o envio de um e-mail. Não bloqueia: se a fila estiver cheia,
-// o e-mail é descartado e um aviso é registrado no log.
-func (q *Queue) Enqueue(to, subject, body string) {
+// Enqueue agenda o envio de um e-mail, usando o layout visual padrão do site
+// (msg). Não bloqueia: se a fila estiver cheia, o e-mail é descartado e um
+// aviso é registrado no log.
+func (q *Queue) Enqueue(to, subject string, msg Message) {
 	select {
-	case q.jobs <- job{To: to, Subject: subject, Body: body}:
+	case q.jobs <- job{To: to, Subject: subject, Message: msg}:
 	default:
 		log.Printf("fila de e-mail cheia: descartando envio para %s", to)
 	}
@@ -64,7 +65,8 @@ func (q *Queue) run() {
 			continue
 		}
 
-		if err := q.mailer.Send(j.To, j.Subject, j.Body); err != nil {
+		text, html := j.Message.Render()
+		if err := q.mailer.Send(j.To, j.Subject, text, html); err != nil {
 			log.Printf("erro ao enviar e-mail da fila para %s: %v", j.To, err)
 		}
 	}

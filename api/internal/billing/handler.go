@@ -623,7 +623,12 @@ func (h *Handler) notifyUser(ctx context.Context, userID int64, kind, title, mes
 		log.Printf("erro ao buscar usuário %d para e-mail de assinatura: %v", userID, err)
 		return
 	}
-	h.mailQueue.Enqueue(u.Email, title, message)
+	h.mailQueue.Enqueue(u.Email, title, email.Message{
+		Preheader:  message,
+		Heading:    title,
+		Paragraphs: []string{message},
+		Button:     &email.Button{Text: "Ver planos", URL: strings.TrimRight(h.appURL, "/") + "/planos"},
+	})
 }
 
 // --- Admin ---

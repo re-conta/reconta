@@ -8,6 +8,7 @@ import AccountsManager from "../components/AccountsManager.vue";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import FinancialHealthCard from "../components/FinancialHealthCard.vue";
+import FinancialRecommendations from "../components/FinancialRecommendations.vue";
 import TransactionCalendar from "../components/TransactionCalendar.vue";
 import {
   ApiError,
@@ -491,7 +492,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-2 py-4 md:px-6 md:py-8">
+  <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Transações</h1>
@@ -525,6 +526,7 @@ onUnmounted(() => {
         class="order-first flex flex-col gap-6 md:sticky md:top-20 md:order-2 md:w-80 md:shrink-0 xl:w-96"
       >
         <FinancialHealthCard :month="filters.month" :year="filters.year" />
+        <FinancialRecommendations :month="filters.month" :year="filters.year" />
         <TransactionCalendar
           :month="filters.month"
           :year="filters.year"
