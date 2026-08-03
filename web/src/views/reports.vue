@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import MonthlyCashFlowChart from "../components/charts/MonthlyCashFlowChart.vue";
@@ -9,12 +10,42 @@ import type { ReportScopeKind } from "../types/report";
 import type { Period, Transaction } from "../types/transaction";
 
 const now = new Date();
+const route = useRoute();
+const router = useRouter();
 
-const scopeKind = ref<ReportScopeKind>("month");
-const month = ref(now.getMonth() + 1);
-const year = ref(now.getFullYear());
-const dateFrom = ref(now.toISOString().slice(0, 8) + "01");
-const dateTo = ref(now.toISOString().slice(0, 10));
+function initialScope(): ReportScopeKind {
+  const q = route.query.escopo;
+  if (q === "month" || q === "year" || q === "range" || q === "all") return q;
+  return "month";
+}
+
+function initialMonth(): number {
+  const q = Number(route.query.mes);
+  return q >= 1 && q <= 12 ? q : now.getMonth() + 1;
+}
+
+function initialYear(): number {
+  const q = Number(route.query.ano);
+  return q > 0 ? q : now.getFullYear();
+}
+
+function initialDateFrom(): string {
+  const q = route.query.de;
+  return typeof q === "string" && q ? q : now.toISOString().slice(0, 8) + "01";
+}
+
+function initialDateTo(): string {
+  const q = route.query.ate;
+  return typeof q === "string" && q ? q : now.toISOString().slice(0, 10);
+}
+
+const hasQueryPeriod = route.query.mes !== undefined || route.query.ano !== undefined;
+
+const scopeKind = ref<ReportScopeKind>(initialScope());
+const month = ref(initialMonth());
+const year = ref(initialYear());
+const dateFrom = ref(initialDateFrom());
+const dateTo = ref(initialDateTo());
 
 const periods = ref<Period[]>([]);
 const years = computed(() => [...new Set(periods.value.map((p) => p.year))].sort((a, b) => b - a));
@@ -113,12 +144,37 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function buildQuery(): Record<string, string> {
+  const query: Record<string, string> = { escopo: scopeKind.value };
+  if (scopeKind.value === "month") {
+    query.mes = String(month.value);
+    query.ano = String(year.value);
+  } else if (scopeKind.value === "year") {
+    query.ano = String(year.value);
+  } else if (scopeKind.value === "range") {
+    query.de = dateFrom.value;
+    query.ate = dateTo.value;
+  }
+  return query;
+}
+
+watch([scopeKind, month, year, dateFrom, dateTo], () => {
+  router.replace({ query: buildQuery() });
+});
+
 onMounted(async () => {
   try {
     periods.value = await listPeriods();
+    const hasCurrent = periods.value.some((p) => p.month === month.value && p.year === year.value);
+    if (!hasQueryPeriod && !hasCurrent && sortedPeriods.value.length > 0) {
+      const latest = sortedPeriods.value[sortedPeriods.value.length - 1];
+      month.value = latest.month;
+      year.value = latest.year;
+    }
   } catch {
     // seletor de período funciona com os padrões mesmo sem histórico carregado
   }
+  router.replace({ query: buildQuery() });
   await loadPreview();
 });
 </script>
