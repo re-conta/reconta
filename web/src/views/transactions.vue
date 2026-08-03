@@ -1121,6 +1121,7 @@ onUnmounted(() => {
                     <th class="px-2 py-2">Descrição</th>
                     <th class="px-2 py-2">Categoria / Tags</th>
                     <th class="px-2 py-2">Conta</th>
+                    <th class="px-2 py-2">Banco</th>
                     <th class="px-2 py-2 text-right">Valor</th>
                     <th class="w-16 px-2 py-2"></th>
                   </tr>
@@ -1175,19 +1176,21 @@ onUnmounted(() => {
                         >
                           {{ t.name }}
                         </span>
-                        <span
-                          v-if="tx.importedFrom"
-                          class="rounded-full bg-ink-100 px-1.5 py-0.5 text-xs text-ink-500"
-                          :title="
-                            tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined
-                          "
-                        >
-                          importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
-                        </span>
                       </div>
                     </td>
                     <td class="whitespace-nowrap px-2 py-1 text-ink-500">
                       {{ accountName(tx.accountId) ?? "-" }}
+                    </td>
+                    <td class="whitespace-nowrap px-2 py-1">
+                      <span
+                        v-if="tx.importedFrom"
+                        class="rounded-full bg-ink-100 px-1.5 py-0.5 text-xs text-ink-500"
+                        :title="
+                          tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined
+                        "
+                      >
+                        {{ tx.bank || "importado" }}
+                      </span>
                     </td>
                     <td
                       class="whitespace-nowrap px-2 py-2 text-right font-semibold"
@@ -1270,7 +1273,7 @@ onUnmounted(() => {
                         tx.pixBeneficiary ? `Beneficiário PIX: ${tx.pixBeneficiary}` : undefined
                       "
                     >
-                      importado{{ tx.bank ? ` · ${tx.bank}` : "" }}
+                      {{ tx.bank || "importado" }}
                     </span>
                   </div>
                   <p
