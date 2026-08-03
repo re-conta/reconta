@@ -26,6 +26,38 @@ const previewTransactions = ref<Transaction[]>([]);
 const loadingPreview = ref(false);
 const previewError = ref("");
 
+const sortedPeriods = computed(() =>
+  [...periods.value].sort((a, b) => a.year - b.year || a.month - b.month),
+);
+
+const currentPeriodIndex = computed(() =>
+  sortedPeriods.value.findIndex((p) => p.month === month.value && p.year === year.value),
+);
+
+const canGoPrevPeriod = computed(() => currentPeriodIndex.value > 0);
+const canGoNextPeriod = computed(
+  () =>
+    currentPeriodIndex.value !== -1 && currentPeriodIndex.value < sortedPeriods.value.length - 1,
+);
+
+function goToPrevPeriod() {
+  if (!canGoPrevPeriod.value) return;
+  const target = sortedPeriods.value[currentPeriodIndex.value - 1];
+  month.value = target.month;
+  year.value = target.year;
+  loadPreview();
+}
+
+function goToNextPeriod() {
+  if (!canGoNextPeriod.value) return;
+  const target = sortedPeriods.value[currentPeriodIndex.value + 1];
+  month.value = target.month;
+  year.value = target.year;
+  loadPreview();
+}
+
+const chartCount = computed(() => (scopeKind.value === "month" || scopeKind.value === "year" ? 2 : 1));
+
 function scopeLabel() {
   if (scopeKind.value === "month") {
     return `${String(month.value).padStart(2, "0")}/${year.value}`;
@@ -146,6 +178,26 @@ onMounted(async () => {
             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
           </select>
         </label>
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            :disabled="!canGoPrevPeriod"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink-200 text-sm text-ink-600 transition hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Mês anterior"
+            @click="goToPrevPeriod"
+          >
+            &lsaquo;
+          </button>
+          <button
+            type="button"
+            :disabled="!canGoNextPeriod"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink-200 text-sm text-ink-600 transition hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Próximo mês"
+            @click="goToNextPeriod"
+          >
+            &rsaquo;
+          </button>
+        </div>
       </template>
 
       <label
@@ -216,7 +268,11 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-if="!loadingPreview" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div
+      v-if="!loadingPreview"
+      class="grid grid-cols-1 gap-4"
+      :class="{ 'sm:grid-cols-2': chartCount > 1 }"
+    >
       <CashFlowChart
         v-if="scopeKind === 'month'"
         :month="month"
