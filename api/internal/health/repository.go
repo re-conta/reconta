@@ -92,8 +92,8 @@ func (r *Repository) MonthTotals(ctx context.Context, userID int64, month, year 
 
 	err = r.db.QueryRowContext(ctx, `
 		SELECT
-			COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)
+			COALESCE(SUM(CASE WHEN type = 'income' AND is_transfer = 0 THEN amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'expense' AND is_transfer = 0 THEN amount ELSE 0 END), 0)
 		FROM transactions
 		WHERE user_id = ? AND date >= ? AND date <= ?`,
 		userID, start, end,

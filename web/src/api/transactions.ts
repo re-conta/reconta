@@ -1,6 +1,7 @@
 import type {
   BulkUpdateFields,
   Period,
+  SelfTransferCandidate,
   Transaction,
   TransactionFilters,
   TransactionInput,
@@ -92,6 +93,12 @@ export function bulkDeleteTransactions(
     credentials: "include",
     body: JSON.stringify({ scope, month, year }),
   }).then((res) => parseResponse<{ deleted: number }>(res));
+}
+
+export function listSelfTransferCandidates(): Promise<SelfTransferCandidate[]> {
+  return fetch("/api/transactions/self-transfer-candidates", { credentials: "include" }).then(
+    (res) => parseResponse<SelfTransferCandidate[]>(res),
+  );
 }
 
 export function autoCategorize(): Promise<{ updated: number; checked: number }> {

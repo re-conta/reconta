@@ -16,6 +16,7 @@ export interface Transaction {
   importedFrom: string | null;
   bank: string | null;
   pixBeneficiary: string | null;
+  isTransfer: boolean;
   createdAt: string;
   tags: Tag[];
 }
@@ -29,6 +30,7 @@ export interface TransactionInput {
   accountId: number | null;
   notes: string | null;
   tagIds: number[];
+  isTransfer?: boolean;
 }
 
 export interface Totals {
@@ -66,6 +68,16 @@ export interface BulkUpdateFields {
   categoryId?: number | "_none";
   accountId?: number | "_none";
   date?: string;
+  isTransfer?: boolean;
+}
+
+export interface SelfTransferCandidate {
+  id: number;
+  date: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  pixBeneficiary: string;
 }
 
 export interface Period {

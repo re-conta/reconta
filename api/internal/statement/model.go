@@ -13,6 +13,7 @@ type ParsedTransaction struct {
 	CategoryID     *int64  `json:"categoryId,omitempty"`
 	CategoryName   *string `json:"categoryName,omitempty"`
 	Duplicate      bool    `json:"duplicate"`
+	SelfTransfer   bool    `json:"selfTransfer"`
 	RawLine        string  `json:"-"`
 }
 

@@ -14,6 +14,7 @@ export interface ParsedTransaction {
   categoryId?: number | null;
   categoryName?: string | null;
   duplicate: boolean;
+  selfTransfer: boolean;
 }
 
 export interface ImportPreview {
@@ -34,4 +35,5 @@ export interface ConfirmImportRow {
   type: TransactionType;
   categoryId: number | null;
   pixBeneficiary: string | null;
+  isTransfer: boolean;
 }

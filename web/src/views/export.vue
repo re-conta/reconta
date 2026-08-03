@@ -241,15 +241,17 @@ onMounted(async () => {
       {{ previewError }}
     </p>
 
-    <div v-if="!loadingPreview" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <CashFlowChart
-        v-if="scopeKind === 'month'"
-        ref="cashFlowRef"
-        :month="month"
-        :year="year"
-        :transactions="previewTransactions"
-      />
-      <CategoryExpenseChart ref="categoryChartRef" :transactions="previewTransactions" />
+    <div v-if="!loadingPreview" class="h-0 overflow-hidden" aria-hidden="true">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <CashFlowChart
+          v-if="scopeKind === 'month'"
+          ref="cashFlowRef"
+          :month="month"
+          :year="year"
+          :transactions="previewTransactions"
+        />
+        <CategoryExpenseChart ref="categoryChartRef" :transactions="previewTransactions" />
+      </div>
     </div>
 
     <div class="rounded-3xl border border-ink-200/70 bg-white p-5 shadow-sm">

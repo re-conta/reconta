@@ -40,6 +40,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
 const dayMap = computed(() => {
   const map = new Map<string, { income: number; expense: number }>();
   for (const tx of props.transactions) {
+    if (tx.isTransfer) continue;
     const entry = map.get(tx.date) ?? { income: 0, expense: 0 };
     if (tx.type === "income") entry.income += tx.amount;
     else entry.expense += tx.amount;
@@ -81,12 +82,12 @@ function toggleDay(cell: DayCell) {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-ink-200/70 bg-white p-3 shadow-sm">
+  <div class="mx-auto w-full max-w-xs rounded-2xl border border-ink-200/70 bg-white p-3 shadow-sm">
     <div class="flex items-center justify-between gap-1">
       <button
         type="button"
         :disabled="!canGoPrev"
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ink-200 text-xs text-ink-600 transition hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-30"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink-200 text-base text-ink-600 transition hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-30"
         aria-label="Mês anterior"
         @click="emit('prev')"
       >
@@ -96,7 +97,7 @@ function toggleDay(cell: DayCell) {
       <button
         type="button"
         :disabled="!canGoNext"
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ink-200 text-xs text-ink-600 transition hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-30"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink-200 text-base text-ink-600 transition hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-30"
         aria-label="Próximo mês"
         @click="emit('next')"
       >

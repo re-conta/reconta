@@ -33,14 +33,15 @@ type Input struct {
 	ImportedFrom   *string
 	Bank           *string
 	PixBeneficiary *string
+	IsTransfer     bool
 }
 
 func (r *Repository) Create(ctx context.Context, userID int64, in Input) (*Transaction, error) {
 	res, err := r.db.ExecContext(ctx,
-		`INSERT INTO transactions (user_id, date, description, amount, type, category_id, account_id, notes, imported_from, bank, pix_beneficiary)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO transactions (user_id, date, description, amount, type, category_id, account_id, notes, imported_from, bank, pix_beneficiary, is_transfer)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		userID, in.Date, in.Description, in.Amount, in.Type, in.CategoryID, in.AccountID, in.Notes,
-		in.ImportedFrom, in.Bank, in.PixBeneficiary,
+		in.ImportedFrom, in.Bank, in.PixBeneficiary, in.IsTransfer,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserindo transação: %w", err)
@@ -57,7 +58,7 @@ func (r *Repository) Create(ctx context.Context, userID int64, in Input) (*Trans
 func (r *Repository) GetByID(ctx context.Context, userID, id int64) (*Transaction, error) {
 	row := r.db.QueryRowContext(ctx, `
 		SELECT t.id, t.date, t.description, t.amount, t.type, t.category_id, c.name, c.color,
-		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.created_at
+		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.is_transfer, t.created_at
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE t.id = ? AND t.user_id = ?`, id, userID,
@@ -67,9 +68,9 @@ func (r *Repository) GetByID(ctx context.Context, userID, id int64) (*Transactio
 
 func (r *Repository) Update(ctx context.Context, userID, id int64, in Input) (*Transaction, error) {
 	res, err := r.db.ExecContext(ctx,
-		`UPDATE transactions SET date = ?, description = ?, amount = ?, type = ?, category_id = ?, account_id = ?, notes = ?
+		`UPDATE transactions SET date = ?, description = ?, amount = ?, type = ?, category_id = ?, account_id = ?, notes = ?, is_transfer = ?
 		 WHERE id = ? AND user_id = ?`,
-		in.Date, in.Description, in.Amount, in.Type, in.CategoryID, in.AccountID, in.Notes, id, userID,
+		in.Date, in.Description, in.Amount, in.Type, in.CategoryID, in.AccountID, in.Notes, in.IsTransfer, id, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("atualizando transação: %w", err)
@@ -146,8 +147,8 @@ func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*Li
 	var totals Totals
 	err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
 		SELECT
-			COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN t.type = 'income' AND t.is_transfer = 0 THEN t.amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN t.type = 'expense' AND t.is_transfer = 0 THEN t.amount ELSE 0 END), 0),
 			COUNT(*)
 		FROM transactions t
 		WHERE %s`, whereClause), args...,
@@ -160,7 +161,7 @@ func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*Li
 	listArgs := append(append([]any{}, args...), limit, offset)
 	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
 		SELECT t.id, t.date, t.description, t.amount, t.type, t.category_id, c.name, c.color,
-		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.created_at
+		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.is_transfer, t.created_at
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE %s
@@ -199,8 +200,8 @@ func (r *Repository) ListAll(ctx context.Context, userID int64, f ListFilters) (
 	var totals Totals
 	err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
 		SELECT
-			COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN t.type = 'income' AND t.is_transfer = 0 THEN t.amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN t.type = 'expense' AND t.is_transfer = 0 THEN t.amount ELSE 0 END), 0),
 			COUNT(*)
 		FROM transactions t
 		WHERE %s`, whereClause), args...,
@@ -212,7 +213,7 @@ func (r *Repository) ListAll(ctx context.Context, userID int64, f ListFilters) (
 
 	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
 		SELECT t.id, t.date, t.description, t.amount, t.type, t.category_id, c.name, c.color,
-		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.created_at
+		       t.account_id, t.notes, t.imported_from, t.bank, t.pix_beneficiary, t.is_transfer, t.created_at
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE %s
@@ -243,6 +244,7 @@ type BulkUpdateFields struct {
 	CategoryID **int64
 	AccountID  **int64
 	Date       *string
+	IsTransfer *bool
 }
 
 // BulkUpdate atualiza campos em lote para uma lista de transações do usuário.
@@ -269,6 +271,10 @@ func (r *Repository) BulkUpdate(ctx context.Context, userID int64, ids []int64, 
 	if fields.Date != nil {
 		sets = append(sets, "date = ?")
 		args = append(args, *fields.Date)
+	}
+	if fields.IsTransfer != nil {
+		sets = append(sets, "is_transfer = ?")
+		args = append(args, *fields.IsTransfer)
 	}
 	if len(sets) == 0 {
 		return 0, nil
@@ -418,6 +424,42 @@ func (r *Repository) UpsertOpeningBalance(ctx context.Context, userID int64, mon
 	return nil
 }
 
+// SelfTransferCandidate é uma transação já lançada cujo remetente/beneficiário
+// do PIX pode ser o próprio titular da conta — candidata a virar transferência.
+type SelfTransferCandidate struct {
+	ID             int64
+	Date           string
+	Description    string
+	Amount         float64
+	Type           string
+	PixBeneficiary string
+}
+
+// ListSelfTransferCandidates retorna as transações do usuário, ainda não
+// marcadas como transferência, com um beneficiário/remetente de PIX
+// registrado — para o chamador comparar o nome contra o titular da conta.
+func (r *Repository) ListSelfTransferCandidates(ctx context.Context, userID int64) ([]SelfTransferCandidate, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, date, description, amount, type, pix_beneficiary FROM transactions
+		 WHERE user_id = ? AND is_transfer = 0 AND pix_beneficiary IS NOT NULL AND pix_beneficiary <> ''`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listando candidatas a transferência: %w", err)
+	}
+	defer rows.Close()
+
+	result := []SelfTransferCandidate{}
+	for rows.Next() {
+		var c SelfTransferCandidate
+		if err := rows.Scan(&c.ID, &c.Date, &c.Description, &c.Amount, &c.Type, &c.PixBeneficiary); err != nil {
+			return nil, err
+		}
+		result = append(result, c)
+	}
+	return result, rows.Err()
+}
+
 // FindDuplicate verifica se já existe uma transação do usuário com a mesma
 // data, valor e descrição — usado para sinalizar possíveis duplicatas ao
 // importar um extrato já lançado anteriormente.
@@ -484,7 +526,7 @@ func scanTransaction(s scanner) (*Transaction, error) {
 	if err := s.Scan(
 		&t.ID, &t.Date, &t.Description, &t.Amount, &t.Type,
 		&categoryID, &categoryName, &categoryColor,
-		&accountID, &notes, &importedFrom, &bank, &pixBeneficiary, &createdAt,
+		&accountID, &notes, &importedFrom, &bank, &pixBeneficiary, &t.IsTransfer, &createdAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound

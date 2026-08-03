@@ -650,9 +650,16 @@ onMounted(() => {
                 <div class="flex shrink-0 items-center gap-3">
                   <span
                     class="text-sm font-semibold"
-                    :class="tx.type === 'income' ? 'text-emerald-600' : 'text-coral-600'"
+                    :class="
+                      tx.isTransfer
+                        ? 'text-sky-600'
+                        : tx.type === 'income'
+                          ? 'text-emerald-600'
+                          : 'text-coral-600'
+                    "
                   >
-                    {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
+                    {{ tx.isTransfer ? "" : tx.type === "income" ? "+" : "-"
+                    }}{{ formatCurrency(tx.amount) }}
                   </span>
                   <template v-if="selectedShare?.canEdit">
                     <button type="button" class="text-xs font-semibold text-brand-700 hover:text-brand-800" @click="startEdit(tx)">

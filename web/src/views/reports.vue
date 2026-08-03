@@ -134,6 +134,7 @@ const totals = computed(() => {
   let income = 0;
   let expense = 0;
   for (const tx of previewTransactions.value) {
+    if (tx.isTransfer) continue;
     if (tx.type === "income") income += tx.amount;
     else expense += tx.amount;
   }

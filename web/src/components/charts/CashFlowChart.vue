@@ -39,6 +39,7 @@ const dailyTotals = computed(() => {
   const income = Array.from({ length: daysInMonth }, () => 0);
   const expense = Array.from({ length: daysInMonth }, () => 0);
   for (const tx of props.transactions) {
+    if (tx.isTransfer) continue;
     const day = Number(tx.date.slice(8, 10));
     if (day < 1 || day > daysInMonth) continue;
     if (tx.type === "income") income[day - 1] += tx.amount;

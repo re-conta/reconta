@@ -21,6 +21,7 @@ type Transaction struct {
 	ImportedFrom   *string   `json:"importedFrom"`
 	Bank           *string   `json:"bank"`
 	PixBeneficiary *string   `json:"pixBeneficiary"`
+	IsTransfer     bool      `json:"isTransfer"`
 	CreatedAt      time.Time `json:"createdAt"`
 	Tags           []tag.Tag `json:"tags"`
 }

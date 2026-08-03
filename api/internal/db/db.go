@@ -102,6 +102,7 @@ func migrate(conn *sql.DB) error {
 		imported_from   TEXT,
 		bank            TEXT,
 		pix_beneficiary TEXT,
+		is_transfer     INTEGER NOT NULL DEFAULT 0,
 		created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
@@ -426,6 +427,16 @@ func addMissingColumns(conn *sql.DB) error {
 	if !hasBannedAt {
 		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN banned_at TEXT`); err != nil {
 			return fmt.Errorf("adicionando coluna banned_at: %w", err)
+		}
+	}
+
+	hasIsTransfer, err := columnExists(conn, "transactions", "is_transfer")
+	if err != nil {
+		return fmt.Errorf("verificando coluna is_transfer: %w", err)
+	}
+	if !hasIsTransfer {
+		if _, err := conn.Exec(`ALTER TABLE transactions ADD COLUMN is_transfer INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("adicionando coluna is_transfer: %w", err)
 		}
 	}
 

@@ -13,6 +13,8 @@ import (
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/category"
 	"github.com/re-conta/reconta/api/internal/tag"
+	"github.com/re-conta/reconta/api/internal/textutil"
+	"github.com/re-conta/reconta/api/internal/user"
 )
 
 type Handler struct {
@@ -20,15 +22,17 @@ type Handler struct {
 	tags       *tag.Repository
 	categories *category.Repository
 	accounts   *account.Repository
+	users      *user.Repository
 	auth       *auth.Handler
 }
 
-func NewHandler(repo *Repository, tags *tag.Repository, categories *category.Repository, accounts *account.Repository, authHandler *auth.Handler) *Handler {
-	return &Handler{repo: repo, tags: tags, categories: categories, accounts: accounts, auth: authHandler}
+func NewHandler(repo *Repository, tags *tag.Repository, categories *category.Repository, accounts *account.Repository, users *user.Repository, authHandler *auth.Handler) *Handler {
+	return &Handler{repo: repo, tags: tags, categories: categories, accounts: accounts, users: users, auth: authHandler}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/transactions", h.auth.RequireUser(h.list))
+	mux.HandleFunc("GET /api/transactions/self-transfer-candidates", h.auth.RequireUser(h.selfTransferCandidates))
 	mux.HandleFunc("GET /api/transactions/periods", h.auth.RequireUser(h.periods))
 	mux.HandleFunc("POST /api/transactions", h.auth.RequireUser(h.create))
 	mux.HandleFunc("PATCH /api/transactions", h.auth.RequireUser(h.bulkUpdate))
@@ -66,6 +70,56 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request, userID int64) {
 		log.Printf("erro ao carregar tags das transações: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+// selfTransferCandidateResponse é o subconjunto de campos exibido ao usuário
+// para confirmar em lote quais transações são transferências entre contas
+// próprias (mesmo titular no PIX de origem/destino).
+type selfTransferCandidateResponse struct {
+	ID             int64   `json:"id"`
+	Date           string  `json:"date"`
+	Description    string  `json:"description"`
+	Amount         float64 `json:"amount"`
+	Type           string  `json:"type"`
+	PixBeneficiary string  `json:"pixBeneficiary"`
+}
+
+// selfTransferCandidates lista transações já lançadas cujo beneficiário ou
+// remetente do PIX é o próprio titular da conta — normalmente transferências
+// entre contas do usuário em bancos diferentes, importadas de dois extratos
+// (uma como despesa, outra como receita), que não deveriam contar como
+// receita/despesa real.
+func (h *Handler) selfTransferCandidates(w http.ResponseWriter, r *http.Request, userID int64) {
+	u, err := h.users.GetByID(r.Context(), userID)
+	if err != nil {
+		log.Printf("erro ao carregar titular da conta: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	candidates, err := h.repo.ListSelfTransferCandidates(r.Context(), userID)
+	if err != nil {
+		log.Printf("erro ao listar candidatas a transferência: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	result := []selfTransferCandidateResponse{}
+	for _, c := range candidates {
+		if !textutil.SameHolder(c.PixBeneficiary, u.Name) {
+			continue
+		}
+		result = append(result, selfTransferCandidateResponse{
+			ID:             c.ID,
+			Date:           c.Date,
+			Description:    c.Description,
+			Amount:         c.Amount,
+			Type:           c.Type,
+			PixBeneficiary: c.PixBeneficiary,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, result)
@@ -110,6 +164,7 @@ type transactionRequest struct {
 	AccountID   *int64  `json:"accountId"`
 	Notes       *string `json:"notes"`
 	TagIDs      []int64 `json:"tagIds"`
+	IsTransfer  bool    `json:"isTransfer"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
@@ -132,6 +187,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 		CategoryID:  req.CategoryID,
 		AccountID:   req.AccountID,
 		Notes:       req.Notes,
+		IsTransfer:  req.IsTransfer,
 	})
 	if err != nil {
 		log.Printf("erro ao criar transação: %v", err)
@@ -206,6 +262,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request, userID int64) {
 		CategoryID:  req.CategoryID,
 		AccountID:   req.AccountID,
 		Notes:       req.Notes,
+		IsTransfer:  req.IsTransfer,
 	})
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
@@ -296,6 +353,12 @@ func (h *Handler) bulkUpdate(w http.ResponseWriter, r *http.Request, userID int6
 		var v string
 		if err := json.Unmarshal(raw, &v); err == nil {
 			fields.Date = &v
+		}
+	}
+	if raw, ok := req.Fields["isTransfer"]; ok {
+		var v bool
+		if err := json.Unmarshal(raw, &v); err == nil {
+			fields.IsTransfer = &v
 		}
 	}
 

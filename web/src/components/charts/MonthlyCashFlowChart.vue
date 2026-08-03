@@ -51,6 +51,7 @@ const monthlyTotals = computed(() => {
   const income = Array.from({ length: 12 }, () => 0);
   const expense = Array.from({ length: 12 }, () => 0);
   for (const tx of props.transactions) {
+    if (tx.isTransfer) continue;
     const month = Number(tx.date.slice(5, 7));
     if (month < 1 || month > 12) continue;
     if (tx.type === "income") income[month - 1] += tx.amount;

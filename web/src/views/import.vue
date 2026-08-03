@@ -31,7 +31,7 @@ const resultMessage = ref("");
 
 const bankLabel = ref("");
 const bankKey = ref("");
-const rows = ref<(ParsedTransaction & { include: boolean })[]>([]);
+const rows = ref<(ParsedTransaction & { include: boolean; isTransfer: boolean })[]>([]);
 
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -53,7 +53,11 @@ async function handleAnalyze() {
     );
     bankKey.value = preview.bank;
     bankLabel.value = preview.bankLabel;
-    rows.value = preview.transactions.map((t) => ({ ...t, include: !t.duplicate }));
+    rows.value = preview.transactions.map((t) => ({
+      ...t,
+      include: !t.duplicate,
+      isTransfer: t.selfTransfer,
+    }));
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao analisar o extrato";
     rows.value = [];
@@ -82,6 +86,7 @@ async function handleImport() {
         type: r.type,
         categoryId: r.categoryId ?? null,
         pixBeneficiary: r.pixBeneficiary ?? null,
+        isTransfer: r.isTransfer,
       })),
     );
     resultMessage.value = `${res.imported} de ${res.total} lançamentos importados.`;
@@ -191,7 +196,7 @@ onMounted(async () => {
             v-for="(row, i) in rows"
             :key="i"
             class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50/60"
-            :class="row.duplicate ? 'bg-amber-50/50' : ''"
+            :class="row.duplicate ? 'bg-amber-50/50' : row.selfTransfer ? 'bg-sky-50/50' : ''"
           >
             <input type="checkbox" v-model="row.include" />
             <div class="min-w-0 flex-1">
@@ -205,8 +210,22 @@ onMounted(async () => {
                 >
                   possível duplicata
                 </span>
+                <span
+                  v-if="row.selfTransfer"
+                  class="ml-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700"
+                >
+                  transferência entre suas contas
+                </span>
               </p>
             </div>
+            <label
+              v-if="row.selfTransfer"
+              class="flex items-center gap-1 text-[11px] font-medium text-sky-700"
+              title="Não conta como receita/despesa nos totais e relatórios"
+            >
+              <input type="checkbox" v-model="row.isTransfer" />
+              transferência
+            </label>
             <select v-model="row.type" class="rounded-lg border border-ink-200 px-2 py-1 text-xs">
               <option value="income">Receita</option>
               <option value="expense">Despesa</option>

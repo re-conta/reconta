@@ -102,8 +102,8 @@ func main() {
 	account.NewHandler(accountRepo, authHandler).RegisterRoutes(mux)
 	category.NewHandler(categoryRepo, authHandler).RegisterRoutes(mux)
 	tag.NewHandler(tagRepo, authHandler).RegisterRoutes(mux)
-	transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, authHandler).RegisterRoutes(mux)
-	statement.NewHandler(transactionRepo, categoryRepo, authHandler).RegisterRoutes(mux)
+	transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, userRepo, authHandler).RegisterRoutes(mux)
+	statement.NewHandler(transactionRepo, categoryRepo, accountRepo, userRepo, authHandler).RegisterRoutes(mux)
 	report.NewHandler(transactionRepo, categoryRepo, accountRepo, tagRepo, authHandler).RegisterRoutes(mux)
 
 	healthRepo := health.NewRepository(conn)

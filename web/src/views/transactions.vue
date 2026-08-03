@@ -21,6 +21,7 @@ import {
   deleteTransaction,
   getOpeningBalance,
   listPeriods,
+  listSelfTransferCandidates,
   listTransactions,
   setOpeningBalance,
   updateTransaction,
@@ -28,7 +29,12 @@ import {
 import type { Account } from "../types/account";
 import type { Category, CategoryInput } from "../types/category";
 import type { Tag } from "../types/tag";
-import type { Period, Transaction, TransactionInput } from "../types/transaction";
+import type {
+  Period,
+  SelfTransferCandidate,
+  Transaction,
+  TransactionInput,
+} from "../types/transaction";
 
 const isPayingUser = ref(false);
 
@@ -109,6 +115,7 @@ const emptyForm = (): TransactionInput => ({
   accountId: null,
   notes: null,
   tagIds: [],
+  isTransfer: false,
 });
 const form = reactive<TransactionInput>(emptyForm());
 
@@ -350,6 +357,7 @@ function startEdit(tx: Transaction) {
   form.accountId = tx.accountId;
   form.notes = tx.notes;
   form.tagIds = tx.tags.map((t) => t.id);
+  form.isTransfer = tx.isTransfer;
   showForm.value = true;
 }
 
@@ -398,6 +406,17 @@ async function applyBulkCategory() {
     await bulkUpdateTransactions([...selectedIds.value], { categoryId: bulkCategoryId.value });
     selectedIds.value = new Set();
     bulkCategoryId.value = "";
+    await loadTransactions();
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao editar em lote";
+  }
+}
+
+async function applyBulkTransfer(isTransfer: boolean) {
+  if (selectedIds.value.size === 0) return;
+  try {
+    await bulkUpdateTransactions([...selectedIds.value], { isTransfer });
+    selectedIds.value = new Set();
     await loadTransactions();
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao editar em lote";
@@ -533,11 +552,41 @@ watch(showForm, (open) => {
   document.body.style.overflow = open ? "hidden" : "";
 });
 
+const transferCandidates = ref<SelfTransferCandidate[]>([]);
+const transferCandidatesDismissed = ref(false);
+const markingTransfers = ref(false);
+
+async function loadTransferCandidates() {
+  try {
+    transferCandidates.value = await listSelfTransferCandidates();
+  } catch {
+    transferCandidates.value = [];
+  }
+}
+
+async function markTransferCandidates() {
+  if (transferCandidates.value.length === 0) return;
+  markingTransfers.value = true;
+  try {
+    await bulkUpdateTransactions(
+      transferCandidates.value.map((c) => c.id),
+      { isTransfer: true },
+    );
+    transferCandidates.value = [];
+    await loadTransactions();
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao marcar transferências";
+  } finally {
+    markingTransfers.value = false;
+  }
+}
+
 onMounted(async () => {
   window.addEventListener("keydown", handleKeydown);
   await loadReferenceData();
   await loadTransactions();
   await loadSubscription();
+  await loadTransferCandidates();
 });
 
 onUnmounted(() => {
@@ -575,6 +624,32 @@ onUnmounted(() => {
       {{ autoCategorizeMessage }}
     </p>
 
+    <div
+      v-if="transferCandidates.length > 0 && !transferCandidatesDismissed"
+      class="flex flex-wrap items-center gap-3 rounded-xl bg-sky-50 px-3 py-2.5 text-sm text-sky-800"
+    >
+      <span>
+        {{ transferCandidates.length }} transação(ões) parecem ser transferências entre suas
+        próprias contas (PIX para o titular da conta) e podem estar contando em dobro nas
+        receitas/despesas.
+      </span>
+      <button
+        type="button"
+        :disabled="markingTransfers"
+        class="ml-auto rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+        @click="markTransferCandidates"
+      >
+        {{ markingTransfers ? "Marcando..." : "Marcar todas como transferência" }}
+      </button>
+      <button
+        type="button"
+        class="text-xs font-semibold text-sky-600 hover:text-sky-800"
+        @click="transferCandidatesDismissed = true"
+      >
+        Ignorar
+      </button>
+    </div>
+
     <div class="flex flex-col gap-6 md:flex-row md:items-start">
       <!-- Barra lateral: calendário + gráficos -->
       <div
@@ -592,7 +667,7 @@ onUnmounted(() => {
           @select-date="(d) => (selectedDate = d)"
         />
         <FinancialHealthCard :month="filters.month" :year="filters.year" />
-        <FinancialRecommendations v-if="isPayingUser" :month="filters.month" :year="filters.year" />
+        <FinancialRecommendations :month="filters.month" :year="filters.year" :is-paying-user="isPayingUser" />
       </div>
 
       <div class="flex min-w-0 flex-1 flex-col gap-6 md:order-1">
@@ -872,6 +947,12 @@ onUnmounted(() => {
                           class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
                         />
                       </label>
+                      <label class="flex items-center gap-2 sm:col-span-2">
+                        <input type="checkbox" v-model="form.isTransfer" />
+                        <span class="text-sm font-medium text-ink-700">
+                          Transferência entre contas próprias (não conta em receitas/despesas)
+                        </span>
+                      </label>
                     </div>
                     <div class="flex flex-col gap-1.5">
                       <span class="text-sm font-medium text-ink-700">Tags</span>
@@ -1132,6 +1213,21 @@ onUnmounted(() => {
           </button>
           <button
             type="button"
+            class="rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white"
+            title="Transferências entre suas contas não contam em receitas/despesas"
+            @click="applyBulkTransfer(true)"
+          >
+            Marcar como transferência
+          </button>
+          <button
+            type="button"
+            class="rounded-full border border-ink-700 px-3 py-1 text-xs font-semibold text-white"
+            @click="applyBulkTransfer(false)"
+          >
+            Desmarcar transferência
+          </button>
+          <button
+            type="button"
             class="ml-auto text-xs text-ink-300 hover:text-white"
             @click="selectedIds = new Set()"
           >
@@ -1246,12 +1342,26 @@ onUnmounted(() => {
                       >
                         {{ tx.bank || "importado" }}
                       </span>
+                      <span
+                        v-if="tx.isTransfer"
+                        class="ml-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-xs text-sky-700"
+                        title="Transferência entre contas próprias — não conta em receitas/despesas"
+                      >
+                        transferência
+                      </span>
                     </td>
                     <td
                       class="whitespace-nowrap px-2 py-2 text-right font-semibold"
-                      :class="tx.type === 'income' ? 'text-brand-600' : 'text-coral-600'"
+                      :class="
+                        tx.isTransfer
+                          ? 'text-sky-600'
+                          : tx.type === 'income'
+                            ? 'text-brand-600'
+                            : 'text-coral-600'
+                      "
                     >
-                      {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
+                      {{ tx.isTransfer ? "" : tx.type === "income" ? "+" : "-"
+                      }}{{ formatCurrency(tx.amount) }}
                     </td>
                     <td class="px-2 py-1">
                       <div class="flex justify-end gap-2">
@@ -1330,6 +1440,13 @@ onUnmounted(() => {
                     >
                       {{ tx.bank || "importado" }}
                     </span>
+                    <span
+                      v-if="tx.isTransfer"
+                      class="rounded-full bg-sky-100 px-1.5 py-0.5 text-[11px] text-sky-700"
+                      title="Transferência entre contas próprias — não conta em receitas/despesas"
+                    >
+                      transferência
+                    </span>
                   </div>
                   <p
                     v-if="tx.notes"
@@ -1341,9 +1458,16 @@ onUnmounted(() => {
                 </div>
                 <p
                   class="shrink-0 text-sm font-semibold"
-                  :class="tx.type === 'income' ? 'text-brand-600' : 'text-coral-600'"
+                  :class="
+                    tx.isTransfer
+                      ? 'text-sky-600'
+                      : tx.type === 'income'
+                        ? 'text-brand-600'
+                        : 'text-coral-600'
+                  "
                 >
-                  {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
+                  {{ tx.isTransfer ? "" : tx.type === "income" ? "+" : "-"
+                  }}{{ formatCurrency(tx.amount) }}
                 </p>
                 <div class="flex shrink-0 gap-2">
                   <button

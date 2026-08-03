@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Lightbulb, Scissors, Sparkles, TrendingUp } from "lucide-vue-next";
+import { Lightbulb, Lock, Scissors, Sparkles, TrendingUp } from "lucide-vue-next";
 import { onBeforeUnmount, ref, watch } from "vue";
 import { getRecommendations } from "../api/health";
 import type { Recommendation, RecommendationsResponse } from "../types/health";
@@ -7,6 +7,7 @@ import type { Recommendation, RecommendationsResponse } from "../types/health";
 const props = defineProps<{
   month: number;
   year: number;
+  isPayingUser: boolean;
 }>();
 
 const data = ref<RecommendationsResponse | null>(null);
@@ -46,8 +47,12 @@ async function load(attempt = 0) {
 }
 
 watch(
-  () => [props.month, props.year],
+  () => [props.month, props.year, props.isPayingUser],
   () => {
+    if (!props.isPayingUser) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     load();
   },
@@ -66,7 +71,34 @@ function badgeLabel(kind: Recommendation["kind"]) {
 </script>
 
 <template>
-  <div v-if="!loading && (failed || !data || data.status === 'disabled' || data.status === 'no_data')" class="hidden"></div>
+  <div v-if="!isPayingUser" class="rounded-3xl border border-black/5 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900">
+    <div class="flex items-center gap-2">
+      <Sparkles :size="18" class="text-indigo-500" />
+      <h3 class="font-display text-base font-bold text-neutral-800 dark:text-neutral-100">
+        Recomendações da IA
+      </h3>
+    </div>
+
+    <div class="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-6 text-center dark:border-indigo-500/20 dark:bg-indigo-500/5">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+        <Lock :size="18" />
+      </div>
+      <p class="text-sm font-medium text-neutral-700 dark:text-neutral-200">
+        Recomendações personalizadas de IA são exclusivas para assinantes.
+      </p>
+      <p class="text-sm text-neutral-500 dark:text-neutral-400">
+        Assine um plano para receber sugestões de investimento e cortes de gastos com base nas suas transações.
+      </p>
+      <RouterLink
+        to="/planos"
+        class="mt-1 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+      >
+        Ver planos
+      </RouterLink>
+    </div>
+  </div>
+
+  <div v-else-if="!loading && (failed || !data || data.status === 'disabled' || data.status === 'no_data')" class="hidden"></div>
 
   <div v-else class="rounded-3xl border border-black/5 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900">
     <div class="flex items-center gap-2">

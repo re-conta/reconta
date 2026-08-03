@@ -8,9 +8,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/re-conta/reconta/api/internal/account"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/category"
+	"github.com/re-conta/reconta/api/internal/textutil"
 	"github.com/re-conta/reconta/api/internal/transaction"
+	"github.com/re-conta/reconta/api/internal/user"
 )
 
 // maxUploadSize limita o tamanho do PDF de extrato aceito no upload.
@@ -19,11 +22,13 @@ const maxUploadSize = 20 << 20 // 20MB
 type Handler struct {
 	transactions *transaction.Repository
 	categories   *category.Repository
+	accounts     *account.Repository
+	users        *user.Repository
 	auth         *auth.Handler
 }
 
-func NewHandler(transactions *transaction.Repository, categories *category.Repository, authHandler *auth.Handler) *Handler {
-	return &Handler{transactions: transactions, categories: categories, auth: authHandler}
+func NewHandler(transactions *transaction.Repository, categories *category.Repository, accounts *account.Repository, users *user.Repository, authHandler *auth.Handler) *Handler {
+	return &Handler{transactions: transactions, categories: categories, accounts: accounts, users: users, auth: authHandler}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -85,12 +90,23 @@ func (h *Handler) preview(w http.ResponseWriter, r *http.Request, userID int64) 
 	}
 	rules := compileCategoryRules(cats)
 
+	holderName := ""
+	if u, err := h.users.GetByID(r.Context(), userID); err != nil {
+		log.Printf("erro ao carregar titular da conta: %v", err)
+	} else {
+		holderName = u.Name
+	}
+
 	for i := range parsed {
 		dup, err := h.transactions.FindDuplicate(r.Context(), userID, parsed[i].Date, parsed[i].Amount, parsed[i].Description)
 		if err != nil {
 			log.Printf("erro ao verificar duplicidade: %v", err)
 		}
 		parsed[i].Duplicate = dup
+
+		if holderName != "" && parsed[i].PixBeneficiary != nil {
+			parsed[i].SelfTransfer = textutil.SameHolder(*parsed[i].PixBeneficiary, holderName)
+		}
 
 		haystack := parsed[i].Description
 		if parsed[i].PixBeneficiary != nil {
@@ -116,6 +132,7 @@ type importRow struct {
 	Type           string  `json:"type"`
 	CategoryID     *int64  `json:"categoryId"`
 	PixBeneficiary *string `json:"pixBeneficiary"`
+	IsTransfer     bool    `json:"isTransfer"`
 }
 
 func (h *Handler) confirm(w http.ResponseWriter, r *http.Request, userID int64) {
@@ -134,6 +151,17 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request, userID int64) 
 	}
 
 	bankLabel := BankByKey(req.Bank).Label
+
+	accountID := req.AccountID
+	if accountID == nil {
+		acc, err := h.accounts.FindOrCreateByName(r.Context(), userID, bankLabel, "checking")
+		if err != nil {
+			log.Printf("erro ao criar conta para o banco %q: %v", bankLabel, err)
+		} else {
+			accountID = &acc.ID
+		}
+	}
+
 	imported := 0
 	for _, row := range req.Transactions {
 		if row.Date == "" || row.Description == "" || row.Amount == 0 || (row.Type != "income" && row.Type != "expense") {
@@ -145,10 +173,11 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request, userID int64) 
 			Amount:         absFloat(row.Amount),
 			Type:           row.Type,
 			CategoryID:     row.CategoryID,
-			AccountID:      req.AccountID,
+			AccountID:      accountID,
 			ImportedFrom:   new("pdf"),
 			Bank:           new(bankLabel),
 			PixBeneficiary: row.PixBeneficiary,
+			IsTransfer:     row.IsTransfer,
 		})
 		if err != nil {
 			log.Printf("erro ao importar transação: %v", err)

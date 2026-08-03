@@ -39,7 +39,7 @@ func analyzeSignals(txs []transaction.Transaction) Signals {
 	categoryTotals := map[string]float64{}
 
 	for _, t := range txs {
-		if t.Type != "expense" {
+		if t.Type != "expense" || t.IsTransfer {
 			continue
 		}
 		if t.CategoryName != nil && *t.CategoryName != "" {
