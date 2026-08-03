@@ -1,12 +1,73 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ApiError, createUser } from "../api/users";
 import PasswordInput from "../components/PasswordInput.vue";
 import { formatCnpj, isValidCnpj, normalizeCnpj } from "../utils/cnpj";
 import type { UserRole } from "../types/user";
 
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        options: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "error-callback"?: () => void;
+          "expired-callback"?: () => void;
+        },
+      ) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
+
 const router = useRouter();
+
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+const turnstileContainer = ref<HTMLElement | null>(null);
+const turnstileToken = ref("");
+let turnstileWidgetId: string | undefined;
+let turnstilePollTimer: ReturnType<typeof setInterval> | undefined;
+
+function renderTurnstile() {
+  if (!turnstileSiteKey || !turnstileContainer.value || !window.turnstile) return;
+  turnstileWidgetId = window.turnstile.render(turnstileContainer.value, {
+    sitekey: turnstileSiteKey,
+    callback: (token) => {
+      turnstileToken.value = token;
+    },
+    "error-callback": () => {
+      turnstileToken.value = "";
+    },
+    "expired-callback": () => {
+      turnstileToken.value = "";
+    },
+  });
+}
+
+onMounted(() => {
+  if (!turnstileSiteKey) return;
+  if (window.turnstile) {
+    renderTurnstile();
+    return;
+  }
+  turnstilePollTimer = setInterval(() => {
+    if (window.turnstile) {
+      clearInterval(turnstilePollTimer);
+      renderTurnstile();
+    }
+  }, 100);
+});
+
+onBeforeUnmount(() => {
+  if (turnstilePollTimer) clearInterval(turnstilePollTimer);
+  if (turnstileWidgetId && window.turnstile) {
+    window.turnstile.remove(turnstileWidgetId);
+  }
+});
 
 const accountTypes: { value: UserRole; label: string; description: string }[] = [
   { value: "pessoa_fisica", label: "Pessoa Física", description: "Para uso pessoal" },
@@ -45,6 +106,11 @@ async function handleSubmit() {
     return;
   }
 
+  if (turnstileSiteKey && !turnstileToken.value) {
+    errorMessage.value = "Confirme que você não é um robô.";
+    return;
+  }
+
   submitting.value = true;
   try {
     await createUser({
@@ -53,10 +119,15 @@ async function handleSubmit() {
       password: form.password.trim(),
       role: form.role,
       cnpj: isPessoaJuridica.value ? normalizeCnpj(form.cnpj) : undefined,
+      turnstileToken: turnstileToken.value,
     });
     router.push("/login");
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao cadastrar usuário";
+    if (turnstileWidgetId && window.turnstile) {
+      window.turnstile.reset(turnstileWidgetId);
+      turnstileToken.value = "";
+    }
   } finally {
     submitting.value = false;
   }
@@ -144,6 +215,8 @@ async function handleSubmit() {
               autocomplete="new-password"
             />
           </label>
+          <div v-if="turnstileSiteKey" ref="turnstileContainer" class="flex justify-center"></div>
+
           <button
             type="submit"
             :disabled="submitting"

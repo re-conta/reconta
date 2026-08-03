@@ -41,6 +41,7 @@ export interface CreateUserInput {
   password: string;
   role: UserRole;
   cnpj?: string;
+  turnstileToken: string;
 }
 
 export interface UpdateProfileInput {

@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/re-conta/reconta/api/internal/turnstile"
 )
 
 // currentUserFunc resolve o usuário autenticado a partir da requisição. É
@@ -23,6 +26,7 @@ type Handler struct {
 	currentUser currentUserFunc
 	afterCreate func(ctx context.Context, userID int64)
 	onBan       func(ctx context.Context, userID int64)
+	turnstile   *turnstile.Verifier
 }
 
 func NewHandler(repo *Repository) *Handler {
@@ -96,6 +100,30 @@ func (h *Handler) SetOnBan(fn func(ctx context.Context, userID int64)) {
 	h.onBan = fn
 }
 
+// SetTurnstile registra o verificador do Cloudflare Turnstile usado para
+// proteger o cadastro público contra bots. Deve ser chamado antes de
+// RegisterRoutes.
+func (h *Handler) SetTurnstile(v *turnstile.Verifier) {
+	h.turnstile = v
+}
+
+// clientIP resolve o IP real do visitante: primeiro o cabeçalho que o
+// Cloudflare injeta na borda (CF-Connecting-IP), depois X-Real-IP (setado
+// pelo Nginx), e por fim o endereço da conexão TCP.
+func clientIP(r *http.Request) string {
+	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
+		return ip
+	}
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 // canManageTarget impede que um admin comum (não Super Admin) altere,
 // bane ou exclua outro admin ou o próprio Super Admin — reservado ao Super
 // Admin, mesmo que o ator tenha a permissão de gerenciar usuários.
@@ -107,11 +135,12 @@ func canManageTarget(actor, target *User) bool {
 }
 
 type createUserRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Role     string `json:"role"`
-	CNPJ     string `json:"cnpj"`
+	Name           string `json:"name"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	Role           string `json:"role"`
+	CNPJ           string `json:"cnpj"`
+	TurnstileToken string `json:"turnstileToken"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -119,6 +148,19 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
 		return
+	}
+
+	if h.turnstile != nil && h.turnstile.Enabled() {
+		ok, err := h.turnstile.Verify(r.Context(), req.TurnstileToken, clientIP(r))
+		if err != nil {
+			log.Printf("erro ao verificar turnstile: %v", err)
+			writeError(w, http.StatusServiceUnavailable, "não foi possível verificar o captcha, tente novamente")
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusUnprocessableEntity, "falha na verificação anti-robô, tente novamente")
+			return
+		}
 	}
 
 	req.Name = strings.TrimSpace(req.Name)

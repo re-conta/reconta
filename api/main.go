@@ -25,6 +25,7 @@ import (
 	"github.com/re-conta/reconta/api/internal/statement"
 	"github.com/re-conta/reconta/api/internal/tag"
 	"github.com/re-conta/reconta/api/internal/transaction"
+	"github.com/re-conta/reconta/api/internal/turnstile"
 	"github.com/re-conta/reconta/api/internal/user"
 )
 
@@ -71,9 +72,15 @@ func main() {
 	authHandler.SetMail(mailQueue, appURL)
 	authHandler.RegisterRoutes(mux)
 
+	turnstileSecret := getEnv("TURNSTILE_SECRET_KEY", "")
+	if turnstileSecret == "" {
+		log.Print("TURNSTILE_SECRET_KEY não definido: verificação anti-robô no cadastro desabilitada")
+	}
+
 	userHandler := user.NewHandler(userRepo)
 	userHandler.SetAfterCreate(seedDefaults)
 	userHandler.SetAuth(authHandler.CurrentUser)
+	userHandler.SetTurnstile(turnstile.NewVerifier(turnstileSecret))
 	userHandler.SetOnBan(func(ctx context.Context, userID int64) {
 		if err := sessionsRepo.DeleteByUserID(ctx, userID); err != nil {
 			log.Printf("erro ao encerrar sessões do usuário banido %d: %v", userID, err)
