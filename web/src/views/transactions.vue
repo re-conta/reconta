@@ -492,7 +492,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
+  <div class="mx-auto flex w-full flex-col gap-6 px-2 py-2 md:px-6 md:py-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="font-display text-2xl font-bold text-ink-900">Transações</h1>
@@ -543,7 +543,7 @@ onUnmounted(() => {
       <div class="flex min-w-0 flex-1 flex-col gap-6 md:order-1">
         <!-- Filtros -->
         <div
-          class="flex flex-wrap items-end gap-3 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm"
+          class="flex flex-wrap items-end gap-3 rounded-xl border border-ink-200/70 bg-white p-4 shadow-sm"
         >
           <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
             Mês
@@ -616,7 +616,7 @@ onUnmounted(() => {
 
         <!-- Saldo de abertura -->
         <div
-          class="flex items-center justify-between rounded-3xl border border-ink-200/70 bg-white px-5 py-3 shadow-sm"
+          class="flex items-center justify-between rounded-xl border border-ink-200/70 bg-white px-5 py-3 shadow-sm"
         >
           <p class="text-sm text-ink-600">
             Saldo de abertura ({{ filters.month }}/{{ filters.year }}):
@@ -1085,8 +1085,8 @@ onUnmounted(() => {
         </div>
 
         <!-- Lista -->
-        <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
-          <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
+        <div class="overflow-hidden rounded-xl border border-ink-200/70 bg-white shadow-sm">
+          <div v-if="loading" class="flex flex-col items-center gap-2 p-6 text-sm text-ink-400">
             <span
               class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
             ></span>
@@ -1131,16 +1131,16 @@ onUnmounted(() => {
                     :key="tx.id"
                     class="transition hover:bg-ink-50/60"
                   >
-                    <td class="px-3 py-2">
+                    <td class="px-2 py-1">
                       <input
                         type="checkbox"
                         :checked="selectedIds.has(tx.id)"
                         @change="toggleSelected(tx.id)"
                       />
                     </td>
-                    <td class="whitespace-nowrap px-2 py-2 text-ink-500">{{ tx.date }}</td>
-                    <td class="min-w-0 max-w-xs px-2 py-2">
-                      <p class="truncate font-semibold text-ink-900" :title="tx.description">
+                    <td class="whitespace-nowrap px-2 py-1 text-ink-500">{{ tx.date }}</td>
+                    <td class="min-w-0 max-w-xs px-2 py-1">
+                      <p class="text-xs md:text-[12px] truncate font-semibold text-ink-900" :title="tx.description">
                         {{ tx.description }}
                       </p>
                       <p
@@ -1151,7 +1151,7 @@ onUnmounted(() => {
                         {{ tx.notes }}
                       </p>
                     </td>
-                    <td class="px-2 py-2">
+                    <td class="px-2 py-1">
                       <div class="flex flex-wrap items-center gap-1">
                         <span
                           v-if="tx.categoryName"
@@ -1186,7 +1186,7 @@ onUnmounted(() => {
                         </span>
                       </div>
                     </td>
-                    <td class="whitespace-nowrap px-2 py-2 text-ink-500">
+                    <td class="whitespace-nowrap px-2 py-1 text-ink-500">
                       {{ accountName(tx.accountId) ?? "-" }}
                     </td>
                     <td
@@ -1195,7 +1195,7 @@ onUnmounted(() => {
                     >
                       {{ tx.type === "income" ? "+" : "-" }}{{ formatCurrency(tx.amount) }}
                     </td>
-                    <td class="px-2 py-2">
+                    <td class="px-2 py-1">
                       <div class="flex justify-end gap-2">
                         <button
                           type="button"

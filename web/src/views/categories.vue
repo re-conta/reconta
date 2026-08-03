@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { X } from "lucide-vue-next";
 import {
   ApiError,
   createCategory,
@@ -62,6 +63,10 @@ const emptySubtitle = computed(() =>
     ? "Crie a primeira categoria para começar."
     : "Crie a primeira tag para começar.",
 );
+const formTitle = computed(() => {
+  const noun = activeTab.value === "categories" ? "categoria" : "tag";
+  return editingId.value ? `Editar ${noun}` : `Nova ${noun}`;
+});
 
 async function loadAll() {
   loading.value = true;
@@ -170,7 +175,25 @@ async function handleDeleteTag(id: number) {
   }
 }
 
-onMounted(loadAll);
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === "Escape" && showForm.value) {
+    resetForm();
+  }
+}
+
+watch(showForm, (open) => {
+  document.body.style.overflow = open ? "hidden" : "";
+});
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeydown);
+  loadAll();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeydown);
+  document.body.style.overflow = "";
+});
 </script>
 
 <template>
@@ -206,91 +229,133 @@ onMounted(loadAll);
       </button>
     </div>
 
-    <form
-      v-if="showForm"
-      class="flex flex-col gap-4 rounded-3xl border border-ink-200/70 bg-white p-6 shadow-sm"
-      @submit.prevent="handleSubmit"
-    >
-      <div class="grid gap-4 sm:grid-cols-2">
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-ink-700">Nome</span>
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
-          />
-        </label>
-        <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-ink-700">Tipo</span>
-          <select
-            v-model="form.type"
-            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
-          >
-            <option v-for="t in categoryTypes" :key="t.value" :value="t.value">
-              {{ t.label }}
-            </option>
-          </select>
-        </label>
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-ink-700">Cor</span>
-          <input
-            v-model="form.color"
-            type="color"
-            class="h-10.5 w-16 cursor-pointer rounded-xl border border-ink-200"
-          />
-        </label>
-        <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-ink-700">Ícone (nome lucide)</span>
-          <input
-            v-model="form.icon"
-            type="text"
-            placeholder="circle"
-            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
-          />
-        </label>
-      </div>
-      <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
-        <span class="flex items-center justify-between text-sm font-medium text-ink-700">
-          Padrões de auto-categorização (opcional)
-          <button
-            type="button"
-            class="text-xs font-semibold text-brand-700 hover:text-brand-800"
-            @click="showPatternsHelp = !showPatternsHelp"
-          >
-            {{ showPatternsHelp ? "ocultar ajuda" : "como funciona?" }}
-          </button>
-        </span>
-        <textarea
-          v-model="form.patterns"
-          rows="4"
-          placeholder="uma expressão regular por linha, ex.: ifood&#10;uber"
-          class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 font-mono text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
-        ></textarea>
-        <p v-if="showPatternsHelp" class="rounded-xl bg-ink-50 px-3 py-2 text-xs text-ink-500">
-          Uma expressão regular por linha (sem diferenciar maiúsculas/minúsculas). Ao rodar
-          "Auto-categorizar" na tela de Transações, cada lançamento sem categoria é comparado à
-          descrição + beneficiário PIX. Ex.: <code>ifood</code> casa "iFood *Restaurante";
-          <code>^uber</code> casa apenas descrições que começam com "uber".
-        </p>
-      </label>
-      <div class="flex gap-3">
-        <button
-          type="submit"
-          :disabled="submitting"
-          class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showForm"
+          class="fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          @click.self="resetForm"
         >
-          {{ submitting ? "Salvando..." : "Salvar" }}
-        </button>
-        <button
-          type="button"
-          class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
-          @click="resetForm"
-        >
-          Cancelar
-        </button>
-      </div>
-    </form>
+          <Transition
+            appear
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="translate-y-2 scale-95 opacity-0"
+            enter-to-class="translate-y-0 scale-100 opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="translate-y-0 scale-100 opacity-100"
+            leave-to-class="translate-y-2 scale-95 opacity-0"
+          >
+            <form
+              v-if="showForm"
+              class="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+              @submit.prevent="handleSubmit"
+            >
+              <div class="flex shrink-0 items-center justify-between border-b border-ink-100 px-6 py-4">
+                <h2 class="font-display text-lg font-bold text-ink-900">{{ formTitle }}</h2>
+                <button
+                  type="button"
+                  class="rounded-full p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                  title="Fechar"
+                  @click="resetForm"
+                >
+                  <X class="h-5 w-5" />
+                </button>
+              </div>
+
+              <div class="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-700">Nome</span>
+                    <input
+                      v-model="form.name"
+                      type="text"
+                      required
+                      class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                    />
+                  </label>
+                  <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-700">Tipo</span>
+                    <select
+                      v-model="form.type"
+                      class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                    >
+                      <option v-for="t in categoryTypes" :key="t.value" :value="t.value">
+                        {{ t.label }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-700">Cor</span>
+                    <input
+                      v-model="form.color"
+                      type="color"
+                      class="h-10.5 w-16 cursor-pointer rounded-xl border border-ink-200"
+                    />
+                  </label>
+                  <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-700">Ícone (nome lucide)</span>
+                    <input
+                      v-model="form.icon"
+                      type="text"
+                      placeholder="circle"
+                      class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                    />
+                  </label>
+                </div>
+                <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
+                  <span class="flex items-center justify-between text-sm font-medium text-ink-700">
+                    Padrões de auto-categorização (opcional)
+                    <button
+                      type="button"
+                      class="text-xs font-semibold text-brand-700 hover:text-brand-800"
+                      @click="showPatternsHelp = !showPatternsHelp"
+                    >
+                      {{ showPatternsHelp ? "ocultar ajuda" : "como funciona?" }}
+                    </button>
+                  </span>
+                  <textarea
+                    v-model="form.patterns"
+                    rows="4"
+                    placeholder="uma expressão regular por linha, ex.: ifood&#10;uber"
+                    class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 font-mono text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                  ></textarea>
+                  <p v-if="showPatternsHelp" class="rounded-xl bg-ink-50 px-3 py-2 text-xs text-ink-500">
+                    Uma expressão regular por linha (sem diferenciar maiúsculas/minúsculas). Ao rodar
+                    "Auto-categorizar" na tela de Transações, cada lançamento sem categoria é
+                    comparado à descrição + beneficiário PIX. Ex.: <code>ifood</code> casa "iFood
+                    *Restaurante"; <code>^uber</code> casa apenas descrições que começam com "uber".
+                  </p>
+                </label>
+              </div>
+
+              <div class="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
+                <button
+                  type="button"
+                  class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
+                  @click="resetForm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="submitting"
+                  class="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 disabled:opacity-50"
+                >
+                  {{ submitting ? "Salvando..." : "Salvar" }}
+                </button>
+              </div>
+            </form>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
 
     <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
       <div v-if="loading" class="flex flex-col items-center gap-2 p-12 text-sm text-ink-400">
