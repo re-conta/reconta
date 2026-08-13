@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, shallowRef, watch } from "vue";
 import { Calculator, CircleHelp } from "lucide-vue-next";
 import PoupadorCharts from "../components/poupador/PoupadorCharts.vue";
 import PoupadorEntryForm from "../components/poupador/PoupadorEntryForm.vue";
+import PoupadorFuelCalculator from "../components/poupador/PoupadorFuelCalculator.vue";
 import PoupadorEntryList from "../components/poupador/PoupadorEntryList.vue";
 import PoupadorSummary from "../components/poupador/PoupadorSummary.vue";
 import PoupadorShareControl from "../components/poupador/PoupadorShareControl.vue";
@@ -36,6 +37,7 @@ const {
   months,
   incomes,
   expenses,
+  fuel,
   incomeMonthlyTotal,
   expenseMonthlyTotal,
   monthlyBalance,
@@ -137,6 +139,7 @@ async function copyShareURL() {
         :balance="monthlyBalance"
         :yearly-balance="yearlyBalance"
       />
+      <PoupadorFuelCalculator v-model:fuel="fuel" />
       <section class="mt-7 grid gap-5 lg:grid-cols-2">
         <div class="min-w-0">
           <PoupadorEntryForm

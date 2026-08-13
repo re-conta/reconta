@@ -23,7 +23,12 @@ func (r *Repository) Create(ctx context.Context, snapshot Snapshot) (*Snapshot, 
 	data, err := json.Marshal(struct {
 		Incomes  []Entry `json:"incomes"`
 		Expenses []Entry `json:"expenses"`
-	}{snapshot.Incomes, snapshot.Expenses})
+		Fuel     *Fuel   `json:"fuel,omitempty"`
+	}{
+		Incomes:  snapshot.Incomes,
+		Expenses: snapshot.Expenses,
+		Fuel:     snapshot.Fuel,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("codificando resultado do poupador: %w", err)
 	}

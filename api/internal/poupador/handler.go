@@ -89,6 +89,36 @@ func validateSnapshot(snapshot Snapshot) error {
 			return errors.New("a frequência de cada entrada é inválida")
 		}
 	}
+	if err := validateFuel(snapshot.Fuel); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateFuel(fuel *Fuel) error {
+	if fuel == nil {
+		return nil
+	}
+
+	values := []float64{fuel.FuelPrice, fuel.Distance, fuel.Consumption}
+	for _, value := range values {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 {
+			return errors.New("os valores de combustível devem ser maiores ou iguais a zero")
+		}
+	}
+
+	switch fuel.FuelType {
+	case "gasoline", "diesel":
+	default:
+		return errors.New("o tipo de combustível é inválido")
+	}
+
+	switch fuel.DistancePeriod {
+	case "daily", "monthly":
+	default:
+		return errors.New("o período da distância é inválido")
+	}
+
 	return nil
 }
 

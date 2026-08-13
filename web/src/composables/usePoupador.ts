@@ -3,6 +3,7 @@ import { createPoupadorSnapshot, getPoupadorSnapshot } from "../api/poupador";
 import type {
   PoupadorEntry,
   PoupadorEntryDraft,
+  PoupadorFuelInput,
   PoupadorFrequency,
   PoupadorKind,
 } from "../types/poupador";
@@ -13,23 +14,47 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 interface PoupadorStorage {
   incomes: PoupadorEntry[];
   expenses: PoupadorEntry[];
+  fuel: PoupadorFuelInput;
 }
 
 const SAVE_DEBOUNCE_MS = 700;
 const SAVE_THROTTLE_MS = 2_000;
+const DEFAULT_FUEL: PoupadorFuelInput = {
+  fuelType: "gasoline",
+  fuelPrice: 0,
+  distance: 0,
+  distancePeriod: "daily",
+  consumption: 0,
+};
 
 function loadEntries(): PoupadorStorage {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return { incomes: [], expenses: [] };
+    if (!saved) return { incomes: [], expenses: [], fuel: { ...DEFAULT_FUEL } };
     const parsed = JSON.parse(saved) as PoupadorStorage;
     return {
       incomes: Array.isArray(parsed.incomes) ? parsed.incomes : [],
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+      fuel: normalizeFuel(parsed.fuel),
     };
   } catch {
-    return { incomes: [], expenses: [] };
+    return { incomes: [], expenses: [], fuel: { ...DEFAULT_FUEL } };
   }
+}
+
+function normalizeFuel(value: Partial<PoupadorFuelInput> | undefined): PoupadorFuelInput {
+  return {
+    fuelType: value?.fuelType === "diesel" ? "diesel" : "gasoline",
+    fuelPrice: numericValue(value?.fuelPrice),
+    distance: numericValue(value?.distance),
+    distancePeriod: value?.distancePeriod === "monthly" ? "monthly" : "daily",
+    consumption: numericValue(value?.consumption),
+  };
+}
+
+function numericValue(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : 0;
 }
 
 function monthlyAmount(entry: PoupadorEntry) {
@@ -54,6 +79,7 @@ export function usePoupador(snapshotID?: string) {
   const saved = loadEntries();
   const incomes = shallowRef<PoupadorEntry[]>(saved.incomes);
   const expenses = shallowRef<PoupadorEntry[]>(saved.expenses);
+  const fuel = shallowRef<PoupadorFuelInput>(saved.fuel);
   const loadedSnapshotID = shallowRef<string | null>(snapshotID ?? null);
   const shareURL = shallowRef<string | null>(snapshotID ? buildShareURL(snapshotID) : null);
   const saveStatus = shallowRef<"idle" | "saving" | "saved" | "error">("idle");
@@ -67,10 +93,10 @@ export function usePoupador(snapshotID?: string) {
   let saving = false;
   let loadingSnapshot = false;
 
-  watch([incomes, expenses], ([nextIncomes, nextExpenses]) => {
+  watch([incomes, expenses, fuel], ([nextIncomes, nextExpenses, nextFuel]) => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ incomes: nextIncomes, expenses: nextExpenses }),
+      JSON.stringify({ incomes: nextIncomes, expenses: nextExpenses, fuel: nextFuel }),
     );
     if (loadingSnapshot) return;
     changeVersion += 1;
@@ -136,6 +162,7 @@ export function usePoupador(snapshotID?: string) {
       const snapshot = await getPoupadorSnapshot(id);
       incomes.value = snapshot.incomes;
       expenses.value = snapshot.expenses;
+      fuel.value = normalizeFuel(snapshot.fuel);
       await nextTick();
       loadedSnapshotID.value = snapshot.id;
       shareURL.value = buildShareURL(snapshot.id);
@@ -170,6 +197,7 @@ export function usePoupador(snapshotID?: string) {
       const snapshot = await createPoupadorSnapshot({
         incomes: incomes.value,
         expenses: expenses.value,
+        fuel: fuel.value,
       });
       loadedSnapshotID.value = snapshot.id;
       shareURL.value = buildShareURL(snapshot.id);
@@ -194,6 +222,7 @@ export function usePoupador(snapshotID?: string) {
     months: MONTHS,
     incomes,
     expenses,
+    fuel,
     incomeMonthlyTotal,
     expenseMonthlyTotal,
     yearlyIncome,

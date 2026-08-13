@@ -18,11 +18,21 @@ type Entry struct {
 	Month     int     `json:"month"`
 }
 
+// Fuel contém os parâmetros da calculadora de consumo de combustível.
+type Fuel struct {
+	FuelType       string  `json:"fuelType"`
+	FuelPrice      float64 `json:"fuelPrice"`
+	Distance       float64 `json:"distance"`
+	DistancePeriod string  `json:"distancePeriod"`
+	Consumption    float64 `json:"consumption"`
+}
+
 // Snapshot contém todos os parâmetros necessários para reconstruir um
 // resultado do Poupador em outro dispositivo.
 type Snapshot struct {
 	ID        string    `json:"id"`
 	Incomes   []Entry   `json:"incomes"`
 	Expenses  []Entry   `json:"expenses"`
+	Fuel      *Fuel     `json:"fuel,omitempty"`
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 }

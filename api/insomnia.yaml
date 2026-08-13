@@ -1475,7 +1475,14 @@ collection:
               ],
               "expenses": [
                 { "id": "expense-1", "name": "Aluguel", "amount": 1500, "frequency": "monthly", "month": 1 }
-              ]
+              ],
+              "fuel": {
+                "fuelType": "gasoline",
+                "fuelPrice": 6.2,
+                "distance": 30,
+                "distancePeriod": "daily",
+                "consumption": 12
+              }
             }
         headers:
           - name: Content-Type
@@ -1495,7 +1502,7 @@ collection:
           created: 1783525601202
           modified: 1783525601202
           isPrivate: false
-          description: Preenche o Poupador com as receitas e gastos salvos na UUID.
+          description: Preenche o Poupador com as receitas, gastos e cálculo de combustível salvos na UUID.
           sortKey: 0
         method: GET
         settings:

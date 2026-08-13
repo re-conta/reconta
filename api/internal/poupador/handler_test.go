@@ -25,7 +25,7 @@ func newTestHandler(t *testing.T) http.Handler {
 
 func TestSnapshotCanBeCreatedAndRetrieved(t *testing.T) {
 	handler := newTestHandler(t)
-	body := []byte(`{"incomes":[{"id":"income-1","name":"Salário","amount":5000,"frequency":"monthly","month":1}],"expenses":[{"id":"expense-1","name":"Aluguel","amount":1500,"frequency":"monthly","month":1}]}`)
+	body := []byte(`{"incomes":[{"id":"income-1","name":"Salário","amount":5000,"frequency":"monthly","month":1}],"expenses":[{"id":"expense-1","name":"Aluguel","amount":1500,"frequency":"monthly","month":1}],"fuel":{"fuelType":"gasoline","fuelPrice":6.2,"distance":30,"distancePeriod":"daily","consumption":12}}`)
 	create := httptest.NewRequest(http.MethodPost, "/api/poupador/snapshots", bytes.NewReader(body))
 	create.Header.Set("Content-Type", "application/json")
 	created := httptest.NewRecorder()
@@ -38,7 +38,7 @@ func TestSnapshotCanBeCreatedAndRetrieved(t *testing.T) {
 	if err := json.NewDecoder(created.Body).Decode(&saved); err != nil {
 		t.Fatalf("decodificando criação: %v", err)
 	}
-	if saved.ID == "" || len(saved.Incomes) != 1 || len(saved.Expenses) != 1 {
+	if saved.ID == "" || len(saved.Incomes) != 1 || len(saved.Expenses) != 1 || saved.Fuel == nil {
 		t.Fatalf("snapshot salvo inesperado: %#v", saved)
 	}
 
@@ -51,7 +51,7 @@ func TestSnapshotCanBeCreatedAndRetrieved(t *testing.T) {
 	if err := json.NewDecoder(get.Body).Decode(&loaded); err != nil {
 		t.Fatalf("decodificando leitura: %v", err)
 	}
-	if loaded.Incomes[0].Name != "Salário" || loaded.Expenses[0].Amount != 1500 {
+	if loaded.Incomes[0].Name != "Salário" || loaded.Expenses[0].Amount != 1500 || loaded.Fuel.Consumption != 12 {
 		t.Fatalf("snapshot recuperado diferente: %#v", loaded)
 	}
 }
