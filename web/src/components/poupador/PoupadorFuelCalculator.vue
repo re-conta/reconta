@@ -118,22 +118,28 @@ function updateDistancePeriod(event: Event) {
 
     <div v-if="hasValidInput" class="mt-5 grid gap-3 sm:grid-cols-3">
       <article class="rounded-2xl bg-white p-4">
-        <Route class="mb-3 h-4 w-4 text-brand-700" />
-        <p class="text-xs font-bold text-ink-600">Distância mensal</p>
+        <div class="mb-3 flex items-center gap-2 text-xs text-ink-600">
+          <Route class="h-4 w-4 text-brand-700" />
+          <div class="text-xs font-bold text-ink-600">Distância mensal</div>
+        </div>
         <p class="mt-1 font-display text-xl font-bold text-ink-900">
           {{ decimal.format(monthlyDistance) }} km
         </p>
       </article>
       <article class="rounded-2xl bg-white p-4">
-        <Fuel class="mb-3 h-4 w-4 text-brand-700" />
-        <p class="text-xs font-bold text-ink-600">Consumo mensal</p>
+        <div class="mb-3 flex items-center gap-2 text-xs text-ink-600">
+          <Fuel class="h-4 w-4 text-brand-700" />
+          <div class="text-xs font-bold text-ink-600">Consumo mensal</div>
+        </div>
         <p class="mt-1 font-display text-xl font-bold text-ink-900">
           {{ decimal.format(litersPerMonth) }} L
         </p>
       </article>
       <article class="rounded-2xl bg-ink-900 p-4 text-white">
-        <Gauge class="mb-3 h-4 w-4 text-brand-300" />
-        <p class="text-xs font-bold text-ink-300">Custo mensal estimado</p>
+        <div class="mb-3 flex items-center gap-2 text-xs text-ink-600">
+          <Gauge class="h-4 w-4 text-brand-300" />
+          <div class="text-xs font-bold text-ink-300">Custo mensal estimado</div>
+        </div>
         <p class="mt-1 font-display text-xl font-bold">{{ currency.format(monthlyCost) }}</p>
         <p class="mt-1 text-xs text-ink-300">{{ currency.format(costPerKilometer) }} por km</p>
       </article>
