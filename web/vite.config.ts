@@ -27,6 +27,7 @@ export default defineConfig({
       "localhost",
       "local.reconta.app",
       "reconta.local",
+      "poupa.reconta.app",
     ],
     proxy: {
       "/api": {

@@ -11,6 +11,7 @@ import HomeView from "./views/home.vue";
 import ImportView from "./views/import.vue";
 import LoginView from "./views/login.vue";
 import PlansView from "./views/planos.vue";
+import PoupadorView from "./views/poupador.vue";
 import NotificationsView from "./views/notificacoes.vue";
 import RegisterView from "./views/register.vue";
 import ReportsView from "./views/reports.vue";
@@ -23,8 +24,11 @@ import { useAuth } from "./composables/useAuth";
 import { canAccessAdmin } from "./types/user";
 import { trackPageView } from "./api/analytics";
 
+const isPoupadorHost = window.location.hostname === "poupa.reconta.app";
+
 const routes = [
-  { path: "/", name: "Home", component: HomeView },
+  { path: "/", name: "Home", component: isPoupadorHost ? PoupadorView : HomeView },
+  { path: "/poupa", name: "Poupador", component: PoupadorView },
   { path: "/login", name: "Login", component: LoginView },
   { path: "/register", name: "Register", component: RegisterView },
   { path: "/confirmar-cadastro", name: "ConfirmSignup", component: ConfirmSignupView },
