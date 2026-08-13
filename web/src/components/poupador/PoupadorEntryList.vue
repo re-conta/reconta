@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { Pencil, Trash2 } from "lucide-vue-next";
 import type { PoupadorEntry, PoupadorKind } from "../../types/poupador";
 
-defineProps<{ entries: PoupadorEntry[]; kind: PoupadorKind }>();
+const props = defineProps<{ entries: PoupadorEntry[]; kind: PoupadorKind }>();
 defineEmits<{ edit: [entry: PoupadorEntry]; remove: [id: string] }>();
 
 const frequencyLabels = {
@@ -13,6 +14,7 @@ const frequencyLabels = {
   "one-time": "Único",
 };
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const sortedEntries = computed(() => [...props.entries].sort((a, b) => b.amount - a.amount));
 </script>
 
 <template>
@@ -26,7 +28,11 @@ const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "
       }}</span>
     </div>
     <ul v-if="entries.length" class="divide-y divide-ink-100">
-      <li v-for="entry in entries" :key="entry.id" class="flex items-center gap-3 px-5 py-3.5">
+      <li
+        v-for="entry in sortedEntries"
+        :key="entry.id"
+        class="flex items-center gap-3 px-5 py-3.5"
+      >
         <span
           :class="kind === 'income' ? 'bg-brand-100 text-brand-700' : 'bg-coral-100 text-coral-700'"
           class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
