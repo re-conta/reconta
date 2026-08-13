@@ -50,7 +50,7 @@ watch(
         </div>
       </div>
       <div
-        class="flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-8"
+        class="flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4"
         :class="currentUser ? 'flex' : 'hidden sm:flex'"
       >
         <Navbar />
