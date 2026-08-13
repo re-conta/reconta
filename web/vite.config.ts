@@ -19,6 +19,14 @@ const localHttps =
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "index.html"),
+        poupa: resolve(__dirname, "poupa.html"),
+      },
+    },
+  },
   server: {
     https: localHttps,
     allowedHosts: [

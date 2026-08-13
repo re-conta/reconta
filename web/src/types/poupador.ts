@@ -15,3 +15,10 @@ export interface PoupadorEntryDraft {
   frequency: PoupadorFrequency;
   month: number;
 }
+
+export interface PoupadorSnapshot {
+  id: string;
+  incomes: PoupadorEntry[];
+  expenses: PoupadorEntry[];
+  createdAt?: string;
+}

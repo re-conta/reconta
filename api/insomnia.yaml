@@ -1448,6 +1448,64 @@ collection:
             send: true
             store: true
           rebuildPath: true
+  - name: Poupador
+    meta:
+      id: fld_7b11a1a570aa47eea5ca1a8e699dc247
+      created: 1783525601200
+      modified: 1783525601200
+      sortKey: 0
+      description: Snapshots públicos compartilháveis do planejador financeiro.
+    children:
+      - url: "{{ _.url }}/poupador/snapshots"
+        name: Salvar resultado compartilhável
+        meta:
+          id: req_e10b6c502faa4a8aa31c2c49a1d3a946
+          created: 1783525601201
+          modified: 1783525601201
+          isPrivate: false
+          description: Cria um snapshot imutável e retorna a UUID que compõe o link público.
+          sortKey: 0
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "incomes": [
+                { "id": "income-1", "name": "Salário", "amount": 5000, "frequency": "monthly", "month": 1 }
+              ],
+              "expenses": [
+                { "id": "expense-1", "name": "Aluguel", "amount": 1500, "frequency": "monthly", "month": 1 }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.url }}/poupador/snapshots/{{ _.poupadorSnapshotId }}"
+        name: Buscar resultado compartilhável
+        meta:
+          id: req_d1305939301d4a00ad3d0a39f73e48a1
+          created: 1783525601202
+          modified: 1783525601202
+          isPrivate: false
+          description: Preenche o Poupador com as receitas e gastos salvos na UUID.
+          sortKey: 0
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -1474,3 +1532,4 @@ environments:
     url: https://reconta.local/api
     user: lsbrum@icloud.com
     pass: password123
+    poupadorSnapshotId: ""

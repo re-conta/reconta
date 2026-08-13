@@ -303,6 +303,15 @@ func migrate(conn *sql.DB) error {
 		created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	-- Snapshots públicos e imutáveis do planejador Poupador. O UUID é o
+	-- identificador compartilhável e os dados ficam como JSON para preservar
+	-- exatamente as entradas informadas no simulador.
+	CREATE TABLE IF NOT EXISTS poupador_snapshots (
+		id         TEXT PRIMARY KEY,
+		data       TEXT NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 	CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON subscriptions(user_id, status);
 	CREATE INDEX IF NOT EXISTS idx_subscription_payments_mp ON subscription_payments(mp_payment_id);
@@ -318,6 +327,7 @@ func migrate(conn *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_page_visits_created_at ON page_visits(created_at);
 	CREATE INDEX IF NOT EXISTS idx_page_visits_visitor_id ON page_visits(visitor_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_page_visits_path ON page_visits(path);
+	CREATE INDEX IF NOT EXISTS idx_poupador_snapshots_created_at ON poupador_snapshots(created_at);
 	CREATE INDEX IF NOT EXISTS idx_advisor_api_calls_created_at ON advisor_api_calls(created_at);
 	CREATE INDEX IF NOT EXISTS idx_pending_signups_expires_at ON pending_signups(expires_at);
 	`

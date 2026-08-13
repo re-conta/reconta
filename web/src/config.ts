@@ -4,6 +4,10 @@ export const navLinks = [
     path: "/",
   },
   {
+    name: "Poupador",
+    path: "/poupa",
+  },
+  {
     name: "Recorrentes",
     path: "/recorrentes",
     authRequired: true,
