@@ -24,11 +24,11 @@ export const navLinks = [
     authRequired: true,
   },
   {
-    name: "Poupador",
-    path: "/poupa",
-  },
-  {
     name: "Planos",
     path: "/planos",
   },
+  {
+    name: "Poupador",
+    path: "/poupa",
+  }
 ];
