@@ -9,11 +9,16 @@ const links = ref(navLinks);
 
 const { currentUser } = useAuth();
 const { start: startNotifications, disconnect: disconnectNotifications } = useNotifications();
+const isPoupadorHost = window.location.hostname === "poupa.reconta.app";
 
 function linkClasses(path: string) {
   return path === "/poupa"
     ? "inline-flex items-center gap-1.5 rounded-full bg-brand-200 px-3 py-1.5 font-bold text-ink-900 shadow-sm ring-1 ring-brand-300 transition hover:bg-brand-300"
     : "transition hover:text-ink-900";
+}
+
+function linkTarget(path: string) {
+  return path === "/poupa" && isPoupadorHost ? "/" : path;
 }
 
 watch(
@@ -34,7 +39,7 @@ watch(
       <RouterLink
         v-if="!link.authRequired || currentUser"
         :key="link.path"
-        :to="link.path"
+        :to="linkTarget(link.path)"
         :class="linkClasses(link.path)"
         class="shrink-0 whitespace-nowrap"
         :active-class="link.path === '/poupa' ? 'bg-brand-300 text-ink-900' : 'text-ink-900'"

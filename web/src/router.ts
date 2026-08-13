@@ -28,7 +28,12 @@ const isPoupadorHost = window.location.hostname === "poupa.reconta.app";
 
 const routes = [
   { path: "/", name: "Home", component: isPoupadorHost ? PoupadorView : HomeView },
-  { path: "/poupa", name: "Poupador", component: PoupadorView },
+  {
+    path: "/poupa",
+    name: "Poupador",
+    component: PoupadorView,
+    beforeEnter: () => (isPoupadorHost ? { path: "/", replace: true } : true),
+  },
   { path: "/poupa/:snapshotId", name: "PoupadorSnapshot", component: PoupadorView },
   {
     path: "/:snapshotId",
