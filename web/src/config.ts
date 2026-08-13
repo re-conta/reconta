@@ -4,10 +4,6 @@ export const navLinks = [
     path: "/",
   },
   {
-    name: "Poupador",
-    path: "/poupa",
-  },
-  {
     name: "Recorrentes",
     path: "/recorrentes",
     authRequired: true,
@@ -26,6 +22,10 @@ export const navLinks = [
     name: "Compartilhamentos",
     path: "/compartilhamentos",
     authRequired: true,
+  },
+  {
+    name: "Poupador",
+    path: "/poupa",
   },
   {
     name: "Planos",

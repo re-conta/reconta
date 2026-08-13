@@ -111,7 +111,12 @@ export function usePoupador(snapshotID?: string) {
   );
 
   function saveEntry(kind: PoupadorKind, draft: PoupadorEntryDraft, id?: string) {
-    const entry = { ...draft, id: id ?? crypto.randomUUID() };
+    const entry = {
+      ...draft,
+      name: draft.name.trim(),
+      amount: Number(String(draft.amount).trim()),
+      id: id ?? crypto.randomUUID(),
+    };
     const target = kind === "income" ? incomes : expenses;
     target.value = id
       ? target.value.map((item) => (item.id === id ? entry : item))

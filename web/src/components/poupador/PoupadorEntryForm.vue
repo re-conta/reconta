@@ -28,8 +28,13 @@ const frequencies: Array<{ value: PoupadorFrequency; label: string }> = [
 ];
 
 function submit() {
-  if (!form.name.trim() || form.amount <= 0) return;
-  emit("save", { ...form, name: form.name.trim(), amount: Number(form.amount) });
+  const name = form.name.trim();
+  const amount = Number(String(form.amount).trim());
+  if (!name || !Number.isFinite(amount) || amount <= 0) return;
+
+  form.name = name;
+  form.amount = amount;
+  emit("save", { ...form });
   if (!props.entry) {
     form.name = "";
     form.amount = 0;
@@ -40,7 +45,7 @@ function submit() {
 
 <template>
   <form
-    class="rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm sm:p-5"
+    class="w-full min-w-0 rounded-3xl border border-ink-200/70 bg-white p-4 shadow-sm sm:p-5"
     @submit.prevent="submit"
   >
     <div class="mb-4 flex items-center gap-2">
@@ -54,18 +59,18 @@ function submit() {
         {{ entry ? "Atualize os dados da fonte" : "Adicione uma nova fonte" }}
       </p>
     </div>
-    <div class="grid gap-3 sm:grid-cols-2">
-      <label class="text-xs font-bold text-ink-600"
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="min-w-0 text-xs font-bold text-ink-600"
         >Nome
         <input
-          v-model="form.name"
+          v-model.trim="form.name"
           required
           maxlength="60"
           placeholder="Ex.: Salário"
-          class="mt-1.5 w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          class="mt-1.5 w-full min-w-0 max-w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
         />
       </label>
-      <label class="text-xs font-bold text-ink-600"
+      <label class="min-w-0 text-xs font-bold text-ink-600"
         >Valor
         <input
           v-model.number="form.amount"
@@ -75,25 +80,25 @@ function submit() {
           type="number"
           inputmode="decimal"
           placeholder="0,00"
-          class="mt-1.5 w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          class="mt-1.5 w-full min-w-0 max-w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
         />
       </label>
-      <label class="text-xs font-bold text-ink-600"
+      <label class="min-w-0 text-xs font-bold text-ink-600"
         >Frequência
         <select
           v-model="form.frequency"
-          class="mt-1.5 w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          class="mt-1.5 w-full min-w-0 max-w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
         >
           <option v-for="frequency in frequencies" :key="frequency.value" :value="frequency.value">
             {{ frequency.label }}
           </option>
         </select>
       </label>
-      <label v-if="form.frequency === 'one-time'" class="text-xs font-bold text-ink-600"
+      <label v-if="form.frequency === 'one-time'" class="min-w-0 text-xs font-bold text-ink-600"
         >Mês de ocorrência
         <select
           v-model.number="form.month"
-          class="mt-1.5 w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          class="mt-1.5 w-full min-w-0 max-w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
         >
           <option v-for="(month, index) in months" :key="month" :value="index + 1">
             {{ month }}
@@ -101,7 +106,7 @@ function submit() {
         </select>
       </label>
     </div>
-    <div class="mt-4 flex items-center gap-3">
+    <div class="mt-4 flex flex-wrap items-center gap-3">
       <button
         type="submit"
         :class="isIncome ? 'bg-ink-900 hover:bg-ink-800' : 'bg-coral-600 hover:bg-coral-700'"

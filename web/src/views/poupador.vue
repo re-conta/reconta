@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, watch } from "vue";
+import { onMounted, onUnmounted, shallowRef, watch } from "vue";
 import { Calculator, CircleHelp } from "lucide-vue-next";
 import PoupadorCharts from "../components/poupador/PoupadorCharts.vue";
 import PoupadorEntryForm from "../components/poupador/PoupadorEntryForm.vue";
@@ -15,6 +15,22 @@ const router = useRouter();
 const isPoupadorHost = window.location.hostname === "poupa.reconta.app";
 const snapshotID =
   typeof route.params.snapshotId === "string" ? route.params.snapshotId : undefined;
+const poupadorTitle = "Poupador - ReConta";
+const poupadorDescription =
+  "Organize receitas e gastos, acompanhe o saldo mensal e projete suas finanças do ano com o Poupador da ReConta.";
+const originalTitle = document.title;
+const metadata = [
+  { selector: 'meta[name="description"]', content: poupadorDescription },
+  { selector: 'meta[property="og:site_name"]', content: "ReConta" },
+  { selector: 'meta[property="og:title"]', content: poupadorTitle },
+  { selector: 'meta[property="og:description"]', content: poupadorDescription },
+  { selector: 'meta[name="twitter:title"]', content: poupadorTitle },
+  { selector: 'meta[name="twitter:description"]', content: poupadorDescription },
+];
+const originalMetadata = metadata.map(({ selector }) => ({
+  selector,
+  content: document.querySelector<HTMLMetaElement>(selector)?.content,
+}));
 
 const {
   months,
@@ -36,6 +52,22 @@ const {
 } = usePoupador(snapshotID);
 const editing = shallowRef<{ kind: PoupadorKind; entry: PoupadorEntry } | null>(null);
 const copied = shallowRef(false);
+
+onMounted(() => {
+  document.title = poupadorTitle;
+  for (const { selector, content } of metadata) {
+    document.querySelector<HTMLMetaElement>(selector)?.setAttribute("content", content);
+  }
+});
+
+onUnmounted(() => {
+  document.title = originalTitle;
+  for (const { selector, content } of originalMetadata) {
+    if (content !== undefined) {
+      document.querySelector<HTMLMetaElement>(selector)?.setAttribute("content", content);
+    }
+  }
+});
 
 watch(loadedSnapshotID, (id) => {
   if (!id) return;
@@ -106,7 +138,7 @@ async function copyShareURL() {
         :yearly-balance="yearlyBalance"
       />
       <section class="mt-7 grid gap-5 lg:grid-cols-2">
-        <div>
+        <div class="min-w-0">
           <PoupadorEntryForm
             v-if="!editing || editing.kind === 'income'"
             :key="editing?.kind === 'income' ? editing.entry.id : 'income-new'"
@@ -125,7 +157,7 @@ async function copyShareURL() {
             />
           </div>
         </div>
-        <div>
+        <div class="min-w-0">
           <PoupadorEntryForm
             v-if="!editing || editing.kind === 'expense'"
             :key="editing?.kind === 'expense' ? editing.entry.id : 'expense-new'"

@@ -12,7 +12,7 @@ defineEmits<{ copy: [] }>();
 
 <template>
   <div
-    class="mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4"
+    class="w-full mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4"
   >
     <div class="flex items-center gap-2 text-sm text-brand-800">
       <LoaderCircle v-if="status === 'saving'" class="h-4 w-4 animate-spin" />

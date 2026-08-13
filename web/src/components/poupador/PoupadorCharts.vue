@@ -35,11 +35,10 @@ function recurringMonthlyAmount(entry: PoupadorEntry) {
   );
 }
 function breakdown(entries: PoupadorEntry[]) {
-  return entries.map((entry, index) => ({
-    label: entry.name,
-    value: recurringMonthlyAmount(entry),
-    color: colors[index % colors.length],
-  }));
+  return entries
+    .map((entry) => ({ label: entry.name, value: recurringMonthlyAmount(entry) }))
+    .sort((a, b) => b.value - a.value)
+    .map((item, index) => ({ ...item, color: colors[index % colors.length] }));
 }
 const incomeBreakdown = computed(() => breakdown(props.incomes));
 const expenseBreakdown = computed(() => breakdown(props.expenses));
