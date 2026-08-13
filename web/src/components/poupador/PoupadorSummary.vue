@@ -18,14 +18,14 @@ const balanceDescription = computed(() =>
   <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
     <article class="rounded-3xl border border-brand-200 bg-brand-50 p-5">
       <div class="flex items-center gap-2 text-sm text-brand-800">
-        <ArrowUpRight class="mb-5 h-5 w-5 text-brand-700" />
+        <ArrowUpRight class="h-6 w-6 text-brand-700" />
         <div class="text-xs font-bold text-brand-800">Receitas mensais</div>
       </div>
       <p class="mt-1 font-display text-2xl font-bold text-ink-900">{{ currency.format(income) }}</p>
     </article>
     <article class="rounded-3xl border border-coral-200 bg-coral-50 p-5">
       <div class="flex items-center gap-2 text-sm text-brand-800">
-        <ArrowDownRight class="mb-5 h-5 w-5 text-coral-700" />
+        <ArrowDownRight class="h-6 w-6 text-coral-700" />
         <div class="text-xs font-bold text-coral-800">Gastos mensais</div>
       </div>
       <p class="mt-1 font-display text-2xl font-bold text-ink-900">
@@ -35,7 +35,7 @@ const balanceDescription = computed(() =>
     <article class="rounded-3xl border p-5"
       :class="balance >= 0 ? 'border-brand-300 bg-white' : 'border-coral-300 bg-white'">
       <div class="flex items-center gap-2 text-sm text-brand-800">
-        <PiggyBank class="mb-5 h-5 w-5" :class="balance >= 0 ? 'text-brand-700' : 'text-coral-700'" />
+        <PiggyBank class="h-6 w-6" :class="balance >= 0 ? 'text-brand-700' : 'text-coral-700'" />
         <div class="text-xs font-bold text-ink-600">Saldo mensal</div>
       </div>
       <p class="mt-1 font-display text-2xl font-bold text-ink-900">
@@ -45,7 +45,7 @@ const balanceDescription = computed(() =>
     </article>
     <article class="rounded-3xl bg-ink-900 p-5 text-white">
       <div class="flex items-center gap-2 text-sm text-brand-800">
-        <Wallet class="mb-5 h-5 w-5 text-brand-300" />
+        <Wallet class="h-6 w-6 text-brand-300" />
         <div class="text-xs font-bold text-ink-300">Saldo projetado no ano</div>
       </div>
       <p class="mt-1 font-display text-2xl font-bold">{{ currency.format(yearlyBalance) }}</p>
