@@ -107,6 +107,88 @@ O script de deploy:
 
 Segredos necessários no repositório: `SSH_HOST`, `SSH_USER`, `SSH_PASS`, `SSH_PORT`, `PROJECT_PATH`.
 
+## Proteção anti-bot com Anubis
+
+O [Anubis](https://github.com/TecharoHQ/anubis) é um proxy de desafios voltado a reduzir scraping automatizado. Em produção, ele deve ficar **atrás do Cloudflare e do Nginx que termina TLS**, mas antes da aplicação. Não substitui autenticação, validação de webhook, limite de taxa ou o firewall de origem.
+
+```text
+Internet → Cloudflare → Nginx público (:443) → Anubis (:8923, loopback) → Nginx interno (:8080, loopback) → SPA/API
+```
+
+O Nginx atual em `files/reconta.conf` atende a aplicação diretamente em `:443`. Para proteger o domínio principal e todos os subdomínios atendidos (`reconta.app`, `poupa.reconta.app` e redirecionamentos), separe-o em duas camadas:
+
+1. O **Nginx público** mantém certificados, redirecionamento HTTP → HTTPS e `cloudflare-realip.conf`, mas encaminha as requisições HTTPS para o Anubis.
+2. O **Nginx interno** recebe apenas em `127.0.0.1:8080` e contém os blocos atuais que servem a SPA, fazem os redirecionamentos e encaminham `/api/` ao backend Go.
+3. O Anubis recebe em `127.0.0.1:8923` e usa `http://127.0.0.1:8080` como alvo. Nunca use o listener público `:443` como `TARGET`, pois isso cria um loop de proxy.
+
+Exemplo do listener HTTPS público:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name reconta.app *.reconta.app;
+
+    ssl_certificate     /etc/letsencrypt/live/reconta.app/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/reconta.app/privkey.pem;
+    include /etc/nginx/sites.d/cloudflare-realip.conf;
+
+    location / {
+        proxy_pass http://127.0.0.1:8923;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+}
+```
+
+Configure o Anubis com arquivo de ambiente fora do repositório, por exemplo `/etc/anubis/reconta.env`. A chave privada é segredo e não deve ser colocada em `api/.env`, no Git ou no README.
+
+```ini
+BIND=127.0.0.1:8923
+TARGET=http://127.0.0.1:8080
+COOKIE_DOMAIN=.reconta.app
+REDIRECT_DOMAINS=reconta.app,www.reconta.app,poupa.reconta.app,poupador.reconta.app,calc.reconta.app,calculadora.reconta.app
+POLICY_FNAME=/etc/anubis/reconta.botPolicies.yaml
+METRICS_BIND=127.0.0.1:8924
+ED25519_PRIVATE_KEY_HEX=<chave-aleatoria-de-64-caracteres-hexadecimais>
+```
+
+Use a política padrão do Anubis como base e adicione estas regras **antes** das regras de desafio. Integrações sem navegador não conseguem resolver o desafio:
+
+```yaml
+bots:
+  # O backend continua validando x-signature/HMAC do Mercado Pago.
+  - name: mercado-pago-webhook
+    path_regex: ^/api/billing/webhook$
+    action: ALLOW
+
+  # O endpoint continua protegido pelo header X-Internal-Token no backend.
+  - name: internal-notification-scan
+    path_regex: ^/api/internal/notifications/scan$
+    action: ALLOW
+
+  # Necessário para renovação de certificado e recursos básicos da web.
+  - name: acme-challenge
+    path_regex: ^/.well-known/acme-challenge/.*$
+    action: ALLOW
+  - name: robots-txt
+    path_regex: ^/robots.txt$
+    action: ALLOW
+  - name: favicon
+    path_regex: ^/favicon.ico$
+    action: ALLOW
+
+  # Demais regras: política padrão/imports do Anubis, incluindo desafio de browsers.
+```
+
+Para uma única instância em uma VPS, configure armazenamento persistente `bbolt` na política (em diretório gravável exclusivo do Anubis). Não exponha a porta de métricas; mantenha-a em loopback. Ao criar um novo subdomínio, inclua-o em `REDIRECT_DOMAINS`, no Nginx interno e no certificado curinga (`*.reconta.app`) quando aplicável. Subdomínios não atendidos devem ser negados por um `default_server`, em vez de encaminhados à aplicação.
+
+O Cloudflare deve continuar na frente da origem: mantenha os DNS como **proxied** e faça o firewall da VPS aceitar `80/443` apenas das faixas de IP oficiais do Cloudflare. Isso impede que alguém contorne Cloudflare e o Anubis acessando o IP de origem. Depois da configuração, valide em janela anônima o login, a SPA em `poupa.reconta.app`, o SSE `/api/notifications/stream` e um webhook de sandbox do Mercado Pago. A política do Anubis pode bloquear clientes sem JavaScript e crawlers legítimos; acompanhe seus logs/métricas e ajuste allowlists deliberadamente.
+
 ## Login via Google (variáveis de ambiente)
 
 O login via Google é opcional: se `GOOGLE_CLIENT_ID` estiver vazio no `.env`, essa opção fica desabilitada e a aplicação funciona normalmente só com login por email/senha.
