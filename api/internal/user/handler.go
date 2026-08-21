@@ -727,8 +727,11 @@ func (h *Handler) adminBanUser(w http.ResponseWriter, r *http.Request, actor *Us
 }
 
 type updateProfileRequest struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name                 string `json:"name"`
+	Email                string `json:"email"`
+	State                string `json:"state"`
+	City                 string `json:"city"`
+	TaxSimulationEnabled bool   `json:"taxSimulationEnabled"`
 }
 
 func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, u *User) {
@@ -740,6 +743,8 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, u *User)
 
 	req.Name = strings.TrimSpace(req.Name)
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.State = strings.TrimSpace(req.State)
+	req.City = strings.TrimSpace(req.City)
 
 	if req.Name == "" {
 		writeError(w, http.StatusUnprocessableEntity, "nome é obrigatório")
@@ -750,7 +755,7 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, u *User)
 		return
 	}
 
-	updated, err := h.repo.UpdateProfile(r.Context(), u.ID, req.Name, req.Email)
+	updated, err := h.repo.UpdateProfile(r.Context(), u.ID, req.Name, req.Email, req.State, req.City, req.TaxSimulationEnabled)
 	if err != nil {
 		if errors.Is(err, ErrEmailTaken) {
 			writeError(w, http.StatusConflict, "e-mail já cadastrado")

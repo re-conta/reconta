@@ -7,3 +7,9 @@ Transforme a pasta files/ em ansible/ crie um playbook simples mais completo usa
 - Instalação de certificados letsencrypt(caso eles não existam, cuidado com o block por parte do cloudflare/letsencrypt)
 - Instalação do go, nginx, bun, node(se ainda não estiverem instalados), mas fique atento o bun na vps é instalado na home do usuário nginx
 - Criação dos usuários e grupos caso ainda não existam(nginx por exemplo)
+
+Em /configuracoes permita definir uma conta como Padrão
+
+Em Transações (/) conta e banco parecem redundantes
+
+Em Transações (/) onde há escrito "Transações" mostre ao invés disto o nome do mês e ano, na tabela apenas mostre os dias

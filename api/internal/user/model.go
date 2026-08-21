@@ -34,16 +34,19 @@ var AllPermissions = []string{PermAdminPanel, PermManageUsers, PermManagePermiss
 
 // User representa um usuário cadastrado.
 type User struct {
-	ID          int64      `json:"id"`
-	Name        string     `json:"name"`
-	Email       string     `json:"email"`
-	Role        string     `json:"role"`
-	CNPJ        string     `json:"cnpj"`
-	AvatarURL   string     `json:"avatarUrl"`
-	HasPassword bool       `json:"hasPassword"`
-	Permissions []string   `json:"permissions"`
-	BannedAt    *time.Time `json:"bannedAt"`
-	CreatedAt   time.Time  `json:"createdAt"`
+	ID                   int64      `json:"id"`
+	Name                 string     `json:"name"`
+	Email                string     `json:"email"`
+	Role                 string     `json:"role"`
+	CNPJ                 string     `json:"cnpj"`
+	AvatarURL            string     `json:"avatarUrl"`
+	HasPassword          bool       `json:"hasPassword"`
+	Permissions          []string   `json:"permissions"`
+	BannedAt             *time.Time `json:"bannedAt"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	State                string     `json:"state"`
+	City                 string     `json:"city"`
+	TaxSimulationEnabled bool       `json:"taxSimulationEnabled"`
 }
 
 // IsAdmin indica se o usuário tem acesso de administração (admin ou super_admin).

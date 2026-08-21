@@ -34,11 +34,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 type categoryRequest struct {
-	Name     string `json:"name"`
-	Color    string `json:"color"`
-	Icon     string `json:"icon"`
-	Type     string `json:"type"`
-	Patterns string `json:"patterns"`
+	Name      string `json:"name"`
+	Color     string `json:"color"`
+	Icon      string `json:"icon"`
+	Type      string `json:"type"`
+	Patterns  string `json:"patterns"`
+	IsTaxable bool   `json:"isTaxable"`
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request, userID int64) {
@@ -73,7 +74,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 		req.Type = "both"
 	}
 
-	c, err := h.repo.Create(r.Context(), userID, req.Name, req.Color, req.Icon, req.Type, req.Patterns)
+	c, err := h.repo.Create(r.Context(), userID, req.Name, req.Color, req.Icon, req.Type, req.Patterns, req.IsTaxable)
 	if err != nil {
 		log.Printf("erro ao criar categoria: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
@@ -96,7 +97,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request, userID int64) {
 		return
 	}
 
-	c, err := h.repo.Update(r.Context(), userID, id, req.Name, req.Color, req.Icon, req.Type, req.Patterns)
+	c, err := h.repo.Update(r.Context(), userID, id, req.Name, req.Color, req.Icon, req.Type, req.Patterns, req.IsTaxable)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			writeError(w, http.StatusNotFound, "não encontrado")

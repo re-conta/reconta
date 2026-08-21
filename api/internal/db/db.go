@@ -479,6 +479,46 @@ func addMissingColumns(conn *sql.DB) error {
 		}
 	}
 
+	hasState, err := columnExists(conn, "users", "state")
+	if err != nil {
+		return fmt.Errorf("verificando coluna state: %w", err)
+	}
+	if !hasState {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN state TEXT`); err != nil {
+			return fmt.Errorf("adicionando coluna state: %w", err)
+		}
+	}
+
+	hasCity, err := columnExists(conn, "users", "city")
+	if err != nil {
+		return fmt.Errorf("verificando coluna city: %w", err)
+	}
+	if !hasCity {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN city TEXT`); err != nil {
+			return fmt.Errorf("adicionando coluna city: %w", err)
+		}
+	}
+
+	hasTaxSimulationEnabled, err := columnExists(conn, "users", "tax_simulation_enabled")
+	if err != nil {
+		return fmt.Errorf("verificando coluna tax_simulation_enabled: %w", err)
+	}
+	if !hasTaxSimulationEnabled {
+		if _, err := conn.Exec(`ALTER TABLE users ADD COLUMN tax_simulation_enabled INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("adicionando coluna tax_simulation_enabled: %w", err)
+		}
+	}
+
+	hasIsTaxable, err := columnExists(conn, "categories", "is_taxable")
+	if err != nil {
+		return fmt.Errorf("verificando coluna is_taxable: %w", err)
+	}
+	if !hasIsTaxable {
+		if _, err := conn.Exec(`ALTER TABLE categories ADD COLUMN is_taxable INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("adicionando coluna is_taxable: %w", err)
+		}
+	}
+
 	if err := seedDefaultRolePermissions(conn); err != nil {
 		return err
 	}

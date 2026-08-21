@@ -5,9 +5,14 @@ import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import MonthlyCashFlowChart from "../components/charts/MonthlyCashFlowChart.vue";
 import { ApiError } from "../api/reports";
+import { getTaxSimulation } from "../api/taxsim";
 import { listPeriods, listTransactions } from "../api/transactions";
+import { useAuth } from "../composables/useAuth";
 import type { ReportScopeKind } from "../types/report";
+import type { TaxSimulation } from "../types/taxsim";
 import type { Period, Transaction } from "../types/transaction";
+
+const { currentUser } = useAuth();
 
 const now = new Date();
 const route = useRoute();
@@ -144,6 +149,33 @@ const totals = computed(() => {
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+function formatPercent(value: number) {
+  return `${value.toFixed(1).replace(".", ",")}%`;
+}
+
+const taxSimulation = ref<TaxSimulation | null>(null);
+const loadingTaxSimulation = ref(false);
+
+async function loadTaxSimulation() {
+  if (!currentUser.value?.taxSimulationEnabled) {
+    taxSimulation.value = null;
+    return;
+  }
+  loadingTaxSimulation.value = true;
+  try {
+    const result = await getTaxSimulation(year.value);
+    taxSimulation.value = result.enabled ? result : null;
+  } catch {
+    taxSimulation.value = null;
+  } finally {
+    loadingTaxSimulation.value = false;
+  }
+}
+
+watch(() => [year.value, currentUser.value?.taxSimulationEnabled], loadTaxSimulation, {
+  immediate: true,
+});
 
 function buildQuery(): Record<string, string> {
   const query: Record<string, string> = { escopo: scopeKind.value };
@@ -338,6 +370,76 @@ onMounted(async () => {
       />
       <MonthlyCashFlowChart v-else-if="scopeKind === 'year'" :transactions="previewTransactions" />
       <CategoryExpenseChart :transactions="previewTransactions" />
+    </div>
+
+    <div
+      v-if="taxSimulation && taxSimulation.totalIncome > 0"
+      class="rounded-3xl border border-ink-200/70 bg-white p-5 shadow-sm"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 class="font-display text-lg font-bold text-ink-900">
+            Estimativa de imposto de renda &middot; {{ taxSimulation.year }}
+          </h3>
+          <p class="mt-0.5 text-xs text-ink-500">
+            Calculado sobre as receitas de categorias marcadas como tributáveis.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-2xl bg-ink-50/60 p-3">
+          <p class="text-xs text-ink-500">Renda tributável</p>
+          <p class="font-display text-base font-bold text-ink-900">
+            {{ formatCurrency(taxSimulation.totalIncome) }}
+          </p>
+        </div>
+        <div class="rounded-2xl bg-ink-50/60 p-3">
+          <p class="text-xs text-ink-500">IR estimado</p>
+          <p class="font-display text-base font-bold text-coral-700">
+            {{ formatCurrency(taxSimulation.estimatedTax) }}
+          </p>
+        </div>
+        <div class="rounded-2xl bg-ink-50/60 p-3">
+          <p class="text-xs text-ink-500">Alíquota efetiva</p>
+          <p class="font-display text-base font-bold text-ink-900">
+            {{ formatPercent(taxSimulation.effectiveRate) }}
+          </p>
+        </div>
+        <div class="rounded-2xl bg-ink-50/60 p-3">
+          <p class="text-xs text-ink-500">Alíquota marginal</p>
+          <p class="font-display text-base font-bold text-ink-900">
+            {{ formatPercent(taxSimulation.marginalRate * 100) }}
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-4 overflow-x-auto">
+        <table class="w-full min-w-[420px] text-sm">
+          <thead>
+            <tr class="text-left text-xs text-ink-500">
+              <th class="pb-2 font-medium">Faixa</th>
+              <th class="pb-2 font-medium">Alíquota</th>
+              <th class="pb-2 font-medium">Renda na faixa</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ink-100">
+            <tr
+              v-for="(b, i) in taxSimulation.brackets"
+              :key="i"
+              :class="{ 'text-ink-300': !b.isIncomeBracket }"
+            >
+              <td class="py-1.5">
+                {{ b.upTo > 0 ? `até ${formatCurrency(b.upTo)}` : "acima do último limite" }}
+              </td>
+              <td class="py-1.5">{{ formatPercent(b.rate * 100) }}</td>
+              <td class="py-1.5">{{ formatCurrency(b.taxableInBand) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="mt-3 text-[11px] leading-snug text-ink-400">{{ taxSimulation.source }}</p>
     </div>
   </div>
 </template>

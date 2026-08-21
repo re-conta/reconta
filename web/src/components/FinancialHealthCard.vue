@@ -2,7 +2,10 @@
 import { computed, ref, watch } from "vue";
 import { Star } from "lucide-vue-next";
 import { getFinancialHealth } from "../api/health";
+import { getTaxSimulation } from "../api/taxsim";
+import { useAuth } from "../composables/useAuth";
 import { healthLevelLabels, type HealthLevel, type HealthScore } from "../types/health";
+import type { TaxSimulation } from "../types/taxsim";
 
 const props = defineProps<{
   month: number;
@@ -10,10 +13,13 @@ const props = defineProps<{
   refreshKey?: number;
 }>();
 
+const { currentUser } = useAuth();
+
 const score = ref<HealthScore | null>(null);
 const loading = ref(true);
 const failed = ref(false);
 const mascotMissing = ref(false);
+const taxSimulation = ref<TaxSimulation | null>(null);
 
 watch(
   () => [props.month, props.year, props.refreshKey],
@@ -27,6 +33,23 @@ watch(
       score.value = null;
     } finally {
       loading.value = false;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => [props.year, currentUser.value?.taxSimulationEnabled],
+  async () => {
+    if (!currentUser.value?.taxSimulationEnabled) {
+      taxSimulation.value = null;
+      return;
+    }
+    try {
+      const result = await getTaxSimulation(props.year);
+      taxSimulation.value = result.enabled ? result : null;
+    } catch {
+      taxSimulation.value = null;
     }
   },
   { immediate: true },
@@ -167,6 +190,11 @@ function formatCurrency(value: number) {
           Saldo {{ formatCurrency(score.balance) }} &middot; {{ savingsRateLabel }}
         </span>
       </template>
+
+      <p v-if="taxSimulation && taxSimulation.totalIncome > 0" class="relative mt-3 text-xs text-white/80">
+        IR estimado em {{ taxSimulation.year }}: {{ formatCurrency(taxSimulation.estimatedTax) }}
+        <span class="text-white/60">({{ Math.round(taxSimulation.effectiveRate) }}% da renda tributável)</span>
+      </p>
     </template>
   </div>
 </template>

@@ -28,6 +28,9 @@ export interface User {
   permissions: Permission[];
   bannedAt: string | null;
   createdAt: string;
+  state: string;
+  city: string;
+  taxSimulationEnabled: boolean;
 }
 
 export function canAccessAdmin(user: User | null): boolean {
@@ -54,6 +57,9 @@ export interface PendingSignup {
 export interface UpdateProfileInput {
   name: string;
   email: string;
+  state: string;
+  city: string;
+  taxSimulationEnabled: boolean;
 }
 
 // AdminCreateUserInput cria uma conta pelo painel de admin, com a role

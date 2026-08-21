@@ -23,7 +23,43 @@ import type { CancelResult, SubscriptionInfo } from "../types/billing";
 
 const { currentUser, setCurrentUser } = useAuth();
 
-const profileForm = reactive({ name: "", email: "" });
+const brazilianStates = [
+  { uf: "AC", name: "Acre" },
+  { uf: "AL", name: "Alagoas" },
+  { uf: "AP", name: "Amapá" },
+  { uf: "AM", name: "Amazonas" },
+  { uf: "BA", name: "Bahia" },
+  { uf: "CE", name: "Ceará" },
+  { uf: "DF", name: "Distrito Federal" },
+  { uf: "ES", name: "Espírito Santo" },
+  { uf: "GO", name: "Goiás" },
+  { uf: "MA", name: "Maranhão" },
+  { uf: "MT", name: "Mato Grosso" },
+  { uf: "MS", name: "Mato Grosso do Sul" },
+  { uf: "MG", name: "Minas Gerais" },
+  { uf: "PA", name: "Pará" },
+  { uf: "PB", name: "Paraíba" },
+  { uf: "PR", name: "Paraná" },
+  { uf: "PE", name: "Pernambuco" },
+  { uf: "PI", name: "Piauí" },
+  { uf: "RJ", name: "Rio de Janeiro" },
+  { uf: "RN", name: "Rio Grande do Norte" },
+  { uf: "RS", name: "Rio Grande do Sul" },
+  { uf: "RO", name: "Rondônia" },
+  { uf: "RR", name: "Roraima" },
+  { uf: "SC", name: "Santa Catarina" },
+  { uf: "SP", name: "São Paulo" },
+  { uf: "SE", name: "Sergipe" },
+  { uf: "TO", name: "Tocantins" },
+];
+
+const profileForm = reactive({
+  name: "",
+  email: "",
+  state: "",
+  city: "",
+  taxSimulationEnabled: false,
+});
 const profileError = ref("");
 const profileSuccess = ref("");
 const savingProfile = ref(false);
@@ -46,6 +82,9 @@ watch(
     if (!user) return;
     profileForm.name = user.name;
     profileForm.email = user.email;
+    profileForm.state = user.state;
+    profileForm.city = user.city;
+    profileForm.taxSimulationEnabled = user.taxSimulationEnabled;
   },
   { immediate: true },
 );
@@ -68,6 +107,11 @@ function formatDate(value: string) {
 async function handleProfileSubmit() {
   profileError.value = "";
   profileSuccess.value = "";
+  if (profileForm.taxSimulationEnabled && !profileForm.state) {
+    profileError.value = "Selecione um estado para simular o imposto de renda automaticamente";
+    return;
+  }
+
   savingProfile.value = true;
   try {
     const updated = await updateProfile({ ...profileForm });
@@ -369,7 +413,44 @@ async function handlePasswordSubmit() {
             class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
           />
         </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-ink-700">Estado</span>
+          <select
+            v-model="profileForm.state"
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          >
+            <option value="">Selecione...</option>
+            <option v-for="s in brazilianStates" :key="s.uf" :value="s.uf">{{ s.name }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-ink-700">Cidade</span>
+          <input
+            v-model="profileForm.city"
+            type="text"
+            class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+          />
+        </label>
       </div>
+
+      <label
+        class="flex items-start gap-2.5 rounded-2xl border border-ink-100 bg-ink-50/50 p-4 text-sm text-ink-700"
+      >
+        <input
+          v-model="profileForm.taxSimulationEnabled"
+          type="checkbox"
+          class="mt-0.5 h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
+        />
+        <span>
+          <span class="font-medium text-ink-900">Simular imposto de renda automaticamente</span>
+          <br />
+          <span class="text-xs text-ink-500">
+            Estima o IRPF anual sobre as receitas marcadas como tributáveis nas categorias,
+            usando a tabela progressiva oficial da Receita Federal. É uma estimativa
+            simplificada — não considera dependentes, saúde, educação ou previdência.
+          </span>
+        </span>
+      </label>
 
       <p v-if="profileError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
         {{ profileError }}

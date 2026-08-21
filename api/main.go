@@ -26,6 +26,7 @@ import (
 	"github.com/re-conta/reconta/api/internal/share"
 	"github.com/re-conta/reconta/api/internal/statement"
 	"github.com/re-conta/reconta/api/internal/tag"
+	"github.com/re-conta/reconta/api/internal/taxsim"
 	"github.com/re-conta/reconta/api/internal/transaction"
 	"github.com/re-conta/reconta/api/internal/turnstile"
 	"github.com/re-conta/reconta/api/internal/user"
@@ -135,6 +136,8 @@ func main() {
 
 	healthRepo := health.NewRepository(conn)
 	health.NewHandler(healthRepo, authHandler).RegisterRoutes(mux)
+
+	taxsim.NewHandler(taxsim.NewRepository(conn), userRepo, authHandler).RegisterRoutes(mux)
 
 	advisorRepo := advisor.NewRepository(conn)
 	var advisorQueue *advisor.Queue

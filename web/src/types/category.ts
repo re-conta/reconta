@@ -5,6 +5,7 @@ export interface Category {
   icon: string;
   type: "income" | "expense" | "both";
   patterns: string;
+  isTaxable: boolean;
 }
 
 export interface CategoryInput {
@@ -13,4 +14,5 @@ export interface CategoryInput {
   icon: string;
   type: "income" | "expense" | "both";
   patterns: string;
+  isTaxable: boolean;
 }

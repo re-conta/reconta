@@ -18,10 +18,10 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Create(ctx context.Context, userID int64, name, color, icon, catType, patterns string) (*Category, error) {
+func (r *Repository) Create(ctx context.Context, userID int64, name, color, icon, catType, patterns string, isTaxable bool) (*Category, error) {
 	res, err := r.db.ExecContext(ctx,
-		`INSERT INTO categories (user_id, name, color, icon, type, patterns) VALUES (?, ?, ?, ?, ?, ?)`,
-		userID, name, color, icon, catType, nullableString(patterns),
+		`INSERT INTO categories (user_id, name, color, icon, type, patterns, is_taxable) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		userID, name, color, icon, catType, nullableString(patterns), isTaxable,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserindo categoria: %w", err)
@@ -37,14 +37,14 @@ func (r *Repository) Create(ctx context.Context, userID int64, name, color, icon
 
 func (r *Repository) GetByID(ctx context.Context, userID, id int64) (*Category, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, color, icon, type, patterns FROM categories WHERE id = ? AND user_id = ?`, id, userID,
+		`SELECT id, name, color, icon, type, patterns, is_taxable FROM categories WHERE id = ? AND user_id = ?`, id, userID,
 	)
 	return scanCategory(row)
 }
 
 func (r *Repository) List(ctx context.Context, userID int64) ([]Category, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, color, icon, type, patterns FROM categories WHERE user_id = ? ORDER BY name`, userID,
+		`SELECT id, name, color, icon, type, patterns, is_taxable FROM categories WHERE user_id = ? ORDER BY name`, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listando categorias: %w", err)
@@ -65,7 +65,7 @@ func (r *Repository) List(ctx context.Context, userID int64) ([]Category, error)
 // ListUsed retorna apenas as categorias que estão de fato associadas a alguma transação do usuário.
 func (r *Repository) ListUsed(ctx context.Context, userID int64) ([]Category, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT DISTINCT c.id, c.name, c.color, c.icon, c.type, c.patterns
+		SELECT DISTINCT c.id, c.name, c.color, c.icon, c.type, c.patterns, c.is_taxable
 		FROM categories c
 		INNER JOIN transactions t ON t.category_id = c.id
 		WHERE c.user_id = ? AND t.user_id = ?
@@ -90,7 +90,7 @@ func (r *Repository) ListUsed(ctx context.Context, userID int64) ([]Category, er
 // ListWithPatterns retorna apenas categorias que possuem padrões de auto-categorização definidos.
 func (r *Repository) ListWithPatterns(ctx context.Context, userID int64) ([]Category, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, color, icon, type, patterns FROM categories
+		`SELECT id, name, color, icon, type, patterns, is_taxable FROM categories
 		 WHERE user_id = ? AND patterns IS NOT NULL AND patterns != ''`, userID,
 	)
 	if err != nil {
@@ -113,7 +113,7 @@ func (r *Repository) ListWithPatterns(ctx context.Context, userID int64) ([]Cate
 // criando uma nova (sem padrões de auto-categorização) se não existir — usado ao restaurar backups.
 func (r *Repository) FindOrCreateByName(ctx context.Context, userID int64, name, color, icon, catType string) (*Category, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, color, icon, type, patterns FROM categories WHERE user_id = ? AND LOWER(name) = LOWER(?)`,
+		`SELECT id, name, color, icon, type, patterns, is_taxable FROM categories WHERE user_id = ? AND LOWER(name) = LOWER(?)`,
 		userID, name,
 	)
 	c, err := scanCategory(row)
@@ -123,13 +123,13 @@ func (r *Repository) FindOrCreateByName(ctx context.Context, userID int64, name,
 	if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
-	return r.Create(ctx, userID, name, color, icon, catType, "")
+	return r.Create(ctx, userID, name, color, icon, catType, "", false)
 }
 
-func (r *Repository) Update(ctx context.Context, userID, id int64, name, color, icon, catType, patterns string) (*Category, error) {
+func (r *Repository) Update(ctx context.Context, userID, id int64, name, color, icon, catType, patterns string, isTaxable bool) (*Category, error) {
 	res, err := r.db.ExecContext(ctx,
-		`UPDATE categories SET name = ?, color = ?, icon = ?, type = ?, patterns = ? WHERE id = ? AND user_id = ?`,
-		name, color, icon, catType, nullableString(patterns), id, userID,
+		`UPDATE categories SET name = ?, color = ?, icon = ?, type = ?, patterns = ?, is_taxable = ? WHERE id = ? AND user_id = ?`,
+		name, color, icon, catType, nullableString(patterns), isTaxable, id, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("atualizando categoria: %w", err)
@@ -158,7 +158,7 @@ type scanner interface {
 func scanCategory(s scanner) (*Category, error) {
 	var c Category
 	var patterns sql.NullString
-	if err := s.Scan(&c.ID, &c.Name, &c.Color, &c.Icon, &c.Type, &patterns); err != nil {
+	if err := s.Scan(&c.ID, &c.Name, &c.Color, &c.Icon, &c.Type, &patterns, &c.IsTaxable); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}

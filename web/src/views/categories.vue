@@ -31,6 +31,7 @@ const form = reactive<CategoryInput & TagInput>({
   icon: "circle",
   type: "both",
   patterns: "",
+  isTaxable: false,
 });
 
 const categoryTypes = [
@@ -88,6 +89,7 @@ function resetForm() {
   form.icon = "circle";
   form.type = "both";
   form.patterns = "";
+  form.isTaxable = false;
   editingId.value = null;
   showForm.value = false;
   showPatternsHelp.value = false;
@@ -110,6 +112,7 @@ function startEditCategory(category: Category) {
   form.icon = category.icon;
   form.type = category.type;
   form.patterns = category.patterns;
+  form.isTaxable = category.isTaxable;
   showForm.value = true;
 }
 
@@ -131,6 +134,7 @@ async function handleSubmit() {
         icon: form.icon,
         type: form.type,
         patterns: form.patterns,
+        isTaxable: form.isTaxable,
       };
       if (editingId.value) {
         await updateCategory(editingId.value, input);
@@ -309,6 +313,23 @@ onUnmounted(() => {
                     />
                   </label>
                 </div>
+                <label
+                  v-if="activeTab === 'categories' && form.type !== 'expense'"
+                  class="flex items-start gap-2.5 rounded-xl bg-ink-50/50 p-3 text-sm text-ink-700"
+                >
+                  <input
+                    v-model="form.isTaxable"
+                    type="checkbox"
+                    class="mt-0.5 h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-400"
+                  />
+                  <span>
+                    <span class="font-medium text-ink-900">Tributável (conta no imposto de renda)</span>
+                    <br />
+                    <span class="text-xs text-ink-500">
+                      Receitas desta categoria entram na estimativa de IRPF em Configurações.
+                    </span>
+                  </span>
+                </label>
                 <label v-if="activeTab === 'categories'" class="flex flex-col gap-1.5">
                   <span class="flex items-center justify-between text-sm font-medium text-ink-700">
                     Padrões de auto-categorização (opcional)
@@ -390,6 +411,7 @@ onUnmounted(() => {
               <p class="truncate text-xs text-ink-500">
                 {{ categoryTypes.find((t) => t.value === category.type)?.label ?? category.type }}
                 <span v-if="category.patterns"> &middot; auto-categorização ativa</span>
+                <span v-if="category.isTaxable"> &middot; tributável</span>
               </p>
             </div>
           </div>

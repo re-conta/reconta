@@ -186,6 +186,7 @@ const categoryForm = reactive<CategoryInput>({
   icon: "circle",
   type: "both",
   patterns: "",
+  isTaxable: false,
 });
 
 function openCategoryModal() {
@@ -194,6 +195,7 @@ function openCategoryModal() {
   categoryForm.icon = "circle";
   categoryForm.type = "both";
   categoryForm.patterns = "";
+  categoryForm.isTaxable = false;
   categoryError.value = "";
   categoryModalOpen.value = true;
 }
@@ -369,6 +371,9 @@ function resetForm() {
 
 function startCreate() {
   resetForm();
+  if (selectedDate.value) {
+    form.date = selectedDate.value;
+  }
   showForm.value = true;
 }
 

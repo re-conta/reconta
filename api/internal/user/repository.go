@@ -188,9 +188,13 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, name, email, cnp
 	return r.GetByID(ctx, id)
 }
 
-// UpdateProfile altera nome e e-mail do usuário.
-func (r *Repository) UpdateProfile(ctx context.Context, id int64, name, email string) (*User, error) {
-	res, err := r.db.ExecContext(ctx, `UPDATE users SET name = ?, email = ? WHERE id = ?`, name, email, id)
+// UpdateProfile altera nome, e-mail e dados fiscais (estado, cidade e o
+// interruptor de simulação automática de imposto de renda) do usuário.
+func (r *Repository) UpdateProfile(ctx context.Context, id int64, name, email, state, city string, taxSimulationEnabled bool) (*User, error) {
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE users SET name = ?, email = ?, state = ?, city = ?, tax_simulation_enabled = ? WHERE id = ?`,
+		name, email, nullableString(state), nullableString(city), taxSimulationEnabled, id,
+	)
 	if err != nil {
 		if isUniqueConstraintErr(err) {
 			return nil, ErrEmailTaken
@@ -255,7 +259,7 @@ func (r *Repository) Create(ctx context.Context, name, email, passwordHash, role
 
 func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users WHERE id = ?`, id,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at, state, city, tax_simulation_enabled FROM users WHERE id = ?`, id,
 	)
 	u, err := scanUser(row)
 	if err != nil {
@@ -268,13 +272,13 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 // usado exclusivamente pelo fluxo de autenticação.
 func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email string) (*User, string, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, created_at, banned_at, password_hash FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, cnpj, avatar_url, created_at, banned_at, password_hash, state, city, tax_simulation_enabled FROM users WHERE email = ?`, email,
 	)
 
 	var u User
-	var cnpj, avatarURL, bannedAt sql.NullString
+	var cnpj, avatarURL, bannedAt, state, city sql.NullString
 	var createdAt, passwordHash string
-	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &createdAt, &bannedAt, &passwordHash); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &createdAt, &bannedAt, &passwordHash, &state, &city, &u.TaxSimulationEnabled); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, "", ErrNotFound
 		}
@@ -285,6 +289,8 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 	u.CreatedAt = parseTimestamp(createdAt)
 	u.BannedAt = parseNullTimestamp(bannedAt)
 	u.HasPassword = passwordHash != ""
+	u.State = state.String
+	u.City = city.String
 
 	if err := r.attachPermissions(ctx, &u); err != nil {
 		return nil, "", err
@@ -295,7 +301,7 @@ func (r *Repository) GetByEmailWithPasswordHash(ctx context.Context, email strin
 // GetByGoogleID busca um usuário previamente vinculado a uma conta Google.
 func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users WHERE google_id = ?`, googleID,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at, state, city, tax_simulation_enabled FROM users WHERE google_id = ?`, googleID,
 	)
 	u, err := scanUser(row)
 	if err != nil {
@@ -308,7 +314,7 @@ func (r *Repository) GetByGoogleID(ctx context.Context, googleID string) (*User,
 // a um cadastro já existente por e-mail/senha.
 func (r *Repository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users WHERE email = ?`, email,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at, state, city, tax_simulation_enabled FROM users WHERE email = ?`, email,
 	)
 	u, err := scanUser(row)
 	if err != nil {
@@ -359,7 +365,7 @@ func (r *Repository) UpdateAvatarURL(ctx context.Context, id int64, avatarURL st
 
 func (r *Repository) List(ctx context.Context) ([]User, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at FROM users ORDER BY id DESC`,
+		`SELECT id, name, email, role, cnpj, avatar_url, password_hash <> '', banned_at, created_at, state, city, tax_simulation_enabled FROM users ORDER BY id DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listando usuários: %w", err)
@@ -466,9 +472,9 @@ type scanner interface {
 
 func scanUser(s scanner) (*User, error) {
 	var u User
-	var cnpj, avatarURL, bannedAt sql.NullString
+	var cnpj, avatarURL, bannedAt, state, city sql.NullString
 	var createdAt string
-	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &u.HasPassword, &bannedAt, &createdAt); err != nil {
+	if err := s.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &cnpj, &avatarURL, &u.HasPassword, &bannedAt, &createdAt, &state, &city, &u.TaxSimulationEnabled); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -478,6 +484,8 @@ func scanUser(s scanner) (*User, error) {
 	u.AvatarURL = avatarURL.String
 	u.CreatedAt = parseTimestamp(createdAt)
 	u.BannedAt = parseNullTimestamp(bannedAt)
+	u.State = state.String
+	u.City = city.String
 	return &u, nil
 }
 
