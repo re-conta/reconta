@@ -165,7 +165,7 @@ func (r *Repository) List(ctx context.Context, userID int64, f ListFilters) (*Li
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE %s
-		ORDER BY t.date DESC, t.id DESC
+		ORDER BY t.date DESC, CASE WHEN t.type = 'income' THEN 0 ELSE 1 END, t.id DESC
 		LIMIT ? OFFSET ?`, whereClause), listArgs...,
 	)
 	if err != nil {
@@ -217,7 +217,7 @@ func (r *Repository) ListAll(ctx context.Context, userID int64, f ListFilters) (
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE %s
-		ORDER BY t.date ASC, t.id ASC`, whereClause), args...,
+		ORDER BY t.date ASC, CASE WHEN t.type = 'income' THEN 0 ELSE 1 END, t.id ASC`, whereClause), args...,
 	)
 	if err != nil {
 		return nil, Totals{}, fmt.Errorf("listando transações: %w", err)
