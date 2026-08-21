@@ -136,7 +136,7 @@ function toggleDay(cell: DayCell) {
             <span
               v-if="cell.income > 0"
               class="h-0.5 w-0.5 rounded-full"
-              :class="selectedDate === cell.date ? 'bg-white' : 'bg-brand-500'"
+              :class="selectedDate === cell.date ? 'bg-white' : 'bg-leaf-500'"
             ></span>
             <span
               v-if="cell.expense > 0"
@@ -150,7 +150,7 @@ function toggleDay(cell: DayCell) {
 
     <div class="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-ink-500">
       <span class="flex items-center gap-1"
-        ><span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span> Receita</span
+        ><span class="h-1.5 w-1.5 rounded-full bg-leaf-500"></span> Receita</span
       >
       <span class="flex items-center gap-1"
         ><span class="h-1.5 w-1.5 rounded-full bg-coral-500"></span> Despesa</span

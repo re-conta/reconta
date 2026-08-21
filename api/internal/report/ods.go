@@ -17,6 +17,78 @@ const odsManifest = `<?xml version="1.0" encoding="UTF-8"?>
 %s</manifest:manifest>
 `
 
+// odsStyles define os estilos usados no content.xml: título, cabeçalho de
+// tabela (negrito, centralizado, fundo escuro, texto branco), células de
+// moeda (alinhadas à direita) e o bloco de cartões do resumo.
+const odsStyles = `
+  <style:style style:name="colWide" style:family="table-column">
+   <style:table-column-properties style:column-width="4.2cm"/>
+  </style:style>
+  <style:style style:name="colMed" style:family="table-column">
+   <style:table-column-properties style:column-width="2.6cm"/>
+  </style:style>
+  <style:style style:name="colNarrow" style:family="table-column">
+   <style:table-column-properties style:column-width="1.8cm"/>
+  </style:style>
+  <style:style style:name="title" style:family="table-cell">
+   <style:text-properties fo:font-weight="bold" fo:font-size="16pt" fo:color="#1c1712"/>
+  </style:style>
+  <style:style style:name="label" style:family="table-cell">
+   <style:text-properties fo:color="#5c5044"/>
+  </style:style>
+  <style:style style:name="header" style:family="table-cell">
+   <style:table-cell-properties fo:background-color="#1c1712" style:text-align-source="fix" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-weight="bold" fo:color="#ffffff"/>
+  </style:style>
+  <style:style style:name="cell" style:family="table-cell">
+   <style:table-cell-properties style:vertical-align="middle"/>
+  </style:style>
+  <style:style style:name="cellStripe" style:family="table-cell">
+   <style:table-cell-properties fo:background-color="#f4f0ec" style:vertical-align="middle"/>
+  </style:style>
+  <style:style style:name="currency" style:family="table-cell" style:data-style-name="currencyFmt">
+   <style:table-cell-properties style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="end"/>
+  </style:style>
+  <style:style style:name="currencyStripe" style:family="table-cell" style:data-style-name="currencyFmt">
+   <style:table-cell-properties fo:background-color="#f4f0ec" style:vertical-align="middle"/>
+   <style:paragraph-properties fo:text-align="end"/>
+  </style:style>
+  <style:style style:name="cardLabel" style:family="table-cell">
+   <style:table-cell-properties fo:background-color="#fffaeb" fo:border="0.5pt solid #e6ded5"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-size="9pt" fo:color="#5c5044"/>
+  </style:style>
+  <style:style style:name="cardValue" style:family="table-cell" style:data-style-name="currencyFmt">
+   <style:table-cell-properties fo:background-color="#fffaeb" fo:border="0.5pt solid #e6ded5"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-weight="bold" fo:font-size="13pt" fo:color="#1c1712"/>
+  </style:style>
+  <style:style style:name="cardValueIncome" style:family="table-cell" style:data-style-name="currencyFmt">
+   <style:table-cell-properties fo:background-color="#fffaeb" fo:border="0.5pt solid #e6ded5"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-weight="bold" fo:font-size="13pt" fo:color="#228b57"/>
+  </style:style>
+  <style:style style:name="cardValueExpense" style:family="table-cell" style:data-style-name="currencyFmt">
+   <style:table-cell-properties fo:background-color="#fffaeb" fo:border="0.5pt solid #e6ded5"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-weight="bold" fo:font-size="13pt" fo:color="#d63163"/>
+  </style:style>
+  <style:style style:name="cardValueCount" style:family="table-cell">
+   <style:table-cell-properties fo:background-color="#fffaeb" fo:border="0.5pt solid #e6ded5"/>
+   <style:paragraph-properties fo:text-align="center"/>
+   <style:text-properties fo:font-weight="bold" fo:font-size="13pt" fo:color="#1c1712"/>
+  </style:style>
+`
+
+const odsNumberStyles = `
+  <number:currency-style style:name="currencyFmt">
+   <number:text>R$&#160;</number:text>
+   <number:number number:decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:currency-style>
+`
+
 // BuildODS gera uma planilha OpenDocument (.ods) manualmente: um zip com
 // mimetype, manifest.xml, content.xml (uma tabela de lançamentos + resumo) e
 // as imagens dos gráficos embutidas em Pictures/.
@@ -87,20 +159,47 @@ func buildODSContent(scope Scope, txs []transaction.Transaction, totals transact
   xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
   xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
   xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+  xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
+  xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"
+  xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0"
   xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"
   xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"
   xmlns:xlink="http://www.w3.org/1999/xlink"
   office:version="1.2">
+ <office:automatic-styles>`)
+	b.WriteString(odsNumberStyles)
+	b.WriteString(odsStyles)
+	b.WriteString(`
+ </office:automatic-styles>
  <office:body>
   <office:spreadsheet>
    <table:table table:name="Relatório">
+    <table:table-column table:style-name="colNarrow"/>
+    <table:table-column table:style-name="colWide"/>
+    <table:table-column table:style-name="colMed"/>
+    <table:table-column table:style-name="colMed"/>
+    <table:table-column table:style-name="colNarrow"/>
+    <table:table-column table:style-name="colMed"/>
+    <table:table-column table:style-name="colWide"/>
+    <table:table-column table:style-name="colMed"/>
 `)
 
-	writeODSRow(&b, cellStr("Relatório de gastos — "+scope.Label))
+	writeODSRow(&b, styledCellStr("title", "Relatório de gastos — "+scope.Label))
 	writeODSRow(&b)
-	writeODSRow(&b, cellStr("Data"), cellStr("Descrição"), cellStr("Categoria"), cellStr("Conta"), cellStr("Tipo"), cellStr("Valor"), cellStr("Tags"), cellStr("Observações"))
+	// Valor é a última coluna, seguindo a leitura natural da linha (dados
+	// descritivos primeiro, o número que fecha o registro por último).
+	writeODSRow(&b,
+		styledCellStr("header", "Data"), styledCellStr("header", "Descrição"), styledCellStr("header", "Categoria"),
+		styledCellStr("header", "Conta"), styledCellStr("header", "Tipo"), styledCellStr("header", "Tags"),
+		styledCellStr("header", "Observações"), styledCellStr("header", "Valor"),
+	)
 
-	for _, tx := range txs {
+	for i, tx := range txs {
+		cellName, currencyName := "cell", "currency"
+		if i%2 == 1 {
+			cellName, currencyName = "cellStripe", "currencyStripe"
+		}
+
 		category := ""
 		if tx.CategoryName != nil {
 			category = *tx.CategoryName
@@ -123,21 +222,25 @@ func buildODSContent(scope Scope, txs []transaction.Transaction, totals transact
 			notes = *tx.Notes
 		}
 		writeODSRow(&b,
-			cellStr(tx.Date), cellStr(tx.Description), cellStr(category),
-			cellStr(accountName(tx.AccountID, accountNames)), cellStr(typeLabel),
-			cellFloat(amount), cellStr(tagNames), cellStr(notes),
+			styledCellStr(cellName, tx.Date), styledCellStr(cellName, tx.Description), styledCellStr(cellName, category),
+			styledCellStr(cellName, accountName(tx.AccountID, accountNames)), styledCellStr(cellName, typeLabel),
+			styledCellStr(cellName, tagNames), styledCellStr(cellName, notes),
+			styledCellFloat(currencyName, amount),
 		)
 	}
 
 	writeODSRow(&b)
-	writeODSRow(&b, cellStr("Receitas"), cellFloat(totals.Income))
-	writeODSRow(&b, cellStr("Despesas"), cellFloat(totals.Expense))
-	writeODSRow(&b, cellStr("Saldo"), cellFloat(totals.Balance))
-	writeODSRow(&b, cellStr("Lançamentos"), cellFloat(float64(totals.Count)))
+	writeODSRow(&b, styledCellStr("cardLabel", "Receitas"), styledCellStr("cardLabel", "Despesas"), styledCellStr("cardLabel", "Saldo"), styledCellStr("cardLabel", "Lançamentos"))
+	writeODSRow(&b,
+		styledCellFloat("cardValueIncome", totals.Income),
+		styledCellFloat("cardValueExpense", totals.Expense),
+		styledCellFloat("cardValue", totals.Balance),
+		odsCell{style: "cardValueCount", valueType: "float", text: fmt.Sprintf("%d", totals.Count)},
+	)
 
 	for _, img := range images {
 		writeODSRow(&b)
-		writeODSRow(&b, cellStr(img.title))
+		writeODSRow(&b, styledCellStr("label", img.title))
 		fmt.Fprintf(&b, `    <table:table-row>
      <table:table-cell>
       <draw:frame draw:name="%s" svg:width="12cm" svg:height="7cm">
@@ -158,22 +261,27 @@ func buildODSContent(scope Scope, txs []transaction.Transaction, totals transact
 }
 
 type odsCell struct {
+	style     string
 	valueType string
 	text      string
 }
 
-func cellStr(v string) odsCell { return odsCell{valueType: "string", text: v} }
-func cellFloat(v float64) odsCell {
-	return odsCell{valueType: "float", text: fmt.Sprintf("%.2f", v)}
+func styledCellStr(style, v string) odsCell { return odsCell{style: style, valueType: "string", text: v} }
+func styledCellFloat(style string, v float64) odsCell {
+	return odsCell{style: style, valueType: "float", text: fmt.Sprintf("%.2f", v)}
 }
 
 func writeODSRow(b *bytes.Buffer, cells ...odsCell) {
 	b.WriteString("    <table:table-row>\n")
 	for _, c := range cells {
+		styleAttr := ""
+		if c.style != "" {
+			styleAttr = fmt.Sprintf(` table:style-name="%s"`, c.style)
+		}
 		if c.valueType == "float" {
-			fmt.Fprintf(b, "     <table:table-cell office:value-type=\"float\" office:value=\"%s\"><text:p>%s</text:p></table:table-cell>\n", c.text, html.EscapeString(c.text))
+			fmt.Fprintf(b, "     <table:table-cell%s office:value-type=\"float\" office:value=\"%s\"><text:p>%s</text:p></table:table-cell>\n", styleAttr, c.text, html.EscapeString(c.text))
 		} else {
-			fmt.Fprintf(b, "     <table:table-cell office:value-type=\"string\"><text:p>%s</text:p></table:table-cell>\n", html.EscapeString(c.text))
+			fmt.Fprintf(b, "     <table:table-cell%s office:value-type=\"string\"><text:p>%s</text:p></table:table-cell>\n", styleAttr, html.EscapeString(c.text))
 		}
 	}
 	b.WriteString("    </table:table-row>\n")

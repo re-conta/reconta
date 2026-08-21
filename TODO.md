@@ -1,4 +1,6 @@
-Em /exportar não inclua os gráficos, porem os gráficos devem ser mostrados no pdf exportado.
+- Quando apago todas as transações, no calendário lateral eu acabo ficando "preso" em um mês qualquer, quando não houverem mais transações tanto o calendário como a tabela de transações devem "pular" para o dia de hoje.
+
+Se eu mudar o saldo inicial da conta a saúde financeira não muda(talvez quando eu adicione, remova, edite transações tambem?), corrija
 
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.
 

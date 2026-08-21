@@ -241,7 +241,12 @@ onMounted(async () => {
       {{ previewError }}
     </p>
 
-    <div v-if="!loadingPreview" class="h-0 overflow-hidden" aria-hidden="true">
+    <div
+      v-if="!loadingPreview"
+      class="pointer-events-none fixed left-0 top-0 -z-10 opacity-0"
+      style="width: 1200px"
+      aria-hidden="true"
+    >
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <CashFlowChart
           v-if="scopeKind === 'month'"

@@ -278,6 +278,11 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function formatDate(date: string) {
+  const [year, month, day] = date.split("-");
+  return `${day}-${month}-${year}`;
+}
+
 function accountName(accountId: number | null) {
   return accounts.value.find((a) => a.id === accountId)?.name ?? null;
 }
@@ -792,7 +797,7 @@ onUnmounted(() => {
         <div class="grid grid-cols-3 gap-1 md:gap-3">
           <div class="rounded-2xl border border-ink-200/70 bg-white p-2 md:p-4 text-center shadow-sm">
             <p class="text-xs font-medium text-ink-500">Receitas</p>
-            <p class="mt-1 font-display text-base md:text-lg font-bold text-brand-600">
+            <p class="mt-1 font-display text-base md:text-lg font-bold text-leaf-600">
               {{ formatCurrency(totals.income) }}
             </p>
           </div>
@@ -1292,7 +1297,7 @@ onUnmounted(() => {
                         @change="toggleSelected(tx.id)"
                       />
                     </td>
-                    <td class="whitespace-nowrap px-2 py-1 text-ink-500">{{ tx.date }}</td>
+                    <td class="whitespace-nowrap px-2 py-1 text-ink-500">{{ formatDate(tx.date) }}</td>
                     <td class="min-w-0 max-w-xs px-2 py-1">
                       <p class="text-xs md:text-[12px] truncate font-semibold text-ink-900" :title="tx.description">
                         {{ tx.description }}
@@ -1358,7 +1363,7 @@ onUnmounted(() => {
                         tx.isTransfer
                           ? 'text-sky-600'
                           : tx.type === 'income'
-                            ? 'text-brand-600'
+                            ? 'text-leaf-600'
                             : 'text-coral-600'
                       "
                     >
@@ -1407,7 +1412,7 @@ onUnmounted(() => {
                   <div
                     class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500"
                   >
-                    <span>{{ tx.date }}</span>
+                    <span>{{ formatDate(tx.date) }}</span>
                     <span v-if="accountName(tx.accountId)"
                       >&middot; {{ accountName(tx.accountId) }}</span
                     >
@@ -1464,7 +1469,7 @@ onUnmounted(() => {
                     tx.isTransfer
                       ? 'text-sky-600'
                       : tx.type === 'income'
-                        ? 'text-brand-600'
+                        ? 'text-leaf-600'
                         : 'text-coral-600'
                   "
                 >
