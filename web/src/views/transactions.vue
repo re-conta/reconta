@@ -287,6 +287,16 @@ function accountName(accountId: number | null) {
   return accounts.value.find((a) => a.id === accountId)?.name ?? null;
 }
 
+function adjustPeriodToAvailable(p: Period[]) {
+  if (p.length === 0) {
+    filters.month = now.getMonth() + 1;
+    filters.year = now.getFullYear();
+  } else if (!p.some((period) => period.month === filters.month && period.year === filters.year)) {
+    filters.month = p[0].month;
+    filters.year = p[0].year;
+  }
+}
+
 async function loadReferenceData() {
   const [c, t, a, p] = await Promise.all([
     listCategories(),
@@ -298,14 +308,13 @@ async function loadReferenceData() {
   tags.value = t;
   accounts.value = a;
   periods.value = p;
+  adjustPeriodToAvailable(p);
+}
 
-  if (
-    p.length > 0 &&
-    !p.some((period) => period.month === filters.month && period.year === filters.year)
-  ) {
-    filters.month = p[0].month;
-    filters.year = p[0].year;
-  }
+async function reloadPeriods() {
+  const p = await listPeriods();
+  periods.value = p;
+  adjustPeriodToAvailable(p);
 }
 
 async function loadTransactions() {
@@ -392,6 +401,7 @@ async function handleDelete(id: number) {
   try {
     await deleteTransaction(id);
     selectedIds.value.delete(id);
+    await reloadPeriods();
     await loadTransactions();
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir transação";
@@ -434,6 +444,7 @@ async function handleBulkDeleteMonth() {
   if (!confirm(`Excluir todas as transações de ${filters.month}/${filters.year}?`)) return;
   try {
     await bulkDeleteTransactions("month", filters.month, filters.year);
+    await reloadPeriods();
     await loadTransactions();
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir transações";
