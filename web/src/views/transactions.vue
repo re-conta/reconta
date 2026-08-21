@@ -100,6 +100,8 @@ const transactions = ref<Transaction[]>([]);
 const totals = ref({ income: 0, expense: 0, balance: 0, count: 0 });
 const pagination = ref({ page: 1, limit: 50, total: 0 });
 
+const saldoTotal = computed(() => (openingBalance.value ?? 0) + totals.value.balance);
+
 const loading = ref(true);
 const errorMessage = ref("");
 const submitting = ref(false);
@@ -803,7 +805,7 @@ onUnmounted(() => {
           <div class="rounded-2xl border border-ink-200/70 bg-white p-2 md:p-4 text-center shadow-sm">
             <p class="text-xs font-medium text-ink-500">Saldo</p>
             <p class="mt-1 font-display text-base md:text-lg font-bold text-ink-900">
-              {{ formatCurrency(totals.balance) }}
+              {{ formatCurrency(saldoTotal) }}
             </p>
           </div>
         </div>
