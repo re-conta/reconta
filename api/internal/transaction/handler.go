@@ -3,6 +3,7 @@ package transaction
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/re-conta/reconta/api/internal/account"
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/category"
 	"github.com/re-conta/reconta/api/internal/tag"
@@ -24,10 +26,15 @@ type Handler struct {
 	accounts   *account.Repository
 	users      *user.Repository
 	auth       *auth.Handler
+	audit      *auditlog.Logger
 }
 
 func NewHandler(repo *Repository, tags *tag.Repository, categories *category.Repository, accounts *account.Repository, users *user.Repository, authHandler *auth.Handler) *Handler {
 	return &Handler{repo: repo, tags: tags, categories: categories, accounts: accounts, users: users, auth: authHandler}
+}
+
+func (h *Handler) SetAuditLog(logger *auditlog.Logger) {
+	h.audit = logger
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -210,6 +217,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 		tx.Tags, _ = h.tags.ListByTransactionID(r.Context(), tx.ID)
 	}
 
+	h.audit.Log(r, userID, "create", "transaction", &tx.ID, tx.Description)
 	writeJSON(w, http.StatusCreated, tx)
 }
 
@@ -289,6 +297,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request, userID int64) {
 	}
 	tx.Tags, _ = h.tags.ListByTransactionID(r.Context(), tx.ID)
 
+	h.audit.Log(r, userID, "update", "transaction", &tx.ID, tx.Description)
 	writeJSON(w, http.StatusOK, tx)
 }
 
@@ -308,6 +317,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "delete", "transaction", &id, "")
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
 
@@ -368,6 +378,7 @@ func (h *Handler) bulkUpdate(w http.ResponseWriter, r *http.Request, userID int6
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "bulk_update", "transaction", nil, fmt.Sprintf("%d transações", n))
 	writeJSON(w, http.StatusOK, map[string]int{"updated": n})
 }
 
@@ -408,6 +419,7 @@ func (h *Handler) bulkDelete(w http.ResponseWriter, r *http.Request, userID int6
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "bulk_delete", "transaction", nil, fmt.Sprintf("%d transações (%s)", n, scope))
 	writeJSON(w, http.StatusOK, map[string]int{"deleted": n})
 }
 

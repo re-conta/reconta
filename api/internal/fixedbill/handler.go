@@ -8,16 +8,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/auth"
 )
 
 type Handler struct {
-	repo *Repository
-	auth *auth.Handler
+	repo  *Repository
+	auth  *auth.Handler
+	audit *auditlog.Logger
 }
 
 func NewHandler(repo *Repository, authHandler *auth.Handler) *Handler {
 	return &Handler{repo: repo, auth: authHandler}
+}
+
+func (h *Handler) SetAuditLog(logger *auditlog.Logger) {
+	h.audit = logger
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -69,6 +75,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "create", "fixed_bill", &b.ID, b.Name)
 	writeJSON(w, http.StatusCreated, b)
 }
 
@@ -99,6 +106,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "update", "fixed_bill", &b.ID, b.Name)
 	writeJSON(w, http.StatusOK, b)
 }
 
@@ -117,6 +125,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "delete", "fixed_bill", &id, "")
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
 
@@ -136,6 +145,7 @@ func (h *Handler) changeStatus(w http.ResponseWriter, r *http.Request, userID in
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "status_"+status, "fixed_bill", &b.ID, b.Name)
 	writeJSON(w, http.StatusOK, b)
 }
 
@@ -194,6 +204,7 @@ func (h *Handler) pay(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "pay", "fixed_bill", &id, bill.Name)
 	writeJSON(w, http.StatusOK, payResponse{Payment: payment, Bill: bill})
 }
 

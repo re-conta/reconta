@@ -11,6 +11,7 @@ import (
 	"github.com/re-conta/reconta/api/internal/account"
 	"github.com/re-conta/reconta/api/internal/advisor"
 	"github.com/re-conta/reconta/api/internal/analytics"
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/billing"
 	"github.com/re-conta/reconta/api/internal/category"
@@ -56,6 +57,9 @@ func main() {
 	tagRepo := tag.NewRepository(conn)
 	transactionRepo := transaction.NewRepository(conn)
 
+	auditLogRepo := auditlog.NewRepository(conn)
+	auditLogger := auditlog.NewLogger(auditLogRepo)
+
 	seedDefaults := func(ctx context.Context, userID int64) {
 		if err := seed.Defaults(ctx, accountRepo, categoryRepo, userID); err != nil {
 			log.Printf("erro ao popular dados padrão do usuário %d: %v", userID, err)
@@ -71,6 +75,7 @@ func main() {
 	sessionsRepo := auth.NewRepository(conn)
 	authHandler := auth.NewHandler(sessionsRepo, userRepo, secureCookies)
 	authHandler.SetMail(mailQueue, appURL)
+	authHandler.SetAuditLog(auditLogger)
 	authHandler.RegisterRoutes(mux)
 
 	turnstileSecret := getEnv("TURNSTILE_SECRET_KEY", "")
@@ -95,6 +100,7 @@ func main() {
 			log.Printf("erro ao encerrar sessões do usuário banido %d: %v", userID, err)
 		}
 	})
+	userHandler.SetAuditLog(auditLogger.Log)
 	userHandler.RegisterRoutes(mux)
 
 	if clientID := getEnv("GOOGLE_CLIENT_ID", ""); clientID != "" {
@@ -108,10 +114,21 @@ func main() {
 		log.Print("GOOGLE_CLIENT_ID não definido: login via Google desabilitado")
 	}
 
-	account.NewHandler(accountRepo, authHandler).RegisterRoutes(mux)
-	category.NewHandler(categoryRepo, authHandler).RegisterRoutes(mux)
-	tag.NewHandler(tagRepo, authHandler).RegisterRoutes(mux)
-	transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, userRepo, authHandler).RegisterRoutes(mux)
+	accountHandler := account.NewHandler(accountRepo, authHandler)
+	accountHandler.SetAuditLog(auditLogger)
+	accountHandler.RegisterRoutes(mux)
+
+	categoryHandler := category.NewHandler(categoryRepo, authHandler)
+	categoryHandler.SetAuditLog(auditLogger)
+	categoryHandler.RegisterRoutes(mux)
+
+	tagHandler := tag.NewHandler(tagRepo, authHandler)
+	tagHandler.SetAuditLog(auditLogger)
+	tagHandler.RegisterRoutes(mux)
+
+	transactionHandler := transaction.NewHandler(transactionRepo, tagRepo, categoryRepo, accountRepo, userRepo, authHandler)
+	transactionHandler.SetAuditLog(auditLogger)
+	transactionHandler.RegisterRoutes(mux)
 	statement.NewHandler(transactionRepo, categoryRepo, accountRepo, userRepo, authHandler).RegisterRoutes(mux)
 	report.NewHandler(transactionRepo, categoryRepo, accountRepo, tagRepo, authHandler).RegisterRoutes(mux)
 	poupador.NewHandler(poupador.NewRepository(conn)).RegisterRoutes(mux)
@@ -133,14 +150,18 @@ func main() {
 	analytics.NewHandler(analytics.NewRepository(conn), authHandler, geoIP, secureCookies).RegisterRoutes(mux)
 
 	fixedBillRepo := fixedbill.NewRepository(conn)
-	fixedbill.NewHandler(fixedBillRepo, authHandler).RegisterRoutes(mux)
+	fixedBillHandler := fixedbill.NewHandler(fixedBillRepo, authHandler)
+	fixedBillHandler.SetAuditLog(auditLogger)
+	fixedBillHandler.RegisterRoutes(mux)
 
 	notificationHub := notification.NewHub()
 	notificationRepo := notification.NewRepository(conn)
 	notification.NewHandler(notificationRepo, authHandler, notificationHub, fixedBillRepo, userRepo, mailQueue, internalToken).RegisterRoutes(mux)
 
 	shareRepo := share.NewRepository(conn)
-	share.NewHandler(shareRepo, transactionRepo, accountRepo, categoryRepo, tagRepo, userRepo, notificationRepo, notificationHub, authHandler).RegisterRoutes(mux)
+	shareHandler := share.NewHandler(shareRepo, transactionRepo, accountRepo, categoryRepo, tagRepo, userRepo, notificationRepo, notificationHub, authHandler)
+	shareHandler.SetAuditLog(auditLogger)
+	shareHandler.RegisterRoutes(mux)
 
 	billingGateway, err := billing.NewGateway(getEnv("MP_ACCESS_TOKEN", ""))
 	if err != nil {
@@ -149,10 +170,14 @@ func main() {
 	if billingGateway == nil {
 		log.Print("MP_ACCESS_TOKEN não definido: checkout de planos desabilitado")
 	}
-	billing.NewHandler(
+	billingHandler := billing.NewHandler(
 		billing.NewRepository(conn), authHandler, userRepo, notificationRepo, notificationHub,
 		mailQueue, billingGateway, internalToken, getEnv("MP_WEBHOOK_SECRET", ""), appURL,
-	).RegisterRoutes(mux)
+	)
+	billingHandler.SetAuditLog(auditLogger)
+	billingHandler.RegisterRoutes(mux)
+
+	auditlog.NewHandler(auditLogRepo, authHandler.CurrentUser).RegisterRoutes(mux)
 
 	addr := ":" + port
 	log.Printf("servidor rodando em %s (db: %s)", addr, dbPath)

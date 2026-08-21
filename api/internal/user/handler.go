@@ -28,6 +28,11 @@ type currentUserFunc func(r *http.Request) (*User, error)
 // ciclo de import.
 type loginFunc func(w http.ResponseWriter, r *http.Request, userID int64) error
 
+// auditLogFunc registra uma ação de auditoria. Fornecida pelo pacote
+// auditlog via SetAuditLog (como um valor de método), evitando um ciclo de
+// import — auditlog já depende de user para checar permissões.
+type auditLogFunc func(r *http.Request, userID int64, action, entity string, entityID *int64, details string)
+
 type Handler struct {
 	repo          *Repository
 	currentUser   currentUserFunc
@@ -38,10 +43,22 @@ type Handler struct {
 	appURL        string
 	login         loginFunc
 	internalToken string
+	audit         auditLogFunc
 }
 
 func NewHandler(repo *Repository) *Handler {
 	return &Handler{repo: repo}
+}
+
+func (h *Handler) SetAuditLog(fn auditLogFunc) {
+	h.audit = fn
+}
+
+func (h *Handler) log(r *http.Request, userID int64, action, entity string, entityID *int64, details string) {
+	if h.audit == nil {
+		return
+	}
+	h.audit(r, userID, action, entity, entityID, details)
 }
 
 // SetAfterCreate registra um callback executado logo após a criação de um
@@ -460,6 +477,7 @@ func (h *Handler) updateRole(w http.ResponseWriter, r *http.Request, actor *User
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.log(r, actor.ID, "update_role", "user", &u.ID, req.Role)
 	writeJSON(w, http.StatusOK, u)
 }
 
@@ -537,6 +555,7 @@ func (h *Handler) adminCreateUser(w http.ResponseWriter, r *http.Request, actor 
 		h.afterCreate(r.Context(), u.ID)
 	}
 
+	h.log(r, actor.ID, "create", "user", &u.ID, u.Email)
 	writeJSON(w, http.StatusCreated, u)
 }
 
@@ -605,6 +624,7 @@ func (h *Handler) adminUpdateUser(w http.ResponseWriter, r *http.Request, actor 
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.log(r, actor.ID, "update", "user", &updated.ID, updated.Email)
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -643,6 +663,7 @@ func (h *Handler) adminDeleteUser(w http.ResponseWriter, r *http.Request, actor 
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.log(r, actor.ID, "delete", "user", &target.ID, target.Email)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -697,6 +718,11 @@ func (h *Handler) adminBanUser(w http.ResponseWriter, r *http.Request, actor *Us
 		h.onBan(r.Context(), id)
 	}
 
+	action := "unban"
+	if req.Banned {
+		action = "ban"
+	}
+	h.log(r, actor.ID, action, "user", &updated.ID, updated.Email)
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -811,7 +837,7 @@ type updateRolePermissionsRequest struct {
 	Permissions []string `json:"permissions"`
 }
 
-func (h *Handler) updateRolePermissions(w http.ResponseWriter, r *http.Request, _ *User) {
+func (h *Handler) updateRolePermissions(w http.ResponseWriter, r *http.Request, actor *User) {
 	role := r.PathValue("role")
 	if !slices.Contains(AssignableRoles, role) {
 		writeError(w, http.StatusUnprocessableEntity, "role inválida")
@@ -840,6 +866,7 @@ func (h *Handler) updateRolePermissions(w http.ResponseWriter, r *http.Request, 
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.log(r, actor.ID, "update_permissions", "role", nil, role+": "+strings.Join(perms, ","))
 	writeJSON(w, http.StatusOK, map[string][]string{"permissions": perms})
 }
 

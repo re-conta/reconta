@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/re-conta/reconta/api/internal/account"
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/category"
 	"github.com/re-conta/reconta/api/internal/notification"
@@ -28,6 +29,11 @@ type Handler struct {
 	notifications *notification.Repository
 	hub           *notification.Hub
 	auth          *auth.Handler
+	audit         *auditlog.Logger
+}
+
+func (h *Handler) SetAuditLog(logger *auditlog.Logger) {
+	h.audit = logger
 }
 
 func NewHandler(
@@ -115,6 +121,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 	message := fmt.Sprintf("%s quer compartilhar transações com você.", s.OwnerName)
 	h.notifyShare(r.Context(), recipient.ID, s.ID, notification.KindShareInvited, title, message)
 
+	h.audit.Log(r, userID, "create", "share", &s.ID, req.RecipientEmail)
 	writeJSON(w, http.StatusCreated, s)
 }
 
@@ -158,6 +165,7 @@ func (h *Handler) accept(w http.ResponseWriter, r *http.Request, userID int64) {
 	message := fmt.Sprintf("%s aceitou seu convite de compartilhamento.", s.RecipientName)
 	h.notifyShare(r.Context(), s.OwnerID, s.ID, notification.KindShareAccepted, title, message)
 
+	h.audit.Log(r, userID, "accept", "share", &s.ID, "")
 	writeJSON(w, http.StatusOK, s)
 }
 
@@ -181,6 +189,7 @@ func (h *Handler) reject(w http.ResponseWriter, r *http.Request, userID int64) {
 	message := fmt.Sprintf("%s rejeitou seu convite de compartilhamento.", s.RecipientName)
 	h.notifyShare(r.Context(), s.OwnerID, s.ID, notification.KindShareRejected, title, message)
 
+	h.audit.Log(r, userID, "reject", "share", &s.ID, "")
 	writeJSON(w, http.StatusOK, s)
 }
 
@@ -206,6 +215,7 @@ func (h *Handler) cancel(w http.ResponseWriter, r *http.Request, userID int64) {
 	message := fmt.Sprintf("%s cancelou o compartilhamento de transações com você.", s.OwnerName)
 	h.notifyShare(r.Context(), s.RecipientID, s.ID, notification.KindShareCancelled, title, message)
 
+	h.audit.Log(r, userID, "cancel", "share", &s.ID, "")
 	writeJSON(w, http.StatusOK, s)
 }
 

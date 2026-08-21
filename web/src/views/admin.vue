@@ -39,6 +39,8 @@ import type {
   ReferrerCount,
   RecentVisit,
 } from "../types/analytics";
+import { ApiError as AuditLogApiError, getActionLogs } from "../api/auditlog";
+import type { AuditLogEntry } from "../types/auditlog";
 import VisitsOverTimeChart from "../components/charts/VisitsOverTimeChart.vue";
 import DeviceBreakdownChart from "../components/charts/DeviceBreakdownChart.vue";
 import { formatCnpj } from "../utils/cnpj";
@@ -64,7 +66,7 @@ const canManagePlans = computed(
   () => isSuperAdmin.value || currentUser.value?.permissions?.includes("manage_plans"),
 );
 
-const activeTab = ref<"users" | "permissions" | "health" | "plans" | "stats">("users");
+const activeTab = ref<"users" | "permissions" | "health" | "plans" | "stats" | "logs">("users");
 
 // --- Aba de usuários ---
 
@@ -446,6 +448,75 @@ function formatVisitDate(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+// --- Aba de logs ---
+
+const logsVisits = ref<RecentVisit[]>([]);
+const logsActions = ref<AuditLogEntry[]>([]);
+const logsError = ref("");
+const loadingLogs = ref(true);
+
+const actionLabels: Record<string, string> = {
+  login: "Login",
+  logout: "Logout",
+  create: "Criou",
+  update: "Editou",
+  delete: "Excluiu",
+  bulk_update: "Editou em lote",
+  bulk_delete: "Excluiu em lote",
+  accept: "Aceitou",
+  reject: "Rejeitou",
+  cancel: "Cancelou",
+  ban: "Baniu",
+  unban: "Reativou",
+  update_role: "Alterou cargo de",
+  update_permissions: "Alterou permissões de",
+  grant_plan: "Concedeu plano a",
+  revoke_plan: "Revogou plano de",
+  pay: "Pagou",
+  status_active: "Reativou",
+  status_frozen: "Congelou",
+  status_closed: "Encerrou",
+};
+
+const entityLabels: Record<string, string> = {
+  session: "sessão",
+  transaction: "transação",
+  account: "conta",
+  category: "categoria",
+  tag: "tag",
+  fixed_bill: "conta fixa",
+  share: "compartilhamento",
+  user: "usuário",
+  role: "cargo",
+  plan: "plano",
+};
+
+function describeAction(entry: AuditLogEntry) {
+  const action = actionLabels[entry.action] ?? entry.action;
+  const entity = entityLabels[entry.entity] ?? entry.entity;
+  return `${action} ${entity}`;
+}
+
+async function loadLogs() {
+  loadingLogs.value = true;
+  logsError.value = "";
+  try {
+    const [visits, actions] = await Promise.all([
+      getRecentVisits({ from: statsFrom.value, to: statsTo.value }, 200),
+      getActionLogs(200),
+    ]);
+    logsVisits.value = visits;
+    logsActions.value = actions;
+  } catch (err) {
+    logsError.value =
+      err instanceof AnalyticsApiError || err instanceof AuditLogApiError
+        ? err.message
+        : "Falha ao carregar logs";
+  } finally {
+    loadingLogs.value = false;
+  }
+}
+
 pollActiveNow();
 activeNowTimer = setInterval(pollActiveNow, 30_000);
 
@@ -504,6 +575,13 @@ onMounted(() => {
   if (canManagePlans.value) loadPlans();
   loadStats();
 });
+
+let logsLoaded = false;
+function ensureLogsLoaded() {
+  if (logsLoaded) return;
+  logsLoaded = true;
+  loadLogs();
+}
 </script>
 
 <template>
@@ -566,6 +644,17 @@ onMounted(() => {
         @click="activeTab = 'stats'"
       >
         Estatísticas
+      </button>
+      <button
+        type="button"
+        class="rounded-full px-4 py-1.5 text-sm font-semibold transition"
+        :class="activeTab === 'logs' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:text-ink-900'"
+        @click="
+          activeTab = 'logs';
+          ensureLogsLoaded();
+        "
+      >
+        Logs
       </button>
     </div>
 
@@ -1118,6 +1207,123 @@ onMounted(() => {
                   </td>
                 </tr>
                 <tr v-if="statsRecentVisits.length === 0">
+                  <td colspan="7" class="px-5 py-6 text-center text-sm text-ink-400">
+                    Sem visitas registradas neste período
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Aba: Logs -->
+    <div v-else-if="activeTab === 'logs'" class="flex flex-col gap-4">
+      <p class="text-sm text-ink-500">
+        Todo acesso ao site é registrado — IP, agente (navegador/sistema) e páginas visitadas —
+        junto com as ações que cada usuário executou.
+      </p>
+
+      <div
+        v-if="loadingLogs"
+        class="flex flex-col items-center gap-2 rounded-3xl border border-ink-200/70 bg-white p-12 text-sm text-ink-400 shadow-sm"
+      >
+        <span
+          class="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-transparent"
+        ></span>
+        Carregando...
+      </div>
+      <p v-else-if="logsError" class="rounded-xl bg-coral-50 px-3 py-2 text-sm text-coral-700">
+        {{ logsError }}
+      </p>
+      <template v-else>
+        <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+          <h2 class="px-5 pt-4 font-display text-sm font-bold text-ink-900">
+            Ações dos usuários
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr
+                  class="border-b border-ink-100 text-left text-xs uppercase tracking-wide text-ink-400"
+                >
+                  <th class="px-5 py-3 font-semibold">Quando</th>
+                  <th class="px-4 py-3 font-semibold">Usuário</th>
+                  <th class="px-4 py-3 font-semibold">Ação</th>
+                  <th class="px-4 py-3 font-semibold">Detalhes</th>
+                  <th class="px-4 py-3 font-semibold">IP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink-100">
+                <tr v-for="a in logsActions" :key="a.id" class="hover:bg-ink-50/60">
+                  <td class="whitespace-nowrap px-5 py-2.5 text-ink-500">
+                    {{ formatVisitDate(a.createdAt) }}
+                  </td>
+                  <td class="max-w-[12rem] truncate px-4 py-2.5 text-ink-700">
+                    {{ a.userName || a.userEmail || "—" }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 font-medium text-ink-900">
+                    {{ describeAction(a) }}
+                  </td>
+                  <td class="max-w-[16rem] truncate px-4 py-2.5 text-ink-500">
+                    {{ a.details || "—" }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-ink-500">
+                    {{ a.ip }}
+                  </td>
+                </tr>
+                <tr v-if="logsActions.length === 0">
+                  <td colspan="5" class="px-5 py-6 text-center text-sm text-ink-400">
+                    Nenhuma ação registrada ainda
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="overflow-hidden rounded-3xl border border-ink-200/70 bg-white shadow-sm">
+          <h2 class="px-5 pt-4 font-display text-sm font-bold text-ink-900">Visitas ao site</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr
+                  class="border-b border-ink-100 text-left text-xs uppercase tracking-wide text-ink-400"
+                >
+                  <th class="px-5 py-3 font-semibold">Quando</th>
+                  <th class="px-4 py-3 font-semibold">Usuário</th>
+                  <th class="px-4 py-3 font-semibold">Página</th>
+                  <th class="px-4 py-3 font-semibold">IP</th>
+                  <th class="px-4 py-3 font-semibold">Navegador</th>
+                  <th class="px-4 py-3 font-semibold">SO</th>
+                  <th class="px-4 py-3 font-semibold">Agente (user-agent)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink-100">
+                <tr v-for="v in logsVisits" :key="v.id" class="hover:bg-ink-50/60">
+                  <td class="whitespace-nowrap px-5 py-2.5 text-ink-500">
+                    {{ formatVisitDate(v.createdAt) }}
+                  </td>
+                  <td class="max-w-[10rem] truncate px-4 py-2.5 text-ink-700">
+                    {{ v.userName || v.userEmail || "Visitante" }}
+                  </td>
+                  <td class="max-w-[12rem] truncate px-4 py-2.5 text-ink-700">{{ v.path }}</td>
+                  <td class="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-ink-500">
+                    {{ v.ip }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 text-ink-500">
+                    {{ v.browser || "—" }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-2.5 text-ink-500">{{ v.os || "—" }}</td>
+                  <td
+                    class="max-w-[16rem] truncate px-4 py-2.5 font-mono text-xs text-ink-400"
+                    :title="v.userAgent"
+                  >
+                    {{ v.userAgent || "—" }}
+                  </td>
+                </tr>
+                <tr v-if="logsVisits.length === 0">
                   <td colspan="7" class="px-5 py-6 text-center text-sm text-ink-400">
                     Sem visitas registradas neste período
                   </td>

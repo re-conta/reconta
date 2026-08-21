@@ -8,16 +8,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/auth"
 )
 
 type Handler struct {
-	repo *Repository
-	auth *auth.Handler
+	repo  *Repository
+	auth  *auth.Handler
+	audit *auditlog.Logger
 }
 
 func NewHandler(repo *Repository, authHandler *auth.Handler) *Handler {
 	return &Handler{repo: repo, auth: authHandler}
+}
+
+func (h *Handler) SetAuditLog(logger *auditlog.Logger) {
+	h.audit = logger
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -64,6 +70,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "create", "tag", &t.ID, t.Name)
 	writeJSON(w, http.StatusCreated, t)
 }
 
@@ -90,6 +97,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "update", "tag", &t.ID, t.Name)
 	writeJSON(w, http.StatusOK, t)
 }
 
@@ -109,6 +117,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	h.audit.Log(r, userID, "delete", "tag", &id, "")
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
 

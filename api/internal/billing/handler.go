@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/auth"
 	"github.com/re-conta/reconta/api/internal/email"
 	"github.com/re-conta/reconta/api/internal/notification"
@@ -42,6 +43,11 @@ type Handler struct {
 	internalToken string
 	webhookSecret string
 	appURL        string
+	audit         *auditlog.Logger
+}
+
+func (h *Handler) SetAuditLog(logger *auditlog.Logger) {
+	h.audit = logger
 }
 
 func NewHandler(
@@ -720,6 +726,9 @@ func (h *Handler) adminUpdatePlan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	if actor, err := h.auth.CurrentUser(r); err == nil {
+		h.audit.Log(r, actor.ID, "update", "plan", &updated.ID, updated.Name)
+	}
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -806,6 +815,9 @@ func (h *Handler) adminGrantSubscription(w http.ResponseWriter, r *http.Request)
 	)
 	h.notifyUser(ctx, userID, KindSubscriptionActive, title, message, sub.CurrentPeriodEnd, 0, true)
 
+	if actor, err := h.auth.CurrentUser(r); err == nil {
+		h.audit.Log(r, actor.ID, "grant_plan", "user", &userID, sub.PlanName)
+	}
 	writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: sub.PlanCode, Subscription: sub})
 }
 
@@ -833,6 +845,9 @@ func (h *Handler) removeUserSubscription(w http.ResponseWriter, r *http.Request,
 		log.Printf("erro ao remover assinatura do usuário %d: %v", userID, err)
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
+	}
+	if actor, err := h.auth.CurrentUser(r); err == nil {
+		h.audit.Log(r, actor.ID, "revoke_plan", "user", &userID, "")
 	}
 	writeJSON(w, http.StatusOK, subscriptionResponse{PlanCode: PlanFree})
 }

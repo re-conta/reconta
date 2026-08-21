@@ -292,6 +292,9 @@ func (r *Repository) namedCounts(ctx context.Context, column string, from, to ti
 
 type RecentVisit struct {
 	ID        int64  `json:"id"`
+	UserID    *int64 `json:"userId"`
+	UserName  string `json:"userName"`
+	UserEmail string `json:"userEmail"`
 	Path      string `json:"path"`
 	Referrer  string `json:"referrer"`
 	IP        string `json:"ip"`
@@ -300,15 +303,18 @@ type RecentVisit struct {
 	Browser   string `json:"browser"`
 	OS        string `json:"os"`
 	Device    string `json:"device"`
+	UserAgent string `json:"userAgent"`
 	CreatedAt string `json:"createdAt"`
 }
 
 func (r *Repository) RecentVisits(ctx context.Context, from, to time.Time, limit int) ([]RecentVisit, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, path, referrer, ip, country, city, browser, os, device_type, created_at
-		FROM page_visits
-		WHERE created_at >= ? AND created_at < ? AND is_bot = 0
-		ORDER BY created_at DESC
+		SELECT v.id, v.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''),
+			v.path, v.referrer, v.ip, v.country, v.city, v.browser, v.os, v.device_type, v.user_agent, v.created_at
+		FROM page_visits v
+		LEFT JOIN users u ON u.id = v.user_id
+		WHERE v.created_at >= ? AND v.created_at < ? AND v.is_bot = 0
+		ORDER BY v.created_at DESC
 		LIMIT ?`,
 		fmtTime(from), fmtTime(to), limit,
 	)
@@ -320,7 +326,10 @@ func (r *Repository) RecentVisits(ctx context.Context, from, to time.Time, limit
 	var out []RecentVisit
 	for rows.Next() {
 		var v RecentVisit
-		if err := rows.Scan(&v.ID, &v.Path, &v.Referrer, &v.IP, &v.Country, &v.City, &v.Browser, &v.OS, &v.Device, &v.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&v.ID, &v.UserID, &v.UserName, &v.UserEmail,
+			&v.Path, &v.Referrer, &v.IP, &v.Country, &v.City, &v.Browser, &v.OS, &v.Device, &v.UserAgent, &v.CreatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("lendo visitas recentes: %w", err)
 		}
 		out = append(out, v)

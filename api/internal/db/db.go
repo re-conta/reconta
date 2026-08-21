@@ -281,6 +281,18 @@ func migrate(conn *sql.DB) error {
 		updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 	);
 
+	CREATE TABLE IF NOT EXISTS action_logs (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+		action     TEXT NOT NULL,
+		entity     TEXT NOT NULL,
+		entity_id  INTEGER,
+		details    TEXT NOT NULL DEFAULT '',
+		ip         TEXT NOT NULL DEFAULT '',
+		user_agent TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+	);
+
 	CREATE TABLE IF NOT EXISTS page_visits (
 		id              INTEGER PRIMARY KEY AUTOINCREMENT,
 		visitor_id      TEXT NOT NULL,
@@ -330,6 +342,8 @@ func migrate(conn *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_poupador_snapshots_created_at ON poupador_snapshots(created_at);
 	CREATE INDEX IF NOT EXISTS idx_advisor_api_calls_created_at ON advisor_api_calls(created_at);
 	CREATE INDEX IF NOT EXISTS idx_pending_signups_expires_at ON pending_signups(expires_at);
+	CREATE INDEX IF NOT EXISTS idx_action_logs_created_at ON action_logs(created_at);
+	CREATE INDEX IF NOT EXISTS idx_action_logs_user_id ON action_logs(user_id, created_at);
 	`
 	if _, err := conn.Exec(schema); err != nil {
 		return err

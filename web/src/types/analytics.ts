@@ -42,6 +42,9 @@ export interface DeviceBreakdown {
 
 export interface RecentVisit {
   id: number;
+  userId: number | null;
+  userName: string;
+  userEmail: string;
   path: string;
   referrer: string;
   ip: string;
@@ -50,6 +53,7 @@ export interface RecentVisit {
   browser: string;
   os: string;
   device: string;
+  userAgent: string;
   createdAt: string;
 }
 

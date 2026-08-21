@@ -65,8 +65,9 @@ export function getDeviceBreakdown(range: DateRange): Promise<DeviceBreakdown> {
   }).then((res) => parseResponse<DeviceBreakdown>(res));
 }
 
-export function getRecentVisits(range: DateRange): Promise<RecentVisit[]> {
-  return fetch(`/api/admin/analytics/visitors?${withRange(range)}`, {
+export function getRecentVisits(range: DateRange, limit?: number): Promise<RecentVisit[]> {
+  const params = withRange(range, limit ? { limit: String(limit) } : undefined);
+  return fetch(`/api/admin/analytics/visitors?${params}`, {
     credentials: "include",
   }).then((res) => parseResponse<RecentVisit[]>(res).then((v) => v ?? []));
 }

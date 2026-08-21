@@ -1,7 +1,5 @@
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.
 
-No painel de admin crie uma página de logs onde toda visita deve ser logada assim como agente, ip, navegador, sistema e as páginas que visitou e as ações que este usuário fez no site.
-
 Transforme a pasta files/ em ansible/ crie um playbook simples mais completo usando o ansible com:
 
 - Suporte as units systemd do go

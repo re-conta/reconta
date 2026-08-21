@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/re-conta/reconta/api/internal/auditlog"
 	"github.com/re-conta/reconta/api/internal/email"
 	"github.com/re-conta/reconta/api/internal/user"
 )
@@ -29,6 +30,11 @@ type Handler struct {
 	secure   bool
 	mail     *email.Queue
 	appURL   string
+	audit    *auditlog.Logger
+}
+
+func (h *Handler) SetAuditLog(logger *auditlog.Logger) {
+	h.audit = logger
 }
 
 // NewHandler cria o handler de autenticação. secure define se o cookie de
@@ -96,6 +102,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.audit.Log(r, u.ID, "login", "session", nil, "")
 	writeJSON(w, http.StatusOK, u)
 }
 
@@ -133,6 +140,9 @@ func (h *Handler) createSession(w http.ResponseWriter, r *http.Request, userID i
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	if u, err := h.CurrentUser(r); err == nil {
+		h.audit.Log(r, u.ID, "logout", "session", nil, "")
+	}
 	if cookie, err := r.Cookie(cookieName); err == nil {
 		_ = h.sessions.Delete(r.Context(), cookie.Value)
 	}
