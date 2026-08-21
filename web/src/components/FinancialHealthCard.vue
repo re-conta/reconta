@@ -7,6 +7,7 @@ import { healthLevelLabels, type HealthLevel, type HealthScore } from "../types/
 const props = defineProps<{
   month: number;
   year: number;
+  refreshKey?: number;
 }>();
 
 const score = ref<HealthScore | null>(null);
@@ -15,7 +16,7 @@ const failed = ref(false);
 const mascotMissing = ref(false);
 
 watch(
-  () => [props.month, props.year],
+  () => [props.month, props.year, props.refreshKey],
   async () => {
     loading.value = true;
     failed.value = false;

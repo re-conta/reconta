@@ -1,5 +1,3 @@
-Se eu mudar o saldo inicial da conta a saúde financeira não muda(talvez quando eu adicione, remova, edite transações tambem?), corrija
-
 Em /relatorios sob "Tudo" e "Intervalo personalizado" eu preciso do fluxo tambem, preciso de um gráfico por linha e não um ao lado do outro.
 
 No painel de admin crie uma página de logs onde toda visita deve ser logada assim como agente, ip, navegador, sistema e as páginas que visitou e as ações que este usuário fez no site.

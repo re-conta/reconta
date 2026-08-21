@@ -82,13 +82,22 @@ func (h *Handler) score(w http.ResponseWriter, r *http.Request, userID int64) {
 		writeError(w, http.StatusInternalServerError, "erro interno")
 		return
 	}
+	openingBalance, err := h.repo.GetOpeningBalance(r.Context(), userID, month, year)
+	if err != nil {
+		log.Printf("erro ao ler saldo de abertura: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
 
 	resp := scoreResponse{
 		Enabled: true,
 		HasData: income > 0 || expense > 0,
 		Income:  income,
 		Expense: expense,
-		Balance: income - expense,
+		// Balance soma o saldo de abertura só para exibição — a taxa de
+		// poupança (savingsRate) usada na classificação ignora o saldo de
+		// abertura de propósito, pois reflete o fluxo do mês, não o estoque.
+		Balance: openingBalance + income - expense,
 	}
 	if resp.HasData {
 		resp.SavingsRate, resp.Level, resp.Stars = Classify(income, expense, settings)

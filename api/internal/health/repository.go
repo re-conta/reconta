@@ -84,6 +84,24 @@ func (r *Repository) SaveSettings(ctx context.Context, s Settings) error {
 	return nil
 }
 
+// GetOpeningBalance retorna o saldo de abertura manual do mês/ano, se houver
+// (mesma tabela usada pelo pacote transaction). Usado só para exibição — não
+// entra na taxa de poupança, que é sempre relativa ao fluxo do mês.
+func (r *Repository) GetOpeningBalance(ctx context.Context, userID int64, month, year int) (float64, error) {
+	var amount float64
+	err := r.db.QueryRowContext(ctx,
+		`SELECT amount FROM monthly_opening_balances WHERE user_id = ? AND month = ? AND year = ?`,
+		userID, month, year,
+	).Scan(&amount)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("lendo saldo de abertura: %w", err)
+	}
+	return amount, nil
+}
+
 // MonthTotals soma receitas e despesas do usuário no mês informado.
 func (r *Repository) MonthTotals(ctx context.Context, userID int64, month, year int) (income, expense float64, err error) {
 	start := fmt.Sprintf("%04d-%02d-01", year, month)

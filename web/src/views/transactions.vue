@@ -101,6 +101,7 @@ const totals = ref({ income: 0, expense: 0, balance: 0, count: 0 });
 const pagination = ref({ page: 1, limit: 50, total: 0 });
 
 const saldoTotal = computed(() => (openingBalance.value ?? 0) + totals.value.balance);
+const healthRefreshKey = ref(0);
 
 const loading = ref(true);
 const errorMessage = ref("");
@@ -389,6 +390,7 @@ async function handleSubmit() {
     resetForm();
     await loadTransactions();
     await loadOpeningBalance();
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao salvar transação";
   } finally {
@@ -403,6 +405,7 @@ async function handleDelete(id: number) {
     selectedIds.value.delete(id);
     await reloadPeriods();
     await loadTransactions();
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir transação";
   }
@@ -424,6 +427,7 @@ async function applyBulkCategory() {
     selectedIds.value = new Set();
     bulkCategoryId.value = "";
     await loadTransactions();
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao editar em lote";
   }
@@ -435,6 +439,7 @@ async function applyBulkTransfer(isTransfer: boolean) {
     await bulkUpdateTransactions([...selectedIds.value], { isTransfer });
     selectedIds.value = new Set();
     await loadTransactions();
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao editar em lote";
   }
@@ -446,6 +451,7 @@ async function handleBulkDeleteMonth() {
     await bulkDeleteTransactions("month", filters.month, filters.year);
     await reloadPeriods();
     await loadTransactions();
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir transações";
   }
@@ -472,6 +478,7 @@ async function saveOpeningBalance() {
     const res = await setOpeningBalance(filters.month, filters.year, openingBalanceInput.value);
     openingBalance.value = res.amount;
     editingOpeningBalance.value = false;
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value =
       err instanceof ApiError ? err.message : "Falha ao salvar saldo de abertura";
@@ -592,6 +599,7 @@ async function markTransferCandidates() {
     );
     transferCandidates.value = [];
     await loadTransactions();
+    healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao marcar transferências";
   } finally {
@@ -684,7 +692,7 @@ onUnmounted(() => {
           @next="goToNextPeriod"
           @select-date="(d) => (selectedDate = d)"
         />
-        <FinancialHealthCard :month="filters.month" :year="filters.year" />
+        <FinancialHealthCard :month="filters.month" :year="filters.year" :refresh-key="healthRefreshKey" />
         <FinancialRecommendations :month="filters.month" :year="filters.year" :is-paying-user="isPayingUser" />
       </div>
 
