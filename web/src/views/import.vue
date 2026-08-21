@@ -6,6 +6,7 @@ import { ApiError, confirmStatementImport, previewStatementImport } from "../api
 import type { Account } from "../types/account";
 import type { Category } from "../types/category";
 import type { Bank, ParsedTransaction } from "../types/statement";
+import CurrencyInput from "../components/CurrencyInput.vue";
 
 const banks: Bank[] = [
   { key: "", label: "Detectar automaticamente" },
@@ -237,10 +238,8 @@ onMounted(async () => {
               <option :value="null">Sem categoria</option>
               <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
-            <input
-              v-model.number="row.amount"
-              type="number"
-              step="0.01"
+            <CurrencyInput
+              v-model="row.amount"
               class="w-24 rounded-lg border border-ink-200 px-2 py-1 text-right text-xs"
             />
           </li>

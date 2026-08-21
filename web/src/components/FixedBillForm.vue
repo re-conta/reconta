@@ -2,6 +2,7 @@
 import { reactive, ref, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { ApiError, createFixedBill, updateFixedBill } from "../api/fixedBills";
+import CurrencyInput from "./CurrencyInput.vue";
 import type { Account } from "../types/account";
 import type { Category } from "../types/category";
 import type { FixedBill, FixedBillInput, FixedBillPeriodicity } from "../types/fixedBill";
@@ -108,11 +109,8 @@ async function handleSubmit() {
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-ink-700">Valor estimado</span>
-            <input
-              v-model.number="form.amount"
-              type="number"
-              step="0.01"
-              min="0.01"
+            <CurrencyInput
+              v-model="form.amount"
               required
               class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
             />

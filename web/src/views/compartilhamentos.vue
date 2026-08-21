@@ -19,6 +19,7 @@ import type { Account } from "../types/account";
 import type { Category } from "../types/category";
 import type { Share } from "../types/share";
 import type { Transaction, TransactionInput } from "../types/transaction";
+import CurrencyInput from "../components/CurrencyInput.vue";
 
 type Tab = "sent" | "received";
 
@@ -571,10 +572,8 @@ onMounted(() => {
               </label>
               <label class="flex flex-col gap-1.5">
                 <span class="text-sm font-medium text-ink-700">Valor</span>
-                <input
-                  v-model.number="transactionForm.amount"
-                  type="number"
-                  step="0.01"
+                <CurrencyInput
+                  v-model="transactionForm.amount"
                   required
                   class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
                 />

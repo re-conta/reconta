@@ -2,6 +2,7 @@
 import { reactive, ref } from "vue";
 import { X } from "lucide-vue-next";
 import { ApiError, payFixedBill } from "../api/fixedBills";
+import CurrencyInput from "./CurrencyInput.vue";
 import type { Account } from "../types/account";
 import type { FixedBill, PayFixedBillInput, PayFixedBillResult } from "../types/fixedBill";
 
@@ -111,11 +112,8 @@ async function handleSubmit() {
             </label>
             <label class="flex flex-col gap-1.5">
               <span class="text-sm font-medium text-ink-700">Valor pago</span>
-              <input
-                v-model.number="form.amountPaid"
-                type="number"
-                step="0.01"
-                min="0.01"
+              <CurrencyInput
+                v-model="form.amountPaid"
                 class="rounded-xl border border-ink-200 bg-ink-50/50 px-3.5 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
               />
             </label>

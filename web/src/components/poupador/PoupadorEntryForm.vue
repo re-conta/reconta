@@ -7,6 +7,7 @@ import type {
   PoupadorFrequency,
   PoupadorKind,
 } from "../../types/poupador";
+import CurrencyInput from "../CurrencyInput.vue";
 
 const props = defineProps<{ kind: PoupadorKind; entry?: PoupadorEntry; months: string[] }>();
 const emit = defineEmits<{ save: [draft: PoupadorEntryDraft]; cancel: [] }>();
@@ -72,13 +73,9 @@ function submit() {
       </label>
       <label class="min-w-0 text-xs font-bold text-ink-600"
         >Valor
-        <input
-          v-model.number="form.amount"
+        <CurrencyInput
+          v-model="form.amount"
           required
-          min="0.01"
-          step="0.01"
-          type="number"
-          inputmode="decimal"
           placeholder="0,00"
           class="mt-1.5 w-full min-w-0 max-w-full rounded-xl border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
         />

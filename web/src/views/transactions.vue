@@ -7,6 +7,7 @@ import { getSubscription } from "../api/billing";
 import { createCategory, listCategories } from "../api/categories";
 import { createTag, listTags } from "../api/tags";
 import AccountsManager from "../components/AccountsManager.vue";
+import CurrencyInput from "../components/CurrencyInput.vue";
 import CashFlowChart from "../components/charts/CashFlowChart.vue";
 import CategoryExpenseChart from "../components/charts/CategoryExpenseChart.vue";
 import FinancialHealthCard from "../components/FinancialHealthCard.vue";
@@ -824,10 +825,9 @@ onUnmounted(() => {
             }}</span>
           </p>
           <div v-if="editingOpeningBalance" class="flex items-center gap-2">
-            <input
-              v-model.number="openingBalanceInput"
-              type="number"
-              step="0.01"
+            <CurrencyInput
+              v-model="openingBalanceInput"
+              allow-negative
               class="w-32 rounded-lg border border-ink-200 px-2 py-1 text-sm"
             />
             <button
@@ -944,10 +944,8 @@ onUnmounted(() => {
                       </label>
                       <label class="flex flex-col gap-1.5">
                         <span class="text-sm font-medium text-ink-700">Valor</span>
-                        <input
-                          v-model.number="form.amount"
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
+                          v-model="form.amount"
                           required
                           class="rounded-xl border border-ink-200 px-3.5 py-2.5 text-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
                         />
