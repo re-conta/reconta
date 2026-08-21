@@ -41,6 +41,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/transactions", h.auth.RequireUser(h.list))
 	mux.HandleFunc("GET /api/transactions/self-transfer-candidates", h.auth.RequireUser(h.selfTransferCandidates))
 	mux.HandleFunc("GET /api/transactions/periods", h.auth.RequireUser(h.periods))
+	mux.HandleFunc("GET /api/transactions/filter-options", h.auth.RequireUser(h.filterOptions))
 	mux.HandleFunc("POST /api/transactions", h.auth.RequireUser(h.create))
 	mux.HandleFunc("PATCH /api/transactions", h.auth.RequireUser(h.bulkUpdate))
 	mux.HandleFunc("DELETE /api/transactions", h.auth.RequireUser(h.bulkDelete))
@@ -140,6 +141,27 @@ func (h *Handler) periods(w http.ResponseWriter, r *http.Request, userID int64) 
 		return
 	}
 	writeJSON(w, http.StatusOK, periods)
+}
+
+// filterOptions retorna apenas as categorias e tags que estão de fato
+// associadas a alguma transação do usuário — usado para popular os filtros
+// da listagem sem exibir categorias/tags nunca utilizadas.
+func (h *Handler) filterOptions(w http.ResponseWriter, r *http.Request, userID int64) {
+	cats, err := h.categories.ListUsed(r.Context(), userID)
+	if err != nil {
+		log.Printf("erro ao listar categorias usadas: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	tags, err := h.tags.ListUsed(r.Context(), userID)
+	if err != nil {
+		log.Printf("erro ao listar tags usadas: %v", err)
+		writeError(w, http.StatusInternalServerError, "erro interno")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"categories": cats, "tags": tags})
 }
 
 func (h *Handler) attachTags(r *http.Request, txs []Transaction) error {

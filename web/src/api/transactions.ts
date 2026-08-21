@@ -7,6 +7,8 @@ import type {
   TransactionInput,
   TransactionListResult,
 } from "../types/transaction";
+import type { Category } from "../types/category";
+import type { Tag } from "../types/tag";
 
 export class ApiError extends Error {}
 
@@ -35,6 +37,15 @@ export function listTransactions(filters: TransactionFilters = {}): Promise<Tran
 export function listPeriods(): Promise<Period[]> {
   return fetch("/api/transactions/periods", { credentials: "include" }).then((res) =>
     parseResponse<Period[]>(res),
+  );
+}
+
+export function getTransactionFilterOptions(): Promise<{
+  categories: Category[];
+  tags: Tag[];
+}> {
+  return fetch("/api/transactions/filter-options", { credentials: "include" }).then((res) =>
+    parseResponse<{ categories: Category[]; tags: Tag[] }>(res),
   );
 }
 

@@ -63,6 +63,32 @@ func (r *Repository) List(ctx context.Context, userID int64) ([]Tag, error) {
 	return tags, rows.Err()
 }
 
+// ListUsed retorna apenas as tags que estão de fato associadas a alguma transação do usuário.
+func (r *Repository) ListUsed(ctx context.Context, userID int64) ([]Tag, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT t.id, t.name, t.color
+		FROM tags t
+		INNER JOIN transaction_tags tt ON tt.tag_id = t.id
+		INNER JOIN transactions tx ON tx.id = tt.transaction_id
+		WHERE t.user_id = ? AND tx.user_id = ?
+		ORDER BY t.name`, userID, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listando tags usadas: %w", err)
+	}
+	defer rows.Close()
+
+	tags := []Tag{}
+	for rows.Next() {
+		t, err := scanTag(rows)
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, *t)
+	}
+	return tags, rows.Err()
+}
+
 // FindOrCreateByName retorna a tag do usuário com o nome informado (case-insensitive),
 // criando uma nova se não existir — usado ao restaurar backups.
 func (r *Repository) FindOrCreateByName(ctx context.Context, userID int64, name, color string) (*Tag, error) {

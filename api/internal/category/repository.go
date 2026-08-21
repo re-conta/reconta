@@ -62,6 +62,31 @@ func (r *Repository) List(ctx context.Context, userID int64) ([]Category, error)
 	return categories, rows.Err()
 }
 
+// ListUsed retorna apenas as categorias que estão de fato associadas a alguma transação do usuário.
+func (r *Repository) ListUsed(ctx context.Context, userID int64) ([]Category, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT c.id, c.name, c.color, c.icon, c.type, c.patterns
+		FROM categories c
+		INNER JOIN transactions t ON t.category_id = c.id
+		WHERE c.user_id = ? AND t.user_id = ?
+		ORDER BY c.name`, userID, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listando categorias usadas: %w", err)
+	}
+	defer rows.Close()
+
+	categories := []Category{}
+	for rows.Next() {
+		c, err := scanCategory(rows)
+		if err != nil {
+			return nil, err
+		}
+		categories = append(categories, *c)
+	}
+	return categories, rows.Err()
+}
+
 // ListWithPatterns retorna apenas categorias que possuem padrões de auto-categorização definidos.
 func (r *Repository) ListWithPatterns(ctx context.Context, userID int64) ([]Category, error) {
 	rows, err := r.db.QueryContext(ctx,

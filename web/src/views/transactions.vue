@@ -20,6 +20,7 @@ import {
   createTransaction,
   deleteTransaction,
   getOpeningBalance,
+  getTransactionFilterOptions,
   listPeriods,
   listSelfTransferCandidates,
   listTransactions,
@@ -93,6 +94,8 @@ const filters = reactive({
 
 const categories = ref<Category[]>([]);
 const tags = ref<Tag[]>([]);
+const filterCategories = ref<Category[]>([]);
+const filterTags = ref<Tag[]>([]);
 const accounts = ref<Account[]>([]);
 const periods = ref<Period[]>([]);
 
@@ -322,19 +325,24 @@ async function loadTransactions() {
   loading.value = true;
   errorMessage.value = "";
   try {
-    const result = await listTransactions({
-      month: filters.month,
-      year: filters.year,
-      type: filters.type || undefined,
-      categoryId: filters.categoryId || undefined,
-      tagId: filters.tagId || undefined,
-      search: filters.search || undefined,
-      page: filters.page,
-      limit: 50,
-    });
+    const [result, filterOptions] = await Promise.all([
+      listTransactions({
+        month: filters.month,
+        year: filters.year,
+        type: filters.type || undefined,
+        categoryId: filters.categoryId || undefined,
+        tagId: filters.tagId || undefined,
+        search: filters.search || undefined,
+        page: filters.page,
+        limit: 50,
+      }),
+      getTransactionFilterOptions(),
+    ]);
     transactions.value = result.data;
     totals.value = result.totals;
     pagination.value = result.pagination;
+    filterCategories.value = filterOptions.categories;
+    filterTags.value = filterOptions.tags;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao carregar transações";
   } finally {
@@ -408,6 +416,34 @@ async function handleDelete(id: number) {
     healthRefreshKey.value++;
   } catch (err) {
     errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir transação";
+  }
+}
+
+const showBulkDeleteConfirm = ref(false);
+const bulkDeleting = ref(false);
+
+function openBulkDeleteConfirm() {
+  if (selectedIds.value.size === 0) return;
+  showBulkDeleteConfirm.value = true;
+}
+
+function closeBulkDeleteConfirm() {
+  showBulkDeleteConfirm.value = false;
+}
+
+async function confirmBulkDeleteSelected() {
+  bulkDeleting.value = true;
+  try {
+    await Promise.all([...selectedIds.value].map((id) => deleteTransaction(id)));
+    selectedIds.value = new Set();
+    showBulkDeleteConfirm.value = false;
+    await reloadPeriods();
+    await loadTransactions();
+    healthRefreshKey.value++;
+  } catch (err) {
+    errorMessage.value = err instanceof ApiError ? err.message : "Falha ao excluir transações";
+  } finally {
+    bulkDeleting.value = false;
   }
 }
 
@@ -564,7 +600,9 @@ watch(
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key !== "Escape") return;
-  if (accountsModalOpen.value) {
+  if (showBulkDeleteConfirm.value) {
+    closeBulkDeleteConfirm();
+  } else if (accountsModalOpen.value) {
     closeAccountsModal();
   } else if (categoryModalOpen.value) {
     closeCategoryModal();
@@ -739,7 +777,7 @@ onUnmounted(() => {
               class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm"
             >
               <option value="">Todas</option>
-              <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+              <option v-for="c in filterCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
           </label>
           <label class="flex flex-col gap-1 text-xs font-medium text-ink-600">
@@ -749,7 +787,7 @@ onUnmounted(() => {
               class="rounded-lg border border-ink-200 px-2.5 py-1.5 text-sm"
             >
               <option value="">Todas</option>
-              <option v-for="t in tags" :key="t.id" :value="t.id">{{ t.name }}</option>
+              <option v-for="t in filterTags" :key="t.id" :value="t.id">{{ t.name }}</option>
             </select>
           </label>
           <label class="flex flex-1 flex-col gap-1 text-xs font-medium text-ink-600">
@@ -1254,12 +1292,80 @@ onUnmounted(() => {
           </button>
           <button
             type="button"
+            class="rounded-full bg-coral-600 px-3 py-1 text-xs font-semibold text-white hover:bg-coral-700"
+            @click="openBulkDeleteConfirm"
+          >
+            Excluir selecionadas
+          </button>
+          <button
+            type="button"
             class="ml-auto text-xs text-ink-300 hover:text-white"
             @click="selectedIds = new Set()"
           >
             Limpar seleção
           </button>
         </div>
+
+        <!-- Modal: confirmação de exclusão em lote -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="showBulkDeleteConfirm"
+              class="fixed inset-x-0 top-0 z-70 flex h-dvh items-end justify-center bg-ink-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              @click.self="closeBulkDeleteConfirm"
+            >
+              <Transition
+                appear
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-2 scale-95 opacity-0"
+                enter-to-class="translate-y-0 scale-100 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="translate-y-0 scale-100 opacity-100"
+                leave-to-class="translate-y-2 scale-95 opacity-0"
+              >
+                <div
+                  v-if="showBulkDeleteConfirm"
+                  class="flex w-full max-w-sm flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+                >
+                  <div class="flex flex-col gap-2 px-6 py-5">
+                    <h2 class="font-display text-lg font-bold text-ink-900">
+                      Excluir transações selecionadas
+                    </h2>
+                    <p class="text-sm text-ink-500">
+                      Tem certeza que deseja excluir {{ selectedIds.size }} transação(ões)? Esta
+                      ação não pode ser desfeita.
+                    </p>
+                  </div>
+                  <div class="flex shrink-0 justify-end gap-3 border-t border-ink-100 px-6 py-4">
+                    <button
+                      type="button"
+                      class="rounded-full border border-ink-200 px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-100"
+                      :disabled="bulkDeleting"
+                      @click="closeBulkDeleteConfirm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      :disabled="bulkDeleting"
+                      class="rounded-full bg-coral-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-coral-700 disabled:opacity-50"
+                      @click="confirmBulkDeleteSelected"
+                    >
+                      {{ bulkDeleting ? "Excluindo..." : "Excluir" }}
+                    </button>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+          </Transition>
+        </Teleport>
 
         <!-- Lista -->
         <div class="overflow-hidden rounded-xl border border-ink-200/70 bg-white shadow-sm">
